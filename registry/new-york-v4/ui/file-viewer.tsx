@@ -3,12 +3,11 @@
 export {
   detectCategory,
   type FileCategory,
-  type FileViewerControlsPlacement,
   type ViewerSource as FileViewerSource,
   type ViewerSource,
 } from "./file-viewer-core";
 export {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerFieldSource,
   FileViewerFieldSourceLabel,
   FileViewerFieldSourceStatus,
@@ -17,6 +16,9 @@ export {
   FileViewerLegend,
   FileViewerSidebar,
   FileViewerSidebarContent,
+  FileViewerSidebarFooter,
+  FileViewerSidebarHeader,
+  FileViewerSidebarRail,
   FileViewerSidebarSection,
   FileViewerSidebarSectionAction,
   FileViewerSidebarSectionContent,
@@ -29,9 +31,7 @@ export {
   FileViewerSourceList,
   FileViewerSourceTrigger,
   FileViewerViewport,
-  useFileViewerViewportSize,
-  useOptionalFileViewerViewportSize,
-  type FileViewerBodyProps,
+  type FileViewerContentProps,
   type FileViewerFieldSourceLabelProps,
   type FileViewerFieldSourceProps,
   type FileViewerFieldSourceStatusProps,
@@ -40,6 +40,9 @@ export {
   type FileViewerLegendProps,
   type FileViewerSidebarProps,
   type FileViewerSidebarContentProps,
+  type FileViewerSidebarFooterProps,
+  type FileViewerSidebarHeaderProps,
+  type FileViewerSidebarRailProps,
   type FileViewerSidebarSectionActionProps,
   type FileViewerSidebarSectionContentProps,
   type FileViewerSidebarSectionHeaderProps,
@@ -51,26 +54,23 @@ export {
   type FileViewerSourceItemProps,
   type FileViewerSourceListProps,
   type FileViewerSourceTriggerProps,
-  type FileViewerViewportSize,
   type FileViewerViewportProps,
-} from "./file-viewer-body";
+} from "./file-viewer-content";
 export {
   FileViewerDocument,
   type FileViewerDocumentProps,
 } from "./file-viewer-document";
 export {
+  FileViewerControls,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerMeta,
   FileViewerSidebarTrigger,
-  FileViewerToolbar,
-  type FileViewerHeaderEndProps,
+  FileViewerTitle,
+  type FileViewerControlsProps,
   type FileViewerHeaderProps,
-  type FileViewerHeaderStartProps,
-  type FileViewerIdentityProps,
+  type FileViewerMetaProps,
   type FileViewerSidebarTriggerProps,
-  type FileViewerToolbarProps,
+  type FileViewerTitleProps,
 } from "./file-viewer-header";
 export {
   FileViewerEmptyState,

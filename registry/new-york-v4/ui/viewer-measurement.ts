@@ -14,7 +14,15 @@ export type StableElementSize<Element extends HTMLElement = HTMLElement> = {
 };
 
 export type StableElementSizeOptions = {
+  enabled?: boolean;
+  observe?: boolean;
   retainLastNonZero?: boolean;
+};
+
+export type StableCssLengthOptions = {
+  element: HTMLElement | null;
+  retainLastNonZero?: boolean;
+  value: string;
 };
 
 type MeasuredSize = {
@@ -69,6 +77,8 @@ function resolveMeasuredElementSize({
 export function useStableElementSize<Element extends HTMLElement = HTMLElement>(
   options: StableElementSizeOptions = {},
 ): StableElementSize<Element> {
+  const enabled = options.enabled ?? true;
+  const observe = options.observe ?? true;
   const retainLastNonZero = options.retainLastNonZero ?? false;
   const [element, setElementState] = React.useState<Element | null>(null);
   const [size, setSize] = React.useState<MeasuredSize>({
@@ -81,8 +91,15 @@ export function useStableElementSize<Element extends HTMLElement = HTMLElement>(
     setElementState(nextElement);
   }, []);
 
+  React.useLayoutEffect(() => {
+    if (enabled) return;
+    setSize({ height: null, width: null });
+  }, [enabled]);
+
   useKeyedLayoutEffect(
-    element ? joinEffectKey([element, retainLastNonZero]) : null,
+    enabled && element
+      ? joinEffectKey([element, observe, retainLastNonZero])
+      : null,
     () => {
       if (!element) return;
 
@@ -94,7 +111,9 @@ export function useStableElementSize<Element extends HTMLElement = HTMLElement>(
         }),
       );
 
-      const ResizeObserverConstructor = globalThis.ResizeObserver;
+      const ResizeObserverConstructor = observe
+        ? globalThis.ResizeObserver
+        : undefined;
       if (typeof ResizeObserverConstructor === "undefined") return;
 
       let frame = 0;
@@ -136,4 +155,79 @@ export function useStableElementSize<Element extends HTMLElement = HTMLElement>(
     }),
     [element, hasMeasured, setElement, size.height, size.width],
   );
+}
+
+export function useStableCssLength({
+  element,
+  retainLastNonZero = true,
+  value,
+}: StableCssLengthOptions) {
+  const [resolvedLength, setResolvedLength] = React.useState(0);
+
+  useKeyedLayoutEffect(
+    value ? joinEffectKey([element, retainLastNonZero, value]) : null,
+    () => {
+      const nextLength = resolveCssLength(value, element);
+
+      setResolvedLength((currentLength) => {
+        if (retainLastNonZero && nextLength <= 0) return currentLength;
+        return areCssLengthsEqual(currentLength, nextLength)
+          ? currentLength
+          : nextLength;
+      });
+    },
+  );
+
+  return resolvedLength;
+}
+
+function resolveCssLength(value: string, element: HTMLElement | null) {
+  const trimmedValue = value.trim();
+  const pixelMatch = trimmedValue.match(/^(-?\d+(?:\.\d+)?)px$/);
+  if (pixelMatch) return Math.max(0, Number(pixelMatch[1]));
+
+  if (typeof window === "undefined") return 0;
+
+  const remMatch = trimmedValue.match(/^(-?\d+(?:\.\d+)?)rem$/);
+  if (remMatch) {
+    return (
+      Math.max(0, Number(remMatch[1])) *
+      readComputedFontSize(window.document.documentElement)
+    );
+  }
+
+  const emMatch = trimmedValue.match(/^(-?\d+(?:\.\d+)?)em$/);
+  if (emMatch) {
+    return Math.max(0, Number(emMatch[1])) * readComputedFontSize(element);
+  }
+
+  const measuringElement = window.document.createElement("div");
+  measuringElement.style.contain = "strict";
+  measuringElement.style.inlineSize = trimmedValue;
+  measuringElement.style.position = "absolute";
+  measuringElement.style.visibility = "hidden";
+  (element ?? window.document.body).appendChild(measuringElement);
+  const width = readElementInlineSize(measuringElement);
+  measuringElement.remove();
+  return width;
+}
+
+function readElementInlineSize(element: HTMLElement) {
+  const rect =
+    typeof element.getBoundingClientRect === "function"
+      ? element.getBoundingClientRect()
+      : null;
+  const width = rect?.width || element.clientWidth || 0;
+  return Number.isFinite(width) && width > 0 ? width : 0;
+}
+
+function readComputedFontSize(element: Element | null) {
+  if (typeof window === "undefined") return 16;
+  const fontSize = element ? window.getComputedStyle(element).fontSize : "16px";
+  const value = Number.parseFloat(fontSize);
+  return Number.isFinite(value) && value > 0 ? value : 16;
+}
+
+function areCssLengthsEqual(previous: number, next: number) {
+  return Math.abs(previous - next) <= 0.001;
 }

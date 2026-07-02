@@ -4,7 +4,7 @@ description: The geometry-aware content inset beside an optional sidebar.
 component: true
 ---
 
-`FileViewerInset` is the primary content slot inside `FileViewerBody`. It is
+`FileViewerInset` is the primary content slot inside `FileViewerContent`. It is
 the sibling of `FileViewerSidebar` and owns the geometry contract between
 sidebar motion and document rendering.
 
@@ -33,8 +33,9 @@ example a provider-bound PDF page list:
   the sidebar.
 - Renders the internal `data-slot="file-viewer-document-frame"` boundary used
   for alignment, max inline size, and renderer layout.
-- Provides the document-frame layout context used by fit-to-width renderers
-  while inline sidebars open and close.
+- Provides the document-frame contract used by fit-to-width renderers while
+  inline sidebars open and close. The contract exposes active, settled, and
+  prepared inline sizes plus the shell transition duration.
 - Wrap `FileViewerDocument` or provider-bound renderer parts in
   `FileViewerViewport`.
 - It does not read the file source. The routed document or renderer part owns

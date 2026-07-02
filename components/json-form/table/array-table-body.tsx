@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { FixedGridRowWindow } from "@/components/ui/fixed-grid-row-window";
 import { useFixedRowVirtualization } from "@/components/ui/fixed-grid-virtualization";
-import { joinJsonFormPath } from "@/components/json-form/path-codec";
 import {
   TABLE_JUMP_ROW_OVERSCAN,
   TABLE_MAX_HEIGHT,
@@ -47,15 +46,11 @@ export function StaticArrayTableBody({
 }
 
 export function FixedArrayTableBody({
-  name,
   fields,
-  activeEditorPath,
   scrollHandlers,
   renderItem,
 }: {
-  name: string;
   fields: ArrayTableField[];
-  activeEditorPath: string | null;
   scrollHandlers: ArrayTableScrollHandlers;
   renderItem: (index: number, rowTopPx: number) => React.ReactNode;
 }) {
@@ -87,20 +82,11 @@ export function FixedArrayTableBody({
         windowDataSlot="json-form-table-row-window"
         className="[contain:layout_paint_style]"
       >
-        {virtualRowWindow.items.map((virtualRow, slotIndex) => {
-          const isEditingRow = activeEditorPath?.startsWith(
-            `${joinJsonFormPath(name, virtualRow.index)}.`,
-          );
-          return (
-            <React.Fragment
-              key={
-                isEditingRow ? fields[virtualRow.index].id : `slot-${slotIndex}`
-              }
-            >
-              {renderItem(virtualRow.index, virtualRow.start)}
-            </React.Fragment>
-          );
-        })}
+        {virtualRowWindow.items.map((virtualRow) => (
+          <React.Fragment key={fields[virtualRow.index].id}>
+            {renderItem(virtualRow.index, virtualRow.start)}
+          </React.Fragment>
+        ))}
       </FixedGridRowWindow>
     </div>
   );

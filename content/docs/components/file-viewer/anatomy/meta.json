@@ -6,7 +6,7 @@
     "file-viewer",
     "file-viewer-preview",
     "file-viewer-header",
-    "file-viewer-body",
+    "file-viewer-content",
     "file-viewer-sidebar",
     "file-viewer-inset",
     "file-viewer-viewport",

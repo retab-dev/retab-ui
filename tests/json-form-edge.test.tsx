@@ -50,10 +50,12 @@ function getTableDataCell(name: string): HTMLElement {
 }
 
 function renderJsonForm({
+  defaultOpenPaths,
   schema,
   defaultValues = {},
   textInput,
 }: {
+  defaultOpenPaths?: readonly string[];
   schema: JSONSchema7;
   defaultValues?: FormValues;
   textInput?: JsonFormTextInput;
@@ -68,6 +70,7 @@ function renderJsonForm({
     });
     return (
       <JsonForm
+        defaultOpenPaths={defaultOpenPaths}
         form={form}
         schema={schema}
         textInput={textInput}
@@ -92,6 +95,21 @@ function renderJsonForm({
       return submissions[0];
     },
   };
+}
+
+async function chooseDataCellOption(name: string | RegExp) {
+  const option = await screen.findByRole("option", { name });
+  fireEvent.pointerDown(option, {
+    button: 0,
+    pointerId: 1,
+    pointerType: "mouse",
+  });
+  fireEvent.pointerUp(option, {
+    button: 0,
+    pointerId: 1,
+    pointerType: "mouse",
+  });
+  fireEvent.click(option);
 }
 
 // ---------------------------------------------------------------------------
@@ -528,6 +546,108 @@ describe("JsonForm array edge cases", () => {
     await expect(submit()).resolves.toEqual({
       rows: [{ due: "2026-03-01T12:30:45Z" }],
     });
+  });
+
+  it("edits enum table cells through DataCell select without stringifying values", async () => {
+    const { submit } = renderJsonForm({
+      schema: {
+        type: "object",
+        properties: {
+          rows: {
+            type: "array",
+            title: "Rows",
+            items: {
+              type: "object",
+              properties: {
+                status: {
+                  type: "integer",
+                  enum: [1, 2],
+                  title: "Status",
+                },
+                approved: {
+                  type: "boolean",
+                  enum: [false, true],
+                  title: "Approved",
+                },
+              },
+            },
+          },
+        },
+      },
+      defaultValues: { rows: [{ status: 2, approved: false }] },
+    });
+
+    fireEvent.click(getTableDataCell("Status 2"));
+    await chooseDataCellOption("1");
+
+    fireEvent.click(getTableDataCell("Approved false"));
+    await chooseDataCellOption("true");
+
+    await expect(submit()).resolves.toEqual({
+      rows: [{ status: 1, approved: true }],
+    });
+  });
+
+  it("virtualizes medium table arrays instead of mounting every row", async () => {
+    const clientHeight = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "clientHeight",
+    );
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+      configurable: true,
+      get() {
+        return this.getAttribute("data-slot") === "json-form-table-scroll"
+          ? 420
+          : 0;
+      },
+    });
+
+    try {
+      renderJsonForm({
+        defaultOpenPaths: ["rows"],
+        schema: {
+          type: "object",
+          properties: {
+            rows: {
+              type: "array",
+              title: "Rows",
+              items: {
+                type: "object",
+                properties: {
+                  code: { type: "string", title: "Code" },
+                },
+              },
+            },
+          },
+        },
+        defaultValues: {
+          rows: Array.from({ length: 40 }, (_, index) => ({
+            code: `row-${index}`,
+          })),
+        },
+      });
+
+      await waitFor(() => {
+        expect(
+          document.querySelector('[data-slot="json-form-table-row-window"]'),
+        ).toBeTruthy();
+        const mountedRows = document.querySelectorAll(
+          '[data-slot="json-form-table-scroll"] [data-index]',
+        );
+        expect(mountedRows.length).toBeGreaterThan(0);
+        expect(mountedRows.length).toBeLessThan(40);
+      });
+    } finally {
+      if (clientHeight) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          "clientHeight",
+          clientHeight,
+        );
+      } else {
+        delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight;
+      }
+    }
   });
 
   it("renders arrays of objects with nested arrays in card mode", async () => {

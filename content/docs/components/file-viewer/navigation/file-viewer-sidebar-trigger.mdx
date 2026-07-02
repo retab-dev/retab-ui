@@ -5,28 +5,25 @@ component: true
 ---
 
 `FileViewerSidebarTrigger` toggles the nearest `FileViewerSidebar`. Put it in
-`FileViewerHeader`, a toolbar, or another file-scoped control surface.
+`FileViewerHeader`, `FileViewerControls`, or another file-scoped control
+surface.
 
 ```tsx
 <FileViewerProvider source={source} defaultSidebarOpen>
   <FileViewer>
     <FileViewerHeader>
-      <FileViewerHeaderStart>
-        <FileViewerSidebarTrigger />
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+      <FileViewerSidebarTrigger />
+      <FileViewerTitle />
+      <FileViewerControls />
     </FileViewerHeader>
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerSidebar aria-label="PDF pages" />
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
@@ -40,8 +37,8 @@ component: true
 - It is a thin wrapper over the button primitive, so it accepts the usual
   `variant`, `size`, `className`, and `onClick` props; the toggle runs before
   any `onClick` you pass.
-- Only render it when the body has a `FileViewerSidebar` — there is nothing to
-  toggle otherwise.
+- Only render it when `FileViewerContent` has a `FileViewerSidebar` — there is
+  nothing to toggle otherwise.
 
 ## API Reference
 

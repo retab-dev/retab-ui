@@ -36,7 +36,7 @@ shell: width, side override, collapse behavior, and the accessible rail label.
 | ------------- | ------------------------------- | ---------------------------------------------------------------------- |
 | `aria-label`  | `string`                        | Accessible name for the navigation rail. Recommended.                  |
 | `width`       | `string`                        | Rail width (e.g. `"18rem"`). Sets the `--viewer-sidebar-width`.        |
-| `side`        | `"left" \| "right"`             | Which side the rail mounts on. Falls back to `FileViewer.sidebarSide`. |
+| `side`        | `"left" \| "right"`             | Which side the sidebar mounts on. Defaults to `"left"`. |
 | `collapsible` | `"offcanvas" \| "none"`         | Whether the rail can collapse off-canvas.                              |
 | `...props`    | `React.ComponentProps<"aside">` | Standard `aside` props; `className` is forwarded.                      |
 

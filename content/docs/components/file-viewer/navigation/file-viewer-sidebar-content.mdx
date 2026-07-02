@@ -1,15 +1,17 @@
 ---
 title: FileViewerSidebarContent
-description: Layout primitives for sections inside a FileViewerSidebar rail.
+description: Layout primitives for sections inside a FileViewerSidebar.
 component: true
 ---
 
-`FileViewerSidebarContent` and the sidebar section primitives give a rail a
+`FileViewerSidebarHeader`, `FileViewerSidebarContent`,
+`FileViewerSidebarFooter`, and the sidebar section primitives give a sidebar a
 consistent internal layout. They do not define row semantics; domain components
 such as `SegmentSidebar` or `AttachmentSidebar` own those.
 
 ```tsx
 <FileViewerSidebar aria-label="Document navigation">
+  <FileViewerSidebarHeader>Pages</FileViewerSidebarHeader>
   <FileViewerSidebarContent>
     <FileViewerSidebarSection>
       <FileViewerSidebarSectionHeader>
@@ -21,6 +23,7 @@ such as `SegmentSidebar` or `AttachmentSidebar` own those.
       </FileViewerSidebarSectionContent>
     </FileViewerSidebarSection>
   </FileViewerSidebarContent>
+  <FileViewerSidebarFooter>400 pages</FileViewerSidebarFooter>
 </FileViewerSidebar>
 ```
 
@@ -28,7 +31,9 @@ such as `SegmentSidebar` or `AttachmentSidebar` own those.
 
 | Component                         | Use For                                       |
 | --------------------------------- | --------------------------------------------- |
+| `FileViewerSidebarHeader`         | Fixed rail header.                            |
 | `FileViewerSidebarContent`        | Scrollable rail body.                         |
+| `FileViewerSidebarFooter`         | Fixed rail footer.                            |
 | `FileViewerSidebarSection`        | Padded semantic section.                      |
 | `FileViewerSidebarSectionHeader`  | Section title/action row.                     |
 | `FileViewerSidebarSectionTitle`   | Truncating section title.                     |
@@ -47,4 +52,4 @@ such as `SegmentSidebar` or `AttachmentSidebar` own those.
 
 ## Source
 
-<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-sidebar.tsx" />

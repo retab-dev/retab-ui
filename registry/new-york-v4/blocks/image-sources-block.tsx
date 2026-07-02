@@ -3,16 +3,14 @@
 import type { Source } from "@/lib/document-source";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarContent,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { ImageViewer } from "@/components/ui/image-viewer";
@@ -80,17 +78,13 @@ function ImageSourcesContent() {
     >
       <FileViewer
         className="bg-background h-full min-h-[680px]"
-        sidebarSide="right"
+       
       >
         <FileViewerHeader>
-          <FileViewerHeaderStart>
-            <FileViewerIdentity />
-          </FileViewerHeaderStart>
-          <FileViewerHeaderEnd>
-            <FileViewerToolbar />
-          </FileViewerHeaderEnd>
+            <FileViewerTitle />
+            <FileViewerControls />
         </FileViewerHeader>
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>
               <ImageViewer
@@ -117,7 +111,7 @@ function ImageSourcesContent() {
               <SourceFieldList fields={FIELDS} link={link} />
             </FileViewerSidebarContent>
           </FileViewerSidebar>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

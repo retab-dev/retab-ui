@@ -12,14 +12,14 @@ owns the controlled or uncontrolled sidebar open state.
 <FileViewerProvider source={source} defaultSidebarOpen>
   <FileViewer>
     <FileViewerHeader />
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerSidebar aria-label="Document navigation" />
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
@@ -28,8 +28,8 @@ owns the controlled or uncontrolled sidebar open state.
 
 - Owns source identity, category resolution, fallback sizes, and style isolation
   for renderer routes.
-- Provides the file resource context consumed by `FileViewerIdentity`,
-  `FileViewerToolbar`, and `FileViewerDocument`.
+- Provides the file resource context consumed by `FileViewerTitle`,
+  `FileViewerControls`, and `FileViewerDocument`.
 - Owns sidebar open state through `defaultSidebarOpen`, or through controlled
   `sidebarOpen` and `onSidebarOpenChange`.
 - Provides the renderer controls registration layer used by active renderers to
@@ -39,18 +39,18 @@ owns the controlled or uncontrolled sidebar open state.
 
 ## API Reference
 
-| Prop                  | Type                      | Description                                                           |
-| --------------------- | ------------------------- | --------------------------------------------------------------------- |
-| `source`              | `ViewerSource`            | The file source. Required.                                            |
-| `category`            | `FileCategory`            | Force a renderer category instead of detecting it.                    |
-| `fallbackFrameSize`   | `{ width; height }`       | Initial frame size for image-like fallbacks.                          |
-| `fallbackSlideSize`   | `{ width; height }`       | Initial slide size for presentation fallbacks.                        |
-| `isolateStyles`       | `boolean`                 | Scope document styles away from host page styles where supported.     |
-| `headerMode`          | `"inline" \| "outlets"`   | Render header inline or through viewer header outlets.                |
-| `defaultSidebarOpen`  | `boolean`                 | Initial sidebar open state for uncontrolled viewers.                  |
-| `sidebarOpen`         | `boolean`                 | Controlled sidebar open state.                                        |
-| `onSidebarOpenChange` | `(open: boolean) => void` | Fired when the frame requests a sidebar state change.                 |
-| `children`            | `React.ReactNode`         | Usually a `FileViewer` frame with header, body, sidebar, and inset. |
+| Prop                  | Type                      | Description                                                            |
+| --------------------- | ------------------------- | ---------------------------------------------------------------------- |
+| `source`              | `ViewerSource`            | The file source. Required.                                             |
+| `category`            | `FileCategory`            | Force a renderer category instead of detecting it.                     |
+| `fallbackFrameSize`   | `{ width; height }`       | Initial frame size for image-like fallbacks.                           |
+| `fallbackSlideSize`   | `{ width; height }`       | Initial slide size for presentation fallbacks.                         |
+| `isolateStyles`       | `boolean`                 | Scope document styles away from host page styles where supported.      |
+| `headerMode`          | `"inline" \| "outlets"`   | Render header inline or through viewer header outlets.                 |
+| `defaultSidebarOpen`  | `boolean`                 | Initial sidebar open state for uncontrolled viewers.                   |
+| `sidebarOpen`         | `boolean`                 | Controlled sidebar open state.                                         |
+| `onSidebarOpenChange` | `(open: boolean) => void` | Fired when the frame requests a sidebar state change.                  |
+| `children`            | `React.ReactNode`         | Usually a `FileViewer` frame with header, content, sidebar, and inset. |
 
 ## Source
 

@@ -10,15 +10,15 @@ import {
 import { joinEffectKey } from "@/lib/effect-key";
 
 export function useDocxViewerScale({
-  containerWidth,
   defaultScale,
+  layoutInlineSize,
   onScaleChange,
   pageWidth,
   resetKey,
   scale: controlledScale,
 }: {
-  containerWidth: number | null;
   defaultScale?: number;
+  layoutInlineSize: number | null;
   onScaleChange?: (scale: number | null) => void;
   pageWidth: number | null;
   resetKey: string;
@@ -39,8 +39,8 @@ export function useDocxViewerScale({
   );
 
   const fitScale =
-    containerWidth && pageWidth
-      ? clampDocxScale((containerWidth - 32) / pageWidth)
+    layoutInlineSize && pageWidth
+      ? clampDocxScale((layoutInlineSize - 32) / pageWidth)
       : 1;
   const scale = normalizedControlledScale ?? manualScale ?? fitScale;
 

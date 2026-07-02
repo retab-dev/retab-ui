@@ -301,12 +301,11 @@ function payloadCacheKey(source: ViewerSource, descriptor: ViewerDescriptor) {
 }
 
 export function viewerResourceRenderKey(resource: ViewerResource): string {
-  const source = resource.descriptor.source;
   const load = [
-    source.kind,
-    source.identityKey ?? "",
-    sourceMimeType(source) ?? "",
-    directLoadCacheKey(source),
+    resource.sourceKind,
+    resource.identityKey,
+    resource.mimeType ?? resource.content.mimeType ?? "",
+    resource.content.directUrl ?? "",
     viewerContentRenderKey(resource.content),
   ].join("\u0000");
 

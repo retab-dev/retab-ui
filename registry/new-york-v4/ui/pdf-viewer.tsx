@@ -6,14 +6,12 @@ import { cn } from "@/lib/utils";
 
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerControls,
+  FileViewerTitle,
   FileViewerInset,
   FileViewerProvider,
-  FileViewerToolbar,
   FileViewerViewport,
 } from "./file-viewer";
 import {
@@ -111,16 +109,10 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
         >
           <PdfViewerProvider>
             <FileViewerHeader>
-              <FileViewerHeaderStart>
-                <FileViewerIdentity />
-              </FileViewerHeaderStart>
-              {controls ? (
-                <FileViewerHeaderEnd>
-                  <FileViewerToolbar />
-                </FileViewerHeaderEnd>
-              ) : null}
+              <FileViewerTitle className="flex-1" />
+              {controls ? <FileViewerControls className="ms-auto" /> : null}
             </FileViewerHeader>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerInset>
                 <FileViewerViewport>
                   <PdfViewerPages
@@ -132,7 +124,7 @@ export const PdfViewer = React.forwardRef<PdfViewerHandle, PdfViewerProps>(
                   />
                 </FileViewerViewport>
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </PdfViewerProvider>
         </FileViewer>
       </FileViewerProvider>

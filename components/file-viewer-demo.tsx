@@ -2,21 +2,20 @@
 
 import * as React from "react";
 
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerInset,
   FileViewerPreview,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -78,6 +77,7 @@ const SHOWCASE_INITIAL_FILE_KEY =
   SHOWCASE_FILES[0].file;
 const PDF_SHOWCASE_SIDEBAR_WIDTH = 128;
 const PDF_SHOWCASE_SIDEBAR_WIDTH_STYLE = `${PDF_SHOWCASE_SIDEBAR_WIDTH}px`;
+const PDF_SHOWCASE_INLINE_BREAKPOINT = 640;
 const PDF_SHOWCASE_VIEWER_CLASS_NAME = "h-full";
 const PDF_SHOWCASE_PAGES_CLASS_NAME = "h-full";
 
@@ -214,6 +214,9 @@ function FileCanvas({
     fallbackSlideSize: file.fallbackSlideSize,
     isolateStyles: true,
   } as const;
+  const shouldDefaultPdfSidebarOpen = useMediaQuery({
+    min: PDF_SHOWCASE_INLINE_BREAKPOINT,
+  });
 
   return (
     <div
@@ -229,23 +232,19 @@ function FileCanvas({
         <FileViewerProvider
           key={file.file}
           {...fileViewerResourceProps}
-          defaultSidebarOpen
+          defaultSidebarOpen={shouldDefaultPdfSidebarOpen}
         >
           <FileViewer
             className={PDF_SHOWCASE_VIEWER_CLASS_NAME}
-            sidebarMode="inline"
+            inlineBreakpoint={PDF_SHOWCASE_INLINE_BREAKPOINT}
           >
             <PdfViewerProvider>
               <FileViewerHeader>
-                <FileViewerHeaderStart>
-                  <FileViewerSidebarTrigger />
-                  <FileViewerIdentity />
-                </FileViewerHeaderStart>
-                <FileViewerHeaderEnd>
-                  <FileViewerToolbar />
-                </FileViewerHeaderEnd>
+                <FileViewerSidebarTrigger />
+                <FileViewerTitle />
+                <FileViewerControls />
               </FileViewerHeader>
-              <FileViewerBody>
+              <FileViewerContent>
                 <FileViewerSidebar
                   aria-label="PDF pages"
                   width={PDF_SHOWCASE_SIDEBAR_WIDTH_STYLE}
@@ -264,7 +263,7 @@ function FileCanvas({
                     />
                   </FileViewerViewport>
                 </FileViewerInset>
-              </FileViewerBody>
+              </FileViewerContent>
             </PdfViewerProvider>
           </FileViewer>
         </FileViewerProvider>
@@ -272,20 +271,16 @@ function FileCanvas({
         <FileViewerProvider key={file.file} {...fileViewerResourceProps}>
           <FileViewer className="h-full">
             <FileViewerHeader>
-              <FileViewerHeaderStart>
-                <FileViewerIdentity />
-              </FileViewerHeaderStart>
-              <FileViewerHeaderEnd>
-                <FileViewerToolbar />
-              </FileViewerHeaderEnd>
+              <FileViewerTitle />
+              <FileViewerControls />
             </FileViewerHeader>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerInset>
                 <FileViewerViewport>
                   <FileViewerDocument />
                 </FileViewerViewport>
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </FileViewer>
         </FileViewerProvider>
       ) : (

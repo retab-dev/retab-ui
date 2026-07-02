@@ -14,7 +14,6 @@ import {
 import {
   isProseTextDescriptor,
   type FileCategory,
-  type FileViewerControlsPlacement,
   type FileDescriptor,
   type FileViewerFallbackSize,
 } from "./file-viewer-core";
@@ -52,24 +51,23 @@ const XlsxResourceContent = React.lazy(() =>
   })),
 );
 const ProseTextViewer = React.lazy(() =>
-  import("@/components/ui/text-viewer-chenglou").then((m) => ({
-    default: m.ChenglouTextViewer,
+  import("@/components/ui/text-viewer").then((m) => ({
+    default: m.TextResourceContent,
   })),
 );
 const MarkdownViewer = React.lazy(() =>
   import("@/components/ui/markdown-viewer").then((m) => ({
-    default: m.MarkdownViewer,
+    default: m.MarkdownResourceContent,
   })),
 );
 const CodeTextViewer = React.lazy(() =>
   import("@/components/ui/code-viewer").then((m) => ({
-    default: m.CodeViewer,
+    default: m.CodeResourceContent,
   })),
 );
 
 export type FileViewerRouteProps = {
   className?: string;
-  controls: FileViewerControlsPlacement;
   descriptor: FileDescriptor;
   descriptorSignal: AbortSignal;
   fallbackFrameSize?: FileViewerFallbackSize;
@@ -77,6 +75,7 @@ export type FileViewerRouteProps = {
   frame?: "contained" | "none";
   isolateStyles: boolean;
   resource: ViewerResource;
+  controls: boolean;
 };
 
 type RenderContext = {
@@ -170,7 +169,7 @@ const RENDERERS: Partial<
   ),
   markdown: ({ resource, className, bare, controls }) => (
     <MarkdownViewer
-      source={resource.descriptor.source}
+      resource={resource}
       className={className}
       controls={controls}
       download
@@ -184,17 +183,16 @@ const RENDERERS: Partial<
 export function FileViewerRoute({
   descriptor,
   className,
-  controls,
   frame = "contained",
   isolateStyles,
   descriptorSignal,
   fallbackFrameSize,
   fallbackSlideSize,
   resource,
+  controls,
 }: FileViewerRouteProps) {
   const { category } = descriptor;
   const bare = frame === "none";
-  const localControls = controls === "local";
   const isTextSource = descriptor.source.kind === "text";
 
   const renderer = RENDERERS[category];
@@ -218,12 +216,12 @@ export function FileViewerRoute({
   const routeDetails = {
     bare,
     category,
-    controls,
     hasRenderer: Boolean(renderer),
     isTextSource,
     isolateStyles,
     source: summarizeViewerSource(descriptor.source),
     descriptor: summarizeViewerDescriptor(descriptor),
+    controls,
   };
   if (renderer && textSourceAllowed) {
     fileViewerDiagnostic("debug", "file_viewer_route_renderer_selected", {
@@ -235,7 +233,7 @@ export function FileViewerRoute({
       resource,
       className,
       bare,
-      controls: localControls,
+      controls,
       fallbackFrameSize,
       fallbackSlideSize,
       isolateStyles,
@@ -252,7 +250,7 @@ export function FileViewerRoute({
       resource={resource}
       className={className}
       bare={bare}
-      showDownload={localControls}
+      showDownload={controls}
     />
   );
 }
@@ -264,11 +262,10 @@ function renderTextViewer({
   bare,
   controls,
 }: RenderContext): React.ReactNode {
-  const source = resource.descriptor.source;
   if (isProseTextDescriptor(descriptor)) {
     return (
       <ProseTextViewer
-        source={source}
+        resource={resource}
         className={className}
         controls={controls}
         download
@@ -279,7 +276,7 @@ function renderTextViewer({
   }
   return (
     <CodeTextViewer
-      source={source}
+      resource={resource}
       className={className}
       controls={controls}
       download

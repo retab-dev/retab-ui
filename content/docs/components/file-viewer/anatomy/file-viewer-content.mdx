@@ -1,51 +1,51 @@
 ---
-title: FileViewerBody
+title: FileViewerContent
 description: The layout row below the header, usually containing a sidebar and an inset.
 component: true
 ---
 
-`FileViewerBody` owns the space below `FileViewerHeader`. It is the boundary
+`FileViewerContent` owns the space below `FileViewerHeader`. It is the boundary
 between optional file-scoped navigation and the main file inset.
 
 ```tsx
-<FileViewerBody>
+<FileViewerContent>
   <FileViewerSidebar aria-label="PDF pages" />
   <FileViewerInset>
     <FileViewerViewport>
       <FileViewerDocument />
     </FileViewerViewport>
   </FileViewerInset>
-</FileViewerBody>
+</FileViewerContent>
 ```
 
-A body can also hold an inset alone, with no sidebar:
+`FileViewerContent` can also hold an inset alone, with no sidebar:
 
 ```tsx
-<FileViewerBody>
+<FileViewerContent>
   <FileViewerInset>
     <FileViewerViewport>
       <FileViewerDocument />
     </FileViewerViewport>
   </FileViewerInset>
-</FileViewerBody>
+</FileViewerContent>
 ```
 
 ## Behavior
 
-- Renders a `data-slot="file-viewer-body"` row that fills the remaining height
+- Renders a `data-slot="file-viewer-content"` row that fills the remaining height
   below the header and lays out the sidebar beside the inset.
 - It is purely structural: it does not know whether the sidebar contains
   thumbnails, attachments, segments, or source fields, and it does not own
   sidebar open/collapse state — that lives on `FileViewerProvider`.
 - Sidebar placement (side, width, inline vs. overlay) is resolved from
-  `FileViewer` and the `FileViewerSidebar` inside the body.
+  `FileViewer` and the `FileViewerSidebar` inside the content row.
 
 ## API Reference
 
-| Prop       | Type                                      | Description                                                |
-| ---------- | ----------------------------------------- | ---------------------------------------------------------- |
-| `children` | `React.ReactNode`                         | Typically a `FileViewerSidebar` and a `FileViewerInset`. |
-| `...props` | `React.ComponentProps<"div">`             | Standard body props; `className` is forwarded.             |
+| Prop       | Type                          | Description                                              |
+| ---------- | ----------------------------- | -------------------------------------------------------- |
+| `children` | `React.ReactNode`             | Typically a `FileViewerSidebar` and a `FileViewerInset`. |
+| `...props` | `React.ComponentProps<"div">` | Standard content props; `className` is forwarded.        |
 
 ## Source
 

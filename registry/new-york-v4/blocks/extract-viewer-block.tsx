@@ -5,10 +5,8 @@ import { useForm } from "react-hook-form";
 
 import type { Source } from "@/lib/document-source";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
   FileViewer,
   FileViewerProvider,
   FileViewerSidebar,
@@ -108,21 +106,17 @@ function ExtractViewerContent() {
 
   return (
     <FileViewerProvider source={PDF_SOURCE} defaultSidebarOpen>
-      <FileViewer className="bg-background min-h-[680px]" sidebarSide="right">
+      <FileViewer className="bg-background min-h-[680px]">
         <FileViewerHeader className="flex min-h-10 items-center gap-2 px-2">
-          <FileViewerHeaderStart>
             <FileViewerSidebarTrigger />
             <h2 className="min-w-0 truncate text-sm font-medium">
               Extracted data
             </h2>
-          </FileViewerHeaderStart>
-          <FileViewerHeaderEnd>
             <span className="text-muted-foreground text-xs">
               {FIELDS.length} fields
             </span>
-          </FileViewerHeaderEnd>
         </FileViewerHeader>
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>
               <PdfViewerProvider>
@@ -162,7 +156,7 @@ function ExtractViewerContent() {
               </FileViewerSidebarSection>
             </FileViewerSidebarContent>
           </FileViewerSidebar>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

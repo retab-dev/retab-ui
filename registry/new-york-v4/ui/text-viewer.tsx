@@ -23,7 +23,6 @@ export type TextResourceContentProps = Omit<TextViewerProps, "source"> & {
 };
 
 type RoutedTextViewerContentProps = Omit<TextViewerProps, "source"> & {
-  source?: TextViewerProps["source"];
   resource: ViewerResource;
   retryVersion: number;
   forwardedRef?: React.ForwardedRef<TextViewerHandle>;
@@ -109,13 +108,10 @@ function TextViewerRoutedContent(props: RoutedTextViewerContentProps) {
       fileName: props.resource.fileName,
       mimeType: props.resource.content.mimeType,
     });
-  const source =
-    props.source ??
-    (props.resource.descriptor.source as TextViewerProps["source"]);
 
   if (mode === "markdown") {
-    return <MarkdownGreenfieldContent {...props} source={source} />;
+    return <MarkdownGreenfieldContent {...props} />;
   }
 
-  return <TextViewerContent {...props} mode="text" source={source} />;
+  return <TextViewerContent {...props} mode="text" />;
 }

@@ -2634,6 +2634,10 @@ describe("ImageViewer scale semantics", () => {
       '[data-slot="scroll-area-viewport"]',
     ) as HTMLElement;
     expect(viewport).toBeTruthy();
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 4896,
+    });
     viewport.scrollTop = 1708;
 
     await act(async () => {

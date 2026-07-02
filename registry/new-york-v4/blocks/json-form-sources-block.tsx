@@ -7,16 +7,14 @@ import { useForm } from "react-hook-form";
 import { extractionSourcesToSourceMap } from "@/lib/document-source";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerInset,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
   type ViewerSource,
   useFileViewerResource,
@@ -152,20 +150,15 @@ function JsonFormSourcesContent({
   return (
     <FileViewerProvider source={source} defaultSidebarOpen>
       <FileViewer
-        sidebarMode="inline"
-        sidebarSide="right"
+       
         className="bg-background h-full min-h-[680px]"
       >
         <FileViewerHeader>
-          <FileViewerHeaderStart>
             <FileViewerSidebarTrigger className="-ml-1" />
-            <FileViewerIdentity />
-          </FileViewerHeaderStart>
-          <FileViewerHeaderEnd>
-            <FileViewerToolbar />
-          </FileViewerHeaderEnd>
+            <FileViewerTitle />
+            <FileViewerControls />
         </FileViewerHeader>
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>
               {documentKind === "pdf" ? (
@@ -220,7 +213,7 @@ function JsonFormSourcesContent({
               </div>
             </ScrollArea>
           </FileViewerSidebar>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

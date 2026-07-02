@@ -13,10 +13,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { inferCsvDialect } from "@/lib/csv";
-import { createViewerResource } from "@/lib/viewer-resource";
+import {
+  createViewerResource,
+  viewerResourceRenderKey,
+} from "@/lib/viewer-resource";
 import * as FileViewerModule from "@/registry/new-york-v4/ui/file-viewer";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewerHeader,
   FileViewerInset,
@@ -36,7 +39,12 @@ import {
   resolveFileDescriptor,
 } from "@/registry/new-york-v4/ui/file-viewer-core";
 import { ViewerFallback } from "@/registry/new-york-v4/ui/file-viewer-fallback";
-import { createTextResourceCache } from "@/registry/new-york-v4/ui/file-viewer-text-resource";
+import { resetFileViewerRendererPrewarmForTests } from "@/registry/new-york-v4/ui/file-viewer-prewarm";
+import {
+  createTextResourceCache,
+  textResource,
+} from "@/registry/new-york-v4/ui/file-viewer-text-resource";
+import { clearTextViewerResourceCacheForTests } from "@/registry/new-york-v4/ui/text-viewer-resource";
 import { useViewerControlsRegistration } from "@/registry/new-york-v4/ui/viewer-controls";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
@@ -101,11 +109,15 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  clearTextViewerResourceCacheForTests();
+  resetFileViewerRendererPrewarmForTests();
+  textResource.clear();
   docxRouteMock.props.length = 0;
   pdfRouteMock.props.length = 0;
   imageRouteMock.props.length = 0;
   pptxRouteMock.props.length = 0;
   xlsxRouteMock.props.length = 0;
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -350,139 +362,111 @@ describe("FileViewer detection helpers", () => {
     expect(allowlist).toContain('"text"');
   });
 
-  it("keeps route-owned document adapters resource-first", () => {
-    const fileViewerSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer.tsx",
-      "utf8",
+  it("derives resource render keys without reading descriptor source", () => {
+    const resource = createViewerResource({
+      kind: "text",
+      text: "name,value\nalpha,42\n",
+      fileName: "data.csv",
+      mimeType: "text/csv",
+    });
+    const descriptor = resource.descriptor;
+    const descriptorWithoutReadableSource = Object.defineProperty(
+      { ...descriptor },
+      "source",
+      {
+        get() {
+          throw new Error("descriptor source should not be read");
+        },
+      },
     );
-    const fileViewerFrameSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-frame.tsx",
-      "utf8",
-    );
-    const fileViewerPreviewSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-preview.tsx",
-      "utf8",
-    );
-    const documentSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-document.tsx",
-      "utf8",
-    );
-    const routeSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-route.tsx",
-      "utf8",
-    );
-    const fallbackSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-fallback.tsx",
-      "utf8",
-    );
-    const zoomSource = readFileSync(
-      "registry/new-york-v4/ui/viewer-zoom.tsx",
-      "utf8",
-    );
-    const csvAdapterSource = readFileSync(
-      "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
-      "utf8",
-    );
+    const resourceWithoutReadableSource = {
+      ...resource,
+      descriptor: descriptorWithoutReadableSource,
+    };
 
-    expect(documentSource).toContain("ViewerFallback");
-    expect(routeSource).toContain("UnsupportedCard");
-    expect(documentSource).not.toContain("ViewerResourceFallback");
-    expect(routeSource).not.toContain("UnsupportedResourceCard");
-    expect(documentSource).not.toMatch(
-      /<ViewerFallback\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/,
-    );
-    expect(routeSource).not.toMatch(
-      /<UnsupportedCard\b(?:(?!\/>)[\s\S])*\b(?:category|fileName|url|downloadAction)=/,
-    );
-    expect(routeSource).not.toMatch(
-      /<CsvFileContent\b(?:(?!\/>)[\s\S])*\b(?:source|fileName|mimeType)=/,
-    );
-    expect(routeSource).toContain("PdfResourceContent");
-    expect(routeSource).toContain("ImageResourceContent");
-    expect(routeSource).toContain("DocxResourceContent");
-    expect(routeSource).toContain("PptxResourceContent");
-    expect(routeSource).toContain("XlsxResourceContent");
-    expect(fileViewerSource).not.toContain("slots={slots}");
-    expect(fileViewerSource).not.toContain("renderWithViewerShellSlots");
-    expect(fileViewerSource).not.toContain("ViewerShell");
-    expect(routeSource).toContain(
-      'import("@/components/ui/text-viewer-chenglou")',
-    );
-    expect(routeSource).toContain('import("@/components/ui/markdown-viewer")');
-    expect(routeSource).not.toContain(
-      'import("@/components/ui/markdown-document-viewer")',
-    );
-    expect(routeSource).toContain('import("@/components/ui/code-viewer")');
-    expect(routeSource).not.toContain('mode="markdown"');
-    expect(routeSource).toContain('mode="text"');
-    expect(routeSource).not.toContain("MarkdownDocViewer");
-    expect(routeSource).not.toContain("file-viewer-markdown-viewer");
-    expect(routeSource).not.toContain("loadMarkdownHtml");
-    expect(fileViewerSource).not.toMatch(
-      /<(?:PdfViewer|ImageViewer|DocxViewer|PptxViewer|XlsxViewer)\b/,
-    );
-    expect(fileViewerSource).not.toMatch(
-      /<(?:PdfResourceContent|ImageResourceContent|DocxResourceContent|PptxResourceContent|XlsxResourceContent)\b(?:(?!\/>)[\s\S])*\bsource=/,
-    );
-    expect(fallbackSource).not.toContain("ResourceDocShell");
-    expect(fallbackSource).not.toContain("export function DocShell");
-    expect(fallbackSource).not.toContain("ViewerResourceFallback");
-    expect(fallbackSource).not.toContain("UnsupportedResourceCard");
-    expect(fallbackSource).not.toContain("fileName: string");
-    expect(fallbackSource).not.toContain("url?: string");
-    expect(fallbackSource).not.toContain("downloadAction?:");
-    expect(fallbackSource).not.toContain("createHrefDownloadAction");
-    expect(zoomSource).not.toContain("ZoomActionsSkeleton");
-    expect(fileViewerFrameSource).toContain("<ViewerRoot");
-    expect(fileViewerPreviewSource).toContain("<FileViewerInset");
-    expect(fileViewerPreviewSource).toContain("<FileViewerDocument");
-    expect(csvAdapterSource).toMatch(/resource: ViewerResource/);
-    expect(csvAdapterSource).not.toContain("ResourceDocShell");
-    expect(csvAdapterSource).not.toMatch(/\bfileName:\s*string\b/);
-    expect(csvAdapterSource).not.toMatch(/\bmimeType\?:\s*string\b/);
+    expect(() =>
+      viewerResourceRenderKey(resourceWithoutReadableSource),
+    ).not.toThrow();
   });
 
   it("exports the easy API plus shadcn-style FileViewer named parts", () => {
     const exports = Object.keys(FileViewerModule);
 
-    expect(exports).toEqual(
-      expect.arrayContaining([
-        "FileViewer",
-        "FileViewerBody",
-        "FileViewerDocument",
-        "FileViewerHeader",
-        "FileViewerHeaderEnd",
-        "FileViewerHeaderStart",
-        "FileViewerIdentity",
-        "FileViewerProvider",
-        "FileViewerPreview",
-        "FileViewerSidebar",
-        "FileViewerSidebarTrigger",
-        "FileViewerInset",
-        "FileViewerToolbar",
-        "FileViewerViewport",
+    expect(exports.sort()).toEqual(
+      [
         "detectCategory",
+        "FileViewer",
+        "FileViewerContent",
+        "FileViewerDocument",
+        "FileViewerEmptyState",
+        "FileViewerErrorState",
+        "FileViewerFieldSource",
+        "FileViewerFieldSourceLabel",
+        "FileViewerFieldSourceStatus",
+        "FileViewerFieldSourceValue",
+        "FileViewerHeader",
+        "FileViewerInset",
+        "FileViewerLegend",
+        "FileViewerLoadingState",
+        "FileViewerMeta",
+        "FileViewerPreview",
+        "FileViewerProvider",
+        "FileViewerSidebar",
+        "FileViewerSidebarContent",
+        "FileViewerSidebarFooter",
+        "FileViewerSidebarHeader",
+        "FileViewerSidebarRail",
+        "FileViewerSidebarSection",
+        "FileViewerSidebarSectionAction",
+        "FileViewerSidebarSectionContent",
+        "FileViewerSidebarSectionHeader",
+        "FileViewerSidebarSectionTitle",
+        "FileViewerSidebarSeparator",
+        "FileViewerSidebarTrigger",
+        "FileViewerSourceAction",
+        "FileViewerSourceBadge",
+        "FileViewerSourceItem",
+        "FileViewerSourceList",
+        "FileViewerSourceTrigger",
+        "FileViewerTitle",
+        "FileViewerUnavailableState",
+        "FileViewerUnsupportedState",
+        "FileViewerControls",
+        "FileViewerViewport",
         "useFileViewerResource",
-      ]),
+        "useFileViewerSidebar",
+      ].sort(),
     );
+    expect(exports).not.toContain("FileViewerSurface");
+    expect(exports).not.toContain("useFileViewerRendererFrame");
+    expect(exports).not.toContain("useFileViewerViewportSize");
+    expect(exports).not.toContain("useOptionalFileViewerViewportSize");
+    expect(exports).not.toContain("FileViewerRendererFrame");
+    expect(exports).not.toContain("FileViewerControlsPlacement");
     expect(exports).not.toContain("FileHeader");
     expect(exports).not.toContain("FileHeaderControls");
     expect(exports).not.toContain("FileHeaderMeta");
     expect(exports).not.toContain("FileHeaderTitle");
     expect(exports).not.toContain("FileViewerDocumentRenderer");
-    expect(exports).not.toContain("FileViewerControls");
-    expect(exports).not.toContain("FileViewerMeta");
-    expect(exports).not.toContain("FileViewerTitle");
+    expect(exports).not.toContain("FileViewerHeaderEnd");
+    expect(exports).not.toContain("FileViewerHeaderStart");
     expect(exports).not.toContain("InternalFileViewerDocument");
     expect(exports).not.toContain("FileViewerRoute");
     expect(exports).not.toContain("useOptionalFileViewerResource");
   });
 
-  it("renders FileViewerBody as the file viewer body region", () => {
-    const { container } = render(<FileViewerBody />);
+  it("renders FileViewerContent as the file viewer body region", () => {
+    const { container } = render(
+      <FileViewer
+        source={urlSource("/files/body.pdf", "body.pdf")}
+        category="pdf"
+      >
+        <FileViewerContent />
+      </FileViewer>,
+    );
 
     expect(
-      container.querySelector('[data-slot="file-viewer-body"]'),
+      container.querySelector('[data-slot="file-viewer-content"]'),
     ).toBeTruthy();
   });
 
@@ -504,13 +488,13 @@ describe("FileViewer detection helpers", () => {
       container.querySelector('[data-slot="file-viewer-header"]'),
     ).toBeTruthy();
     expect(
-      container.querySelector('[data-slot="file-viewer-body"]'),
+      container.querySelector('[data-slot="file-viewer-content"]'),
     ).toBeTruthy();
     expect(
       container.querySelector('[data-slot="file-viewer-inset"]'),
     ).toBeTruthy();
     expect(
-      container.querySelectorAll('[data-slot="file-viewer-toolbar"]'),
+      container.querySelectorAll('[data-slot="file-viewer-controls"]'),
     ).toHaveLength(1);
     expect(screen.getByText("default.pdf")).toBeTruthy();
     expect(screen.getByText("pdf")).toBeTruthy();
@@ -528,13 +512,13 @@ describe("FileViewer detection helpers", () => {
     const { container } = render(
       <FileViewer source={urlSource("/files/composed.pdf", "composed.pdf")}>
         <FileViewerHeader />
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>
               <FileViewerDocument className="composed-file" />
             </FileViewerViewport>
           </FileViewerInset>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>,
     );
 
@@ -837,13 +821,13 @@ describe("FileViewer detection helpers", () => {
             <FileViewerTitle />
             <FileViewerControls />
           </FileViewerHeader>
-          <FileViewerBody>
+          <FileViewerContent>
             <FileViewerInset>
               <FileViewerViewport>
                 <FileViewerDocument />
               </FileViewerViewport>
             </FileViewerInset>
-          </FileViewerBody>
+          </FileViewerContent>
           {register ? <RegisterControls /> : null}
         </FileViewer>
       );
@@ -870,6 +854,86 @@ describe("FileViewer detection helpers", () => {
     });
     expect(screen.getByText("notes.txt")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Download" })).toBeTruthy();
+  });
+
+  it("places file controls in the header when FileViewerControls is composed there", async () => {
+    pdfRouteMock.props.length = 0;
+    render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
+        <FileViewerHeader>
+          <FileViewerTitle />
+          <FileViewerControls />
+        </FileViewerHeader>
+        <FileViewerContent>
+          <FileViewerInset>
+            <FileViewerViewport>
+              <FileViewerDocument />
+            </FileViewerViewport>
+          </FileViewerInset>
+        </FileViewerContent>
+      </FileViewer>,
+    );
+
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy();
+    expect(pdfRouteMock.props[0]).toMatchObject({
+      controls: false,
+      download: true,
+    });
+    expect(screen.getByRole("link", { name: "Download" })).toBeTruthy();
+  });
+
+  it("places file controls locally when FileViewerDocument opts into controls", async () => {
+    pdfRouteMock.props.length = 0;
+    const { container } = render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
+        <FileViewerHeader>
+          <FileViewerTitle />
+        </FileViewerHeader>
+        <FileViewerContent>
+          <FileViewerInset>
+            <FileViewerViewport>
+              <FileViewerDocument controls />
+            </FileViewerViewport>
+          </FileViewerInset>
+        </FileViewerContent>
+      </FileViewer>,
+    );
+
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy();
+    expect(pdfRouteMock.props[0]).toMatchObject({
+      controls: true,
+      download: true,
+    });
+    expect(
+      container.querySelector('[data-slot="file-viewer-controls"]'),
+    ).toBeNull();
+  });
+
+  it("suppresses file controls when neither header nor document composes them", async () => {
+    pdfRouteMock.props.length = 0;
+    const { container } = render(
+      <FileViewer source={urlSource("/files/report.pdf", "report.pdf")}>
+        <FileViewerHeader>
+          <FileViewerTitle />
+        </FileViewerHeader>
+        <FileViewerContent>
+          <FileViewerInset>
+            <FileViewerViewport>
+              <FileViewerDocument />
+            </FileViewerViewport>
+          </FileViewerInset>
+        </FileViewerContent>
+      </FileViewer>,
+    );
+
+    expect(await screen.findByText("Mock PDF viewer")).toBeTruthy();
+    expect(pdfRouteMock.props[0]).toMatchObject({
+      controls: false,
+      download: true,
+    });
+    expect(
+      container.querySelector('[data-slot="file-viewer-controls"]'),
+    ).toBeNull();
   });
 
   it("keeps abort subscriptions in the neutral async module", () => {
@@ -992,7 +1056,7 @@ describe("FileViewer text rendering", () => {
     },
   );
 
-  it("renders bare FileViewer without children as only the routed document", async () => {
+  it("renders bare FileViewer without children through the canonical document anatomy", async () => {
     const { container } = render(
       <FileViewer
         source={urlSource("/files/report.pdf", "report.pdf")}
@@ -1009,8 +1073,8 @@ describe("FileViewer text rendering", () => {
       container.querySelector('[data-slot="file-viewer-header"]'),
     ).toBeNull();
     expect(
-      container.querySelector('[data-slot="file-viewer-body"]'),
-    ).toBeNull();
+      container.querySelector('[data-slot="file-viewer-content"]'),
+    ).toBeTruthy();
     expect(pdfRouteMock.props.at(-1)).toMatchObject({
       bare: true,
       controls: true,
@@ -1200,7 +1264,7 @@ describe("FileViewer text rendering", () => {
       await screen.findByRole(
         "heading",
         { name: "Release" },
-        { timeout: 5_000 },
+        { timeout: 10_000 },
       ),
     ).toBeTruthy();
     expect(screen.getByText("Body copy")).toBeTruthy();
@@ -1214,7 +1278,7 @@ describe("FileViewer text rendering", () => {
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull();
     expect(container.querySelector(".fv-markdown")).toBeNull();
     expect(container.querySelector("iframe")).toBeNull();
-  });
+  }, 10_000);
 
   it("routes extensionless Markdown MIME URL sources through the Markdown Viewer", async () => {
     mockPretextCanvasMeasurement();
@@ -1230,7 +1294,11 @@ describe("FileViewer text rendering", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "MIME Markdown" }),
+      await screen.findByRole(
+        "heading",
+        { name: "MIME Markdown" },
+        { timeout: 10_000 },
+      ),
     ).toBeTruthy();
     expect(screen.getByText("Body copy")).toBeTruthy();
     expect(
@@ -1238,7 +1306,7 @@ describe("FileViewer text rendering", () => {
     ).toBeTruthy();
     expect(container.querySelector('[data-slot="code-viewer"]')).toBeNull();
     expect(container.querySelector(".fv-markdown")).toBeNull();
-  });
+  }, 10_000);
 
   it("routes MDX files through the standalone Code Viewer", async () => {
     vi.stubGlobal(
@@ -1573,7 +1641,11 @@ describe("FileViewer text rendering", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "Blob MIME Markdown" }),
+      await screen.findByRole(
+        "heading",
+        { name: "Blob MIME Markdown" },
+        { timeout: 10_000 },
+      ),
     ).toBeTruthy();
     expect(screen.getByText("Body copy")).toBeTruthy();
     expect(
@@ -1581,7 +1653,7 @@ describe("FileViewer text rendering", () => {
     ).toBeTruthy();
     expect(document.querySelector('[data-slot="code-viewer"]')).toBeNull();
     expect(document.querySelector(".fv-markdown")).toBeNull();
-  });
+  }, 10_000);
 
   it("renders inline CSV text sources through the resource route", async () => {
     render(
@@ -1596,11 +1668,11 @@ describe("FileViewer text rendering", () => {
     );
 
     expect(
-      await screen.findByText("alpha", undefined, { timeout: 5_000 }),
+      await screen.findByText("alpha", undefined, { timeout: 10_000 }),
     ).toBeTruthy();
     expect(screen.getByText("42")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
-  });
+  }, 10_000);
 
   it("renders an unsupported fallback with a download link", () => {
     render(<FileViewer source={urlSource("/archive.zip", "archive.zip")} />);

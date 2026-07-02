@@ -57,6 +57,12 @@ type CodeIdleWindow = Window &
 const CODE_VIEWER_DEFERRED_SYNTAX_LINE_COUNT = 500;
 const CODE_VIEWER_NATIVE_FIND_CHUNK_SIZE = 128;
 
+type CodeViewerContentProps = Omit<CodeViewerProps, "source"> & {
+  resource: ViewerResource;
+  retryVersion: number;
+  forwardedRef?: React.ForwardedRef<CodeViewerHandle>;
+};
+
 export function CodeViewerContent({
   resource,
   className,
@@ -68,11 +74,7 @@ export function CodeViewerContent({
   maxLines,
   retryVersion,
   forwardedRef,
-}: CodeViewerProps & {
-  resource: ViewerResource;
-  retryVersion: number;
-  forwardedRef?: React.ForwardedRef<CodeViewerHandle>;
-}) {
+}: CodeViewerContentProps) {
   const bounds = resolvedTextViewerBounds({ maxBytes, maxLines });
   const textDocument = readTextDocument({
     content: resource.content,

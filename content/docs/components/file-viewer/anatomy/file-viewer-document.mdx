@@ -26,14 +26,16 @@ renderer from the current `FileViewerProvider` source.
   renderer loads) and an error boundary that resets when the file changes.
 - Must be rendered inside `FileViewerViewport`, which provides the measurement
   boundary used by renderers and diagnostics.
-- Keep renderer-specific controls inside the renderer. They register upward and
-  appear through `FileViewerToolbar`, so the document needs no control props.
+- Header controls are explicit composition: render `FileViewerControls` in the
+  header. Use `controls` when a headerless preview should keep renderer controls
+  inside the document.
 
 ## API Reference
 
-| Prop        | Type     | Description                                        |
-| ----------- | -------- | -------------------------------------------------- |
-| `className` | `string` | Optional class on the rendered document container. |
+| Prop        | Type      | Description                                         |
+| ----------- | --------- | --------------------------------------------------- |
+| `className` | `string`  | Optional class on the rendered document container.  |
+| `controls`  | `boolean` | Render local renderer controls inside the document. |
 
 ## Source
 

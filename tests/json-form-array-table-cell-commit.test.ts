@@ -75,6 +75,21 @@ describe("array table cell commit normalization", () => {
     ).toBe(true);
   });
 
+  it("preserves enum commit identity for non-string JSON values", () => {
+    const option = { code: "approved" };
+
+    expect(
+      normalizeArrayTableCellValue({
+        column: column({
+          kind: "enum",
+          schema: { enum: [{ code: "draft" }, option] },
+        }),
+        currentValue: { code: "draft" },
+        nextValue: option,
+      }),
+    ).toBe(option);
+  });
+
   it("compares date-time commits by local editable display value", () => {
     expect(
       normalizeArrayTableCellValue({

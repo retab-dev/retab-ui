@@ -9,17 +9,15 @@ import {
 } from "@/components/ui/attachment-sidebar";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -84,21 +82,13 @@ export function AttachmentSidebarExample() {
   return (
     <div className="not-prose bg-background h-[620px] overflow-hidden rounded-xl border">
       <FileViewerProvider key={selectedId} source={source} defaultSidebarOpen>
-        <FileViewer
-          sidebarMode="inline"
-          sidebarSide="right"
-          className="bg-background h-full"
-        >
+        <FileViewer className="bg-background h-full">
           <FileViewerHeader>
-            <FileViewerHeaderStart>
               <FileViewerSidebarTrigger className="-ml-1" />
-              <FileViewerIdentity />
-            </FileViewerHeaderStart>
-            <FileViewerHeaderEnd>
-              <FileViewerToolbar />
-            </FileViewerHeaderEnd>
+              <FileViewerTitle />
+              <FileViewerControls />
           </FileViewerHeader>
-          <FileViewerBody>
+          <FileViewerContent>
             <FileViewerInset>
               <FileViewerViewport>
                 <FileViewerDocument />
@@ -137,7 +127,7 @@ export function AttachmentSidebarExample() {
                 </SidebarListGroup>
               </AttachmentSidebar>
             </FileViewerSidebar>
-          </FileViewerBody>
+          </FileViewerContent>
         </FileViewer>
       </FileViewerProvider>
     </div>

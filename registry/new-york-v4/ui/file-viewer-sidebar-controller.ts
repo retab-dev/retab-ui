@@ -1,0 +1,147 @@
+"use client";
+
+import * as React from "react";
+
+import { resolveFileViewerSidebarAccessibilityProps } from "./file-viewer-accessibility";
+import {
+  type FileViewerSidebarCollapsible,
+  type FileViewerSidebarMode,
+  type FileViewerSidebarSide,
+  type FileViewerSidebarState,
+  useFileViewerShell,
+} from "./file-viewer-context";
+import { useIsInsideFileViewerContent } from "./file-viewer-layout";
+import { useStableCssLength, useStableElementSize } from "./viewer-measurement";
+
+export type FileViewerSidebarController = {
+  accessibilityProps: ReturnType<
+    typeof resolveFileViewerSidebarAccessibilityProps
+  >;
+  customProperties: React.CSSProperties;
+  isInline: boolean;
+  isSidebarRequestedOpen: boolean;
+  mode: FileViewerSidebarMode;
+  panelStyle: React.CSSProperties;
+  resolvedCollapsible: FileViewerSidebarCollapsible;
+  resolvedSide: FileViewerSidebarSide;
+  setSidebarGapElement: (element: HTMLDivElement | null) => void;
+  setSidebarPanelElement: (element: HTMLElement | null) => void;
+  sidebarId: string;
+  sidebarState: FileViewerSidebarState;
+};
+
+export function useFileViewerSidebarController({
+  collapsible,
+  id,
+  side,
+  style,
+  width,
+}: {
+  collapsible: FileViewerSidebarCollapsible | undefined;
+  id: string | undefined;
+  side: FileViewerSidebarSide | undefined;
+  style: React.CSSProperties | undefined;
+  width: string;
+}): FileViewerSidebarController {
+  const isInsideContent = useIsInsideFileViewerContent();
+  const shell = useFileViewerShell("FileViewerSidebar");
+  const registerSidebar = shell.registerSidebar;
+  const sidebarSize = useStableElementSize<HTMLElement>({
+    observe: false,
+    retainLastNonZero: true,
+  });
+  const reactId = React.useId();
+  const sidebarId = id ?? `${reactId}-file-viewer-sidebar`;
+  const resolvedCollapsible = collapsible ?? shell.collapsible;
+  const resolvedSide = side ?? shell.side;
+  const isSidebarRequestedOpen =
+    resolvedCollapsible === "none" ? true : shell.isSidebarRequestedOpen;
+  const isSidebarInteractive =
+    resolvedCollapsible === "none" ? true : shell.isSidebarInteractive;
+  const sidebarState = isSidebarRequestedOpen ? "expanded" : "collapsed";
+  const isInline = shell.mode === "inline";
+  const declaredWidthPixels = useStableCssLength({
+    element: sidebarSize.element,
+    value: width,
+  });
+  const widthPixels =
+    declaredWidthPixels > 0 ? declaredWidthPixels : (sidebarSize.width ?? 0);
+  const setSidebarGapElement = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      shell.elementRegistry.registerSidebarGapElement(element);
+    },
+    [shell.elementRegistry],
+  );
+  const setSidebarPanelElement = React.useCallback(
+    (element: HTMLElement | null) => {
+      sidebarSize.setElement(element);
+      shell.elementRegistry.registerSidebarElement(element);
+    },
+    [shell.elementRegistry, sidebarSize.setElement],
+  );
+
+  if (process.env.NODE_ENV !== "production" && !isInsideContent) {
+    throw new Error(
+      "FileViewerSidebar must be rendered inside FileViewerContent.",
+    );
+  }
+
+  React.useLayoutEffect(
+    () =>
+      registerSidebar({
+        collapsible: resolvedCollapsible,
+        id: sidebarId,
+        side: resolvedSide,
+        width,
+        widthPixels,
+      }),
+    [
+      registerSidebar,
+      resolvedCollapsible,
+      resolvedSide,
+      sidebarId,
+      width,
+      widthPixels,
+    ],
+  );
+
+  const accessibilityProps = resolveFileViewerSidebarAccessibilityProps({
+    collapsible: resolvedCollapsible,
+    deferInert:
+      !isSidebarRequestedOpen &&
+      !isSidebarInteractive &&
+      shell.isSidebarTransitioning,
+    isSidebarInteractive,
+  });
+  const customProperties = pickCssCustomProperties(style);
+  const panelStyle: React.CSSProperties = {
+    width,
+    ...style,
+    ...(isSidebarInteractive ? null : { pointerEvents: "none" as const }),
+  };
+
+  // No memo: `panelStyle` and `customProperties` are fresh objects every
+  // render, so the controller value can never be referentially stable anyway.
+  return {
+    accessibilityProps,
+    customProperties,
+    isInline,
+    isSidebarRequestedOpen,
+    mode: shell.mode,
+    panelStyle,
+    resolvedCollapsible,
+    resolvedSide,
+    setSidebarGapElement,
+    setSidebarPanelElement,
+    sidebarId,
+    sidebarState,
+  };
+}
+
+function pickCssCustomProperties(style: React.CSSProperties | undefined) {
+  if (!style) return {};
+
+  return Object.fromEntries(
+    Object.entries(style).filter(([name]) => name.startsWith("--")),
+  ) as React.CSSProperties;
+}

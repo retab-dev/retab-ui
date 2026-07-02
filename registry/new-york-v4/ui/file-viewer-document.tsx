@@ -2,38 +2,23 @@
 
 import * as React from "react";
 
-import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
-import { joinEffectKey } from "@/lib/effect-key";
 import { cn } from "@/lib/utils";
 
-import { type FileViewerControlsPlacement } from "./file-viewer-core";
 import { FileErrorBoundary, ViewerFallback } from "./file-viewer-fallback";
 import { useFileViewerRequiredResourceState } from "./file-viewer-resource-state";
 import { FileViewerRoute } from "./file-viewer-route";
-import { useOptionalViewerRootDiagnostics } from "./viewer-root";
-import { useIsInsideViewerViewport } from "./viewer-surface";
-import { warnViewerDevelopmentOnce } from "./viewer-diagnostics";
+import { useIsInsideFileViewerViewport } from "./file-viewer-content";
 
 export type FileViewerDocumentProps = {
   className?: string;
-  controls?: FileViewerControlsPlacement;
+  controls?: boolean;
 };
-
-type FileViewerDocumentUnmountRecord = {
-  layoutSignature: string;
-  unmountedAt: number;
-};
-
-const recentFileViewerDocumentUnmounts = new Map<
-  string,
-  FileViewerDocumentUnmountRecord
->();
 
 export function FileViewerDocument({
   className,
-  controls = "toolbar",
+  controls = false,
 }: FileViewerDocumentProps) {
-  const isInsideViewport = useIsInsideViewerViewport();
+  const isInsideViewport = useIsInsideFileViewerViewport();
 
   if (process.env.NODE_ENV !== "production" && !isInsideViewport) {
     throw new Error(
@@ -64,63 +49,12 @@ function FileViewerDocumentContent({
     isolateStyles,
     resource,
   } = useFileViewerRequiredResourceState();
-  const rootDiagnostics = useOptionalViewerRootDiagnostics();
-  const latestRootDiagnosticsRef = React.useRef(rootDiagnostics);
-  latestRootDiagnosticsRef.current = rootDiagnostics;
-  const documentInstanceKey = rootDiagnostics
-    ? joinEffectKey([
-        "file-viewer-document-instance",
-        rootDiagnostics.rootId,
-        descriptorKey,
-      ])
-    : null;
-
-  useKeyedMountEffect(documentInstanceKey, () => {
-    const diagnostics = latestRootDiagnosticsRef.current;
-    if (!diagnostics) return;
-
-    const recordKey = `${diagnostics.rootId}:${descriptorKey}`;
-    const previousUnmount = recentFileViewerDocumentUnmounts.get(recordKey);
-    recentFileViewerDocumentUnmounts.delete(recordKey);
-
-    if (
-      previousUnmount &&
-      previousUnmount.layoutSignature !== diagnostics.layoutSignature &&
-      Date.now() - previousUnmount.unmountedAt < 5000
-    ) {
-      warnViewerDevelopmentOnce({
-        code: "file_viewer_document_layout_remount",
-        message:
-          "file viewer document remounted after a layout-only state change.",
-        rootId: diagnostics.rootId,
-        details: {
-          currentLayoutSignature: diagnostics.layoutSignature,
-          descriptorKey,
-          previousLayoutSignature: previousUnmount.layoutSignature,
-        },
-      });
-    }
-
-    return () => {
-      const latestDiagnostics = latestRootDiagnosticsRef.current;
-      if (!latestDiagnostics) return;
-
-      recentFileViewerDocumentUnmounts.set(
-        `${latestDiagnostics.rootId}:${descriptorKey}`,
-        {
-          layoutSignature: latestDiagnostics.layoutSignature,
-          unmountedAt: Date.now(),
-        },
-      );
-    };
-  });
-
   const fallback = (
     <ViewerFallback
       resource={resource}
       className={className}
       bare
-      controls={controls === "local"}
+      controls={controls}
       fallbackFrameSize={fallbackFrameSize}
       fallbackSlideSize={fallbackSlideSize}
     />
@@ -135,7 +69,7 @@ function FileViewerDocumentContent({
       resource={resource}
       className={className}
       resetKey={descriptorKey}
-      showDownload={controls === "local"}
+      showDownload={controls}
     >
       <React.Suspense fallback={fallback}>
         <FileViewerRoute

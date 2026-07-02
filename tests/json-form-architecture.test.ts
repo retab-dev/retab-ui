@@ -71,22 +71,45 @@ describe("json-form architecture", () => {
     ).toBe(true);
     expect(
       existsSync(
+        join(
+          repoRoot,
+          "components/json-form/table/array-table-data-cell-props.ts",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(
         join(repoRoot, "components/json-form/table/array-table-cell-model.ts"),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(
+          repoRoot,
+          "components/json-form/table/array-table-active-cell-store.ts",
+        ),
       ),
     ).toBe(true);
   });
 
-  it("keeps source-link table hover state out of the provider file", () => {
+  it("keeps table hover internals out while scalar source shells own stable source attrs", () => {
     const sourceLink = fileContent("components/json-form/source-link.tsx");
 
     expect(sourceLink).toContain("useSourceTableHoverController");
+    expect(sourceLink).toContain("data-source-active");
+    expect(sourceLink).toContain("data-source-path");
+    expect(sourceLink).toContain("shouldPreviewSourceFromPointerMove");
     expect(sourceLink).not.toContain("elementFromPoint");
     expect(sourceLink).not.toContain("requestAnimationFrame");
-    expect(sourceLink).not.toContain("data-source-active");
     expect(sourceLink).not.toContain("hoverStateRef");
     expect(
       existsSync(
         join(repoRoot, "components/json-form/source-link-table-hover.ts"),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(repoRoot, "components/json-form/source-link-focus-intent.ts"),
       ),
     ).toBe(true);
   });

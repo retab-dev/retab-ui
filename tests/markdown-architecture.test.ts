@@ -71,6 +71,7 @@ const markdownFiles = [
   "registry/new-york-v4/ui/markdown-greenfield-document-store.ts",
   "registry/new-york-v4/ui/markdown-greenfield-document.worker.ts",
   "registry/new-york-v4/ui/markdown-greenfield-layout.ts",
+  "registry/new-york-v4/ui/markdown-greenfield-renderer-frame.ts",
   "registry/new-york-v4/ui/markdown-greenfield-renderer.tsx",
   "registry/new-york-v4/ui/markdown-greenfield-virtualizer.ts",
   "registry/new-york-v4/ui/markdown-hast-types.ts",
@@ -79,6 +80,13 @@ const markdownFiles = [
   "registry/new-york-v4/ui/markdown-url-policy.ts",
 ];
 const markdownViewerSupportFiles = [
+  "registry/new-york-v4/ui/file-viewer-context.tsx",
+  "registry/new-york-v4/ui/file-viewer-elements.ts",
+  "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
+  "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
+  "registry/new-york-v4/ui/file-viewer-renderer-frame.tsx",
+  "registry/new-york-v4/ui/file-viewer-motion-plan.ts",
+  "registry/new-york-v4/ui/mermaid-renderer.ts",
   "registry/new-york-v4/ui/plain-text-viewer-frame.tsx",
   "registry/new-york-v4/ui/text-viewer-chrome.tsx",
   "registry/new-york-v4/ui/text-code-viewer-chrome.tsx",
@@ -101,6 +109,7 @@ const markdownViewerSupportFiles = [
   "registry/new-york-v4/lib/viewer-download-actions.ts",
   "registry/new-york-v4/lib/viewer-errors.ts",
   "registry/new-york-v4/ui/use-is-client.ts",
+  "registry/new-york-v4/ui/viewer-types.ts",
 ];
 const markdownViewerRegistryFiles = [
   ...markdownFiles,

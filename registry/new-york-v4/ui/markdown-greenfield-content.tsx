@@ -19,6 +19,7 @@ import {
   type MarkdownGreenfieldChunkFrame,
   type MarkdownGreenfieldMeasurementContext,
 } from "./markdown-greenfield-layout";
+import { useMarkdownGreenfieldRendererFrame } from "./markdown-greenfield-renderer-frame";
 import { MarkdownGreenfieldChunkRenderer } from "./markdown-greenfield-renderer";
 import {
   createMarkdownGreenfieldVisibleProjection,
@@ -91,6 +92,15 @@ export type MarkdownViewerProps = TextViewerProps & {
   urlFragmentNavigation?: boolean;
 };
 
+export type MarkdownGreenfieldContentProps = Omit<
+  MarkdownViewerProps,
+  "source"
+> & {
+  resource: ViewerResource;
+  retryVersion: number;
+  forwardedRef?: React.ForwardedRef<TextViewerHandle>;
+};
+
 export function MarkdownGreenfieldContent({
   resource,
   className,
@@ -103,11 +113,7 @@ export function MarkdownGreenfieldContent({
   retryVersion,
   forwardedRef,
   urlFragmentNavigation = true,
-}: MarkdownViewerProps & {
-  resource: ViewerResource;
-  retryVersion: number;
-  forwardedRef?: React.ForwardedRef<TextViewerHandle>;
-}) {
+}: MarkdownGreenfieldContentProps) {
   const bounds = React.useMemo(
     () => resolvedTextViewerBounds({ maxBytes, maxLines }),
     [maxBytes, maxLines],
@@ -161,7 +167,24 @@ export function MarkdownGreenfieldContent({
     readonly MarkdownGreenfieldChunkFrame[] | null
   >(null);
   const viewportHeight = viewportSize.height || DEFAULT_VIEWPORT_HEIGHT;
-  const viewportWidth = viewportSize.width || DEFAULT_VIEWPORT_WIDTH;
+  const measuredViewportWidth = viewportSize.width || DEFAULT_VIEWPORT_WIDTH;
+  const captureAnchor = React.useCallback(() => {
+    // Read the live scroll position from the DOM rather than the `scrollTop`
+    // state, which lags behind during fast scrolling. Capturing a stale value
+    // here makes the anchor-restore effect yank the viewport back to an old
+    // (often near-top) position when a freshly revealed chunk is measured.
+    const liveScrollTop =
+      viewportRef.current?.scrollTop ?? scrollTopRef.current;
+    pendingAnchorRef.current = getMarkdownGreenfieldScrollAnchor({
+      frames: frameChunksRef.current,
+      scrollTop: liveScrollTop,
+    });
+  }, []);
+  const markdownRendererFrame = useMarkdownGreenfieldRendererFrame({
+    fallbackViewportInlineSize: measuredViewportWidth,
+    onBeforeLayoutMotion: captureAnchor,
+  });
+  const viewportWidth = markdownRendererFrame.viewportInlineSize;
   const measuredHeightLookup = React.useMemo(
     () => ({
       get: (
@@ -260,19 +283,6 @@ export function MarkdownGreenfieldContent({
     visibleProjectionRef.current = nextProjection;
     setVisibleProjection(nextProjection);
   }, []);
-  const captureAnchor = React.useCallback(() => {
-    // Read the live scroll position from the DOM rather than the `scrollTop`
-    // state, which lags behind during fast scrolling. Capturing a stale value
-    // here makes the anchor-restore effect yank the viewport back to an old
-    // (often near-top) position when a freshly revealed chunk is measured.
-    const liveScrollTop =
-      viewportRef.current?.scrollTop ?? scrollTopRef.current;
-    pendingAnchorRef.current = getMarkdownGreenfieldScrollAnchor({
-      frames: frameChunksRef.current,
-      scrollTop: liveScrollTop,
-    });
-  }, []);
-
   const commitScrollTop = React.useCallback(
     (nextScrollTop: number) => {
       scrollTopRef.current = nextScrollTop;
@@ -366,30 +376,41 @@ export function MarkdownGreenfieldContent({
     viewportRef,
   });
 
-  useKeyedLayoutEffect("mount", () => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "markdown-viewport-resize",
+      markdownRendererFrame.usesShellGeometry,
+    ]),
+    () => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
 
-    const readSize = () => {
-      setViewportSize((current) => {
-        const next = {
-          height: viewport.clientHeight,
-          width: viewport.clientWidth,
-        };
-        return current.height === next.height && current.width === next.width
-          ? current
-          : next;
-      });
-    };
+      const readSize = () => {
+        setViewportSize((current) => {
+          const nextHeight = viewport.clientHeight;
+          const nextWidth =
+            markdownRendererFrame.usesShellGeometry && current.width > 0
+              ? current.width
+              : viewport.clientWidth;
+          const next = {
+            height: nextHeight,
+            width: nextWidth,
+          };
+          return current.height === next.height && current.width === next.width
+            ? current
+            : next;
+        });
+      };
 
-    readSize();
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(readSize);
-    observer?.observe(viewport);
-    return () => observer?.disconnect();
-  });
+      readSize();
+      const observer =
+        typeof ResizeObserver === "undefined"
+          ? null
+          : new ResizeObserver(readSize);
+      observer?.observe(viewport);
+      return () => observer?.disconnect();
+    },
+  );
 
   useKeyedLayoutEffect(joinEffectKey([captureAnchor, viewportWidth]), () => {
     const nextWidth = Math.max(
@@ -625,12 +646,14 @@ export function MarkdownGreenfieldContent({
         }}
       >
         <div
+          ref={markdownRendererFrame.setDocumentSurfaceElement}
           className="relative min-w-0"
           data-projection="unified-hast-markdown"
           data-slot="markdown-virtual-canvas"
           style={{
             height: Math.max(frame.totalHeight, viewportHeight),
             minWidth: viewportWidth,
+            transformOrigin: markdownRendererFrame.transformOrigin,
           }}
         >
           {isDocumentPending ? null : (

@@ -43,7 +43,7 @@ const formatGroups = [
   {
     title: "Documents",
     description:
-      "PDF, DOCX, and PPTX render as paginated surfaces with stable zoom and page state.",
+      "PDF, DOCX, and PPTX render as paginated documents with stable zoom and page state.",
     contract: "fallbackFrameSize / fallbackSlideSize",
     formats: ["PDF", "DOCX", "PPTX"],
   },
@@ -62,9 +62,9 @@ const formatGroups = [
     formats: ["XLSX", "CSV", "JSON"],
   },
   {
-    title: "Text surfaces",
+    title: "Text renderers",
     description:
-      "Plain text, markdown, HTML, and code use dense text surfaces instead of screenshots.",
+      "Plain text, markdown, HTML, and code use dense text renderers instead of screenshots.",
     contract: "inline text source",
     formats: ["Markdown", "HTML", "Code", "Text"],
   },
@@ -84,7 +84,7 @@ const renderingModel = [
   {
     title: "No blank frame",
     description:
-      "The viewer never exposes an empty document surface while the next pages catch up.",
+      "The viewer never exposes an empty viewport while the next pages catch up.",
   },
 ];
 
@@ -140,7 +140,7 @@ export default function FilesPage() {
               </h1>
               <p className="text-muted-foreground mb-2 max-w-[740px] text-base leading-7 text-pretty md:text-lg lg:text-xl">
                 <code className="text-foreground">FileViewer</code> is a
-                composable rendering surface for PDFs, Office files, images,
+                composable rendering frame for PDFs, Office files, images,
                 tables, text, and code. It keeps resource loading, fallback
                 dimensions, controls, and style isolation at the component edge.
               </p>
@@ -198,8 +198,8 @@ export default function FilesPage() {
                     Inverse Sticky technique
                   </Link>
                   : preserve native scrolling, pin the rendered range while the
-                  parser catches up, and keep the document surface filled during
-                  large jumps.
+                  parser catches up, and keep the document viewport filled
+                  during large jumps.
                 </>
               }
             />
@@ -209,7 +209,7 @@ export default function FilesPage() {
           <section className="py-10 md:py-12">
             <SectionHeader
               title="Compose the shell"
-              description="The preset preview is only one shape. The provider, header, body, surface, viewport, document, and toolbar can be rearranged around the same resource."
+              description="The preset preview is only one shape. The provider, header, content, sidebar, inset, viewport, document, and controls can be rearranged around the same resource."
             />
             <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
               <CompositionCode />
@@ -330,16 +330,16 @@ function CompositionCode() {
 >
   <FileViewer>
     <FileViewerHeader>
-      <FileViewerIdentity />
-      <FileViewerToolbar />
+      <FileViewerTitle />
+      <FileViewerControls />
     </FileViewerHeader>
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>`}</code>
       </pre>

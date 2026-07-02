@@ -17,6 +17,7 @@ import { useViewerDocumentGeometryTransaction } from "./viewer-document-geometry
 
 const VIEWER_DOCUMENT_SCROLL_IDLE_MS = 120;
 const VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON = 1;
+const VIEWER_DOCUMENT_SCROLL_RESTORE_MAX_FRAMES = 45;
 
 type ViewerDocumentScrollIntent<Target> =
   | {
@@ -34,6 +35,12 @@ type ViewerDocumentScrollIntent<Target> =
       targetTop: number;
     };
 
+type PendingViewerDocumentScrollRestore = {
+  attempts: number;
+  options: ScrollToOptions;
+  targetTop: number;
+};
+
 export function useViewerDocumentScroll<Anchor, Target>({
   copyScrollTarget,
   layout,
@@ -49,6 +56,10 @@ export function useViewerDocumentScroll<Anchor, Target>({
 }) {
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const scrollPageOffsetRef = React.useRef(0);
+  const pendingScrollRestoreRef =
+    React.useRef<PendingViewerDocumentScrollRestore | null>(null);
+  const pendingScrollRestoreFrameRef = React.useRef(0);
+  const flushPendingScrollRestoreRef = React.useRef<() => void>(() => {});
   const viewportResetKeyRef = React.useRef<unknown>(resetKey);
   const didMountResetEffectRef = React.useRef(false);
   const committedLayoutRef = React.useRef(layout);
@@ -72,8 +83,16 @@ export function useViewerDocumentScroll<Anchor, Target>({
   const [viewportElement, setViewportElementState] =
     React.useState<HTMLDivElement | null>(null);
 
+  const cancelPendingScrollRestore = React.useCallback(() => {
+    pendingScrollRestoreRef.current = null;
+    if (pendingScrollRestoreFrameRef.current === 0) return;
+    cancelAnimationFrame(pendingScrollRestoreFrameRef.current);
+    pendingScrollRestoreFrameRef.current = 0;
+  }, []);
+
   const resetViewportForKey = React.useCallback(
     (element: HTMLDivElement, key: unknown) => {
+      cancelPendingScrollRestore();
       viewportResetKeyRef.current = key;
       scrollPageOffsetRef.current = 0;
       resetGeometryTransaction(element);
@@ -81,7 +100,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
       setViewportPhysicalScrollTop(element, 0);
       element.scrollTo?.({ top: 0, behavior: "auto" });
     },
-    [resetGeometryTransaction, scrollIntent],
+    [cancelPendingScrollRestore, resetGeometryTransaction, scrollIntent],
   );
 
   const setViewportElement = React.useCallback(
@@ -155,29 +174,147 @@ export function useViewerDocumentScroll<Anchor, Target>({
     return viewportElement ? syncViewportScrollPosition(viewportElement) : null;
   }, [syncViewportScrollPosition]);
 
+  const schedulePendingScrollRestore = React.useCallback(
+    (restore: PendingViewerDocumentScrollRestore) => {
+      pendingScrollRestoreRef.current = restore;
+      if (pendingScrollRestoreFrameRef.current !== 0) return;
+      pendingScrollRestoreFrameRef.current = requestAnimationFrame(() => {
+        pendingScrollRestoreFrameRef.current = 0;
+        flushPendingScrollRestoreRef.current();
+      });
+    },
+    [],
+  );
+
+  const resolveLogicalScrollPosition = React.useCallback(
+    (viewportElement: HTMLDivElement, targetTop: number) => {
+      const viewportBlockSize = viewportElement.clientHeight;
+      const position = scrollMapper.resolvePhysicalScrollPosition({
+        blockSize: layout.blockSize,
+        logicalScrollTop: targetTop,
+        scrollPageOffset: scrollPageOffsetRef.current,
+        viewportBlockSize,
+      });
+      const expectedPhysicalScrollSize = scrollMapper.getPhysicalScrollSize({
+        blockSize: layout.blockSize,
+        viewportBlockSize,
+      });
+
+      return {
+        expectedMaxPhysicalScrollTop: Math.max(
+          0,
+          expectedPhysicalScrollSize - viewportBlockSize,
+        ),
+        position,
+      };
+    },
+    [layout.blockSize, scrollMapper],
+  );
+
+  const applyLogicalScrollTop = React.useCallback(
+    (
+      viewportElement: HTMLDivElement,
+      targetTop: number,
+      options: ScrollToOptions,
+      { allowDefer }: { allowDefer: boolean },
+    ) => {
+      const { expectedMaxPhysicalScrollTop, position } =
+        resolveLogicalScrollPosition(viewportElement, targetTop);
+      const currentMaxPhysicalScrollTop =
+        getViewportMaxPhysicalScrollTop(viewportElement);
+      const shouldDefer =
+        allowDefer &&
+        position.physicalScrollTop >
+          currentMaxPhysicalScrollTop +
+            VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON &&
+        position.physicalScrollTop <=
+          expectedMaxPhysicalScrollTop +
+            VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON;
+
+      if (shouldDefer) {
+        schedulePendingScrollRestore({
+          attempts: 0,
+          options: {
+            ...options,
+            behavior: "auto",
+          },
+          targetTop,
+        });
+        return false;
+      }
+
+      scrollPageOffsetRef.current = position.scrollPageOffset;
+      scrollViewportToPhysicalTop(viewportElement, position.physicalScrollTop, {
+        behavior: "auto",
+        ...options,
+      });
+      return true;
+    },
+    [resolveLogicalScrollPosition, schedulePendingScrollRestore],
+  );
+
+  const flushPendingScrollRestore = React.useCallback(() => {
+    const pendingRestore = pendingScrollRestoreRef.current;
+    const viewportElement = viewportElementRef.current;
+    if (!pendingRestore || !viewportElement) return;
+
+    const { expectedMaxPhysicalScrollTop, position } =
+      resolveLogicalScrollPosition(viewportElement, pendingRestore.targetTop);
+    const currentMaxPhysicalScrollTop =
+      getViewportMaxPhysicalScrollTop(viewportElement);
+    const shouldWaitForRange =
+      position.physicalScrollTop >
+        currentMaxPhysicalScrollTop + VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON &&
+      position.physicalScrollTop <=
+        expectedMaxPhysicalScrollTop +
+          VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON &&
+      pendingRestore.attempts < VIEWER_DOCUMENT_SCROLL_RESTORE_MAX_FRAMES;
+
+    if (shouldWaitForRange) {
+      schedulePendingScrollRestore({
+        ...pendingRestore,
+        attempts: pendingRestore.attempts + 1,
+      });
+      return;
+    }
+
+    pendingScrollRestoreRef.current = null;
+    scrollPageOffsetRef.current = position.scrollPageOffset;
+    scrollViewportToPhysicalTop(
+      viewportElement,
+      position.physicalScrollTop,
+      pendingRestore.options,
+    );
+  }, [resolveLogicalScrollPosition, schedulePendingScrollRestore]);
+
+  useKeyedLayoutEffect(joinEffectKey([flushPendingScrollRestore]), () => {
+    flushPendingScrollRestoreRef.current = flushPendingScrollRestore;
+    flushPendingScrollRestore();
+  });
+
   const scrollViewportToLogicalTop = React.useCallback(
     (
       viewportElement: HTMLDivElement,
       targetTop: number,
       options?: ScrollToOptions,
     ) => {
-      const position = scrollMapper.resolvePhysicalScrollPosition({
-        blockSize: layout.blockSize,
-        logicalScrollTop: targetTop,
-        scrollPageOffset: scrollPageOffsetRef.current,
-        viewportBlockSize: viewportElement.clientHeight,
-      });
-      scrollPageOffsetRef.current = position.scrollPageOffset;
-      scrollViewportToPhysicalTop(viewportElement, position.physicalScrollTop, {
-        behavior: "auto",
-        ...options,
-      });
+      applyLogicalScrollTop(
+        viewportElement,
+        targetTop,
+        {
+          behavior: "auto",
+          ...options,
+        },
+        {
+          allowDefer: true,
+        },
+      );
       cacheReadingAnchor({
         scrollTop: targetTop,
         viewportBlockSize: viewportElement.clientHeight,
       });
     },
-    [cacheReadingAnchor, layout.blockSize, scrollMapper],
+    [applyLogicalScrollTop, cacheReadingAnchor],
   );
 
   const scrollViewportToResolvedTarget = React.useCallback(
@@ -208,12 +345,8 @@ export function useViewerDocumentScroll<Anchor, Target>({
         ...(target.left == null ? null : { left: target.left }),
         ...options,
       });
-      cacheReadingAnchor({
-        scrollTop: target.top,
-        viewportBlockSize: viewportElement.clientHeight,
-      });
     },
-    [cacheReadingAnchor, layout.blockSize, scrollMapper],
+    [layout.blockSize, scrollMapper],
   );
 
   useKeyedLayoutEffect(
@@ -272,7 +405,12 @@ export function useViewerDocumentScroll<Anchor, Target>({
       }
 
       const activeIntent = scrollIntent.current();
-      if (activeIntent.kind === "programmatic" && resolveScrollTarget) {
+      const transition = layout.transition;
+      if (
+        activeIntent.kind === "programmatic" &&
+        resolveScrollTarget &&
+        transition?.source !== "viewer-shell"
+      ) {
         const metrics = syncViewportScrollPosition(viewportElement);
         const target = resolveScrollTarget({
           layout,
@@ -310,16 +448,24 @@ export function useViewerDocumentScroll<Anchor, Target>({
         viewportBlockSize,
       });
       if (!transaction) return;
-      const targetTop = layout.getReadingAnchorScrollTop({
-        anchor: transaction.anchor,
-        viewportBlockSize: transaction.viewportBlockSize,
-      });
-      if (targetTop != null) {
-        scrollViewportToLogicalTop(viewportElement, targetTop);
+
+      if (transaction.shouldRestoreScroll) {
+        const targetTop = layout.getReadingAnchorScrollTop({
+          anchor: transaction.anchor,
+          viewportBlockSize: transaction.viewportBlockSize,
+        });
+        if (targetTop != null) {
+          scrollViewportToLogicalTop(viewportElement, targetTop);
+        } else {
+          cacheAnchor({
+            anchor: transaction.anchor,
+            viewportBlockSize,
+          });
+        }
       } else {
         cacheAnchor({
           anchor: transaction.anchor,
-          viewportBlockSize,
+          viewportBlockSize: transaction.viewportBlockSize,
         });
       }
 
@@ -344,6 +490,11 @@ export function useViewerDocumentScroll<Anchor, Target>({
     }
   }, [scrollIntent, syncViewportScrollPosition]);
 
+  const markUserScrollIntent = React.useCallback(() => {
+    cancelPendingScrollRestore();
+    scrollIntent.markUser();
+  }, [cancelPendingScrollRestore, scrollIntent]);
+
   useKeyedMountEffect(joinEffectKey([resetKey, resetViewportForKey]), () => {
     if (!didMountResetEffectRef.current) {
       didMountResetEffectRef.current = true;
@@ -355,43 +506,46 @@ export function useViewerDocumentScroll<Anchor, Target>({
     }
   });
 
-  useKeyedMountEffect(joinEffectKey([scrollIntent, viewportElement]), () => {
-    const viewportElement = viewportElementRef.current;
-    if (!viewportElement) return;
+  useKeyedMountEffect(
+    joinEffectKey([markUserScrollIntent, scrollIntent, viewportElement]),
+    () => {
+      const viewportElement = viewportElementRef.current;
+      if (!viewportElement) return;
 
-    const handleScrollEnd = () => {
-      const activeIntent = scrollIntent.current();
-      if (activeIntent.kind === "programmatic") {
-        scrollIntent.completeProgrammatic(activeIntent.sequence);
-      } else {
-        scrollIntent.reset();
-      }
-    };
+      const handleScrollEnd = () => {
+        const activeIntent = scrollIntent.current();
+        if (activeIntent.kind === "programmatic") {
+          scrollIntent.completeProgrammatic(activeIntent.sequence);
+        } else {
+          scrollIntent.reset();
+        }
+      };
 
-    viewportElement.addEventListener?.("wheel", scrollIntent.markUser, {
-      passive: true,
-    });
-    viewportElement.addEventListener?.("touchstart", scrollIntent.markUser, {
-      passive: true,
-    });
-    viewportElement.addEventListener?.("pointerdown", scrollIntent.markUser);
-    viewportElement.addEventListener?.("keydown", scrollIntent.markUser);
-    viewportElement.addEventListener?.("scrollend", handleScrollEnd);
+      viewportElement.addEventListener?.("wheel", markUserScrollIntent, {
+        passive: true,
+      });
+      viewportElement.addEventListener?.("touchstart", markUserScrollIntent, {
+        passive: true,
+      });
+      viewportElement.addEventListener?.("pointerdown", markUserScrollIntent);
+      viewportElement.addEventListener?.("keydown", markUserScrollIntent);
+      viewportElement.addEventListener?.("scrollend", handleScrollEnd);
 
-    return () => {
-      viewportElement.removeEventListener?.("wheel", scrollIntent.markUser);
-      viewportElement.removeEventListener?.(
-        "touchstart",
-        scrollIntent.markUser,
-      );
-      viewportElement.removeEventListener?.(
-        "pointerdown",
-        scrollIntent.markUser,
-      );
-      viewportElement.removeEventListener?.("keydown", scrollIntent.markUser);
-      viewportElement.removeEventListener?.("scrollend", handleScrollEnd);
-    };
-  });
+      return () => {
+        viewportElement.removeEventListener?.("wheel", markUserScrollIntent);
+        viewportElement.removeEventListener?.(
+          "touchstart",
+          markUserScrollIntent,
+        );
+        viewportElement.removeEventListener?.(
+          "pointerdown",
+          markUserScrollIntent,
+        );
+        viewportElement.removeEventListener?.("keydown", markUserScrollIntent);
+        viewportElement.removeEventListener?.("scrollend", handleScrollEnd);
+      };
+    },
+  );
 
   const scrollToTarget = React.useCallback(
     (target: Target, options?: ScrollToOptions) => {
@@ -408,6 +562,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
           : null;
       if (!viewportElement || !resolvedTarget) return;
 
+      cancelPendingScrollRestore();
       const behavior = options?.behavior ?? "smooth";
       const intent = scrollIntent.startProgrammatic({
         behavior,
@@ -422,6 +577,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
       scrollIntent.scheduleProgrammaticCompletion(intent.sequence);
     },
     [
+      cancelPendingScrollRestore,
       copyScrollTarget,
       layout,
       readScrollMetrics,
@@ -436,6 +592,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
   );
 
   useMountEffect(() => () => {
+    cancelPendingScrollRestore();
     cancelGeometryTransaction();
     scrollIntent.clearProgrammaticTimeout();
   });
@@ -653,6 +810,13 @@ function scrollViewportToPhysicalTop(
   }
 
   setViewportPhysicalScrollTop(viewportElement, targetTop);
+}
+
+function getViewportMaxPhysicalScrollTop(viewportElement: HTMLDivElement) {
+  return Math.max(
+    0,
+    viewportElement.scrollHeight - viewportElement.clientHeight,
+  );
 }
 
 function setViewportPhysicalScrollTop(

@@ -1,11 +1,12 @@
 ---
 title: FileViewerViewport
-description: The measured viewport boundary inside FileViewerInset.
+description: The document viewport boundary inside FileViewerInset.
 component: true
 ---
 
-`FileViewerViewport` is the measured boundary for routed documents. It must live
-inside `FileViewerInset`, and `FileViewerDocument` must live inside it.
+`FileViewerViewport` is the scroll and clipping boundary for routed documents.
+It must live inside `FileViewerInset`, and `FileViewerDocument` must live inside
+it.
 
 ```tsx
 <FileViewerInset>
@@ -18,20 +19,20 @@ inside `FileViewerInset`, and `FileViewerDocument` must live inside it.
 ## Behavior
 
 - Renders a `data-slot="file-viewer-viewport"` element.
-- Publishes `--file-viewer-viewport-width` and
-  `--file-viewer-viewport-height` when measurement is available.
-- Gives renderers a stable surface for sizing, virtualization, and diagnostics.
+- Defines the scroll and clipping boundary that routed documents render inside.
+- Keeps animated width out of React measurement; document sizing comes from the
+  FileViewer document-frame contract.
 - Throws in development when it is rendered outside `FileViewerInset`.
-- Use `useFileViewerViewportSize` when a custom file surface needs the measured
-  viewport element, width, height, or measurement state.
+- Renderer internals use the frame contract for deterministic document sizing;
+  app composition should treat the viewport as an anatomy boundary.
 
 ## API Reference
 
-| Prop       | Type                                          | Description                                     |
-| ---------- | --------------------------------------------- | ----------------------------------------------- |
-| `children` | `React.ReactNode`                             | Usually `FileViewerDocument`.                   |
-| `...props` | `React.ComponentProps<"div">`                 | Standard viewport props; `className` is merged. |
+| Prop       | Type                          | Description                                     |
+| ---------- | ----------------------------- | ----------------------------------------------- |
+| `children` | `React.ReactNode`             | Usually `FileViewerDocument`.                   |
+| `...props` | `React.ComponentProps<"div">` | Standard viewport props; `className` is merged. |
 
 ## Source
 
-<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-layout.tsx" />

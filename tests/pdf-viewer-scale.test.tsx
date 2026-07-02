@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -88,6 +88,13 @@ describe("pdf-viewer-scale", () => {
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation((frameId) => {
       frames.delete(frameId);
     });
+    const flushMeasuredFrames = () => {
+      const pendingFrames = [...frames.entries()];
+      frames.clear();
+      for (const [frameId, callback] of pendingFrames) {
+        callback(frameId);
+      }
+    };
 
     function MeasuredWidth({ width }: { width: number }) {
       const { ref: measuredRef, width: measuredWidth } =
@@ -114,9 +121,10 @@ describe("pdf-viewer-scale", () => {
 
     const { rerender } = render(<MeasuredWidth width={200} />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("width").textContent).toBe("200"),
-    );
+    await act(async () => {
+      flushMeasuredFrames();
+    });
+    expect(screen.getByTestId("width").textContent).toBe("200");
     expect(observedElement).toBe(screen.getByTestId("measured-element"));
 
     const notifyResize = resizeCallback as unknown as ResizeObserverCallback;
@@ -133,9 +141,10 @@ describe("pdf-viewer-scale", () => {
 
     rerender(<MeasuredWidth width={360} />);
 
-    await waitFor(() =>
-      expect(screen.getByTestId("width").textContent).toBe("360"),
-    );
+    await act(async () => {
+      flushMeasuredFrames();
+    });
+    expect(screen.getByTestId("width").textContent).toBe("360");
     expect(disconnect).toHaveBeenCalledTimes(1);
     expect(frames.size).toBe(0);
   });

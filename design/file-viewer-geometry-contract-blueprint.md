@@ -222,16 +222,16 @@ The public geometry vocabulary should be small and unit-explicit:
 
 ```ts
 type FileViewerGeometry = {
-  rootInlineSizePx: number
-  sidebarInlineSizePx: number
-  insetInlineSizePx: number
-  documentInlineSizePx: number
-  documentMaxInlineSizePx: number | null
-  sidebarSide: "left" | "right"
-  sidebarMode: "inline" | "overlay"
-  sidebarState: "expanded" | "collapsed"
-  isGeometryTransitioning: boolean
-}
+  rootInlineSizePx: number;
+  sidebarInlineSizePx: number;
+  insetInlineSizePx: number;
+  documentInlineSizePx: number;
+  documentMaxInlineSizePx: number | null;
+  sidebarSide: "left" | "right";
+  sidebarMode: "inline" | "overlay";
+  sidebarState: "expanded" | "collapsed";
+  isGeometryTransitioning: boolean;
+};
 ```
 
 No `progress` is needed in renderer code. Progress is an implementation detail of
@@ -515,7 +515,7 @@ FileViewerSidebarTrigger
 FileViewerInset
 FileViewerHeader
 FileViewerIdentity
-FileViewerToolbar
+FileViewerControls
 FileViewerViewport
 FileViewerDocument
 ```
@@ -645,15 +645,15 @@ The internal model should have one owner and one vocabulary.
 
 ```ts
 type FileViewerGeometry = {
-  rootInlineSizePx: number | null
-  insetInlineSizePx: number | null
-  sidebarWidthPx: number
-  sidebarProgress: number
-  sidebarState: "expanded" | "collapsed"
-  sidebarMode: "inline" | "overlay"
-  sidebarSide: "left" | "right"
-  isSidebarTransitioning: boolean
-}
+  rootInlineSizePx: number | null;
+  insetInlineSizePx: number | null;
+  sidebarWidthPx: number;
+  sidebarProgress: number;
+  sidebarState: "expanded" | "collapsed";
+  sidebarMode: "inline" | "overlay";
+  sidebarSide: "left" | "right";
+  isSidebarTransitioning: boolean;
+};
 ```
 
 Variable names carry units. Avoid generic `width`, `scale`, `layout`, and
@@ -857,7 +857,7 @@ FileViewerSidebarTrigger
 FileViewerInset
 FileViewerHeader
 FileViewerIdentity
-FileViewerToolbar
+FileViewerControls
 FileViewerViewport
 FileViewerDocument
 ```

@@ -11,7 +11,6 @@ import {
 
 export type { FileCategory, ViewerSource };
 export type FileViewerFallbackSize = { width: number; height: number };
-export type FileViewerControlsPlacement = "toolbar" | "local" | "none";
 
 export interface FileViewerCoreProps {
   source: ViewerSource;

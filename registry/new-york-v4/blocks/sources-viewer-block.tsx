@@ -29,11 +29,9 @@ import {
   type DocxViewerHandle,
 } from "@/components/ui/docx-viewer";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewer,
   FileViewerProvider,
   FileViewerSidebar,
@@ -44,7 +42,7 @@ import {
   FileViewerSidebarSectionTitle,
   FileViewerSidebarTrigger,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
   type ViewerSource,
   useFileViewerResource,
@@ -273,13 +271,9 @@ function fieldsToSegmentedFields(fields: readonly FlatField[]) {
 function SourceLinkedFileHeader() {
   return (
     <FileViewerHeader>
-      <FileViewerHeaderStart>
         <FileViewerSidebarTrigger className="-ms-1" />
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+        <FileViewerTitle />
+        <FileViewerControls />
     </FileViewerHeader>
   );
 }
@@ -297,9 +291,9 @@ function SourceLinkedViewer({
 }) {
   return (
     <FileViewerProvider source={source} headerMode="outlets" defaultSidebarOpen>
-      <FileViewer className="bg-background" sidebarSide="right">
+      <FileViewer className="bg-background">
         <SourceLinkedFileHeader />
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>{children}</FileViewerViewport>
           </FileViewerInset>
@@ -314,7 +308,7 @@ function SourceLinkedViewer({
               <SourcesForm extraction={extraction} link={link} />
             </FileViewerSidebarContent>
           </FileViewerSidebar>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

@@ -1,17 +1,15 @@
 "use client";
 
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerLegend,
   FileViewer,
   FileViewerProvider,
   FileViewerSidebarTrigger,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
 import type { SplitView } from "@/components/viewers/lib/split-types";
@@ -56,15 +54,11 @@ export function SplitViewerBlock() {
           <FileViewer className="bg-background">
             <PdfViewerProvider>
               <FileViewerHeader>
-                <FileViewerHeaderStart>
                   <FileViewerSidebarTrigger className="-ms-1" />
-                  <FileViewerIdentity meta="hidden" />
-                </FileViewerHeaderStart>
-                <FileViewerHeaderEnd>
-                  <FileViewerToolbar />
-                </FileViewerHeaderEnd>
+                  <FileViewerTitle />
+                  <FileViewerControls />
               </FileViewerHeader>
-              <FileViewerBody>
+              <FileViewerContent>
                 <SplitViewerSidebar />
                 <FileViewerInset>
                   <FileViewerLegend>
@@ -72,7 +66,7 @@ export function SplitViewerBlock() {
                   </FileViewerLegend>
                   <SplitViewerDocument document={<SplitViewerPdfDocument />} />
                 </FileViewerInset>
-              </FileViewerBody>
+              </FileViewerContent>
             </PdfViewerProvider>
           </FileViewer>
         </FileViewerProvider>

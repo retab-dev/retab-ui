@@ -7,6 +7,15 @@ import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import { isAbortError, isResourceError } from "@/lib/viewer-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import {
+  resolveFileViewerRendererLayoutInlineSize,
+  type FileViewerDocumentAlign,
+} from "./file-viewer-renderer-contract";
+import {
+  useOptionalFileViewerRendererEnvironment,
+  useOptionalFileViewerRendererFrame,
+} from "./file-viewer-renderer-frame";
 import {
   DocxSkeleton,
   DocxViewerBody,
@@ -67,9 +76,17 @@ export function DocxViewerContent({
     getDocxDocumentResource(resource.content, { retainRejected: true }),
   );
   const renderCacheKey = resource.content.key;
-  const [containerWidth, setContainerWidth] = React.useState<number | null>(
-    null,
-  );
+  const rendererEnvironment = useOptionalFileViewerRendererEnvironment();
+  const { containerRef, containerWidth } = useMeasuredDocxContainerInlineSize({
+    enabled: !rendererEnvironment.usesShellGeometry,
+  });
+  const rendererFrame = useOptionalFileViewerRendererFrame({
+    fallbackInlineSize: containerWidth,
+  });
+  const layoutInlineSize = resolveFileViewerRendererLayoutInlineSize({
+    fallbackInlineSize: containerWidth,
+    rendererFrame,
+  });
   const [numPages, setNumPages] = React.useState(0);
   const [pageWidth, setPageWidth] = React.useState<number | null>(null);
   const [renderIndex, setRenderIndex] = React.useState<DocxRenderIndex | null>(
@@ -83,8 +100,8 @@ export function DocxViewerContent({
   if (renderError) throw renderError;
 
   const { fitWidth, scale, zoomIn, zoomOut } = useDocxViewerScale({
-    containerWidth,
     defaultScale,
+    layoutInlineSize,
     onScaleChange,
     pageWidth,
     resetKey: resource.keys.resource,
@@ -106,37 +123,6 @@ export function DocxViewerContent({
   });
   const scaleRef = React.useRef(scale);
   scaleRef.current = scale;
-
-  const containerRef = React.useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    setContainerWidth(el.clientWidth);
-    if (typeof ResizeObserver === "undefined") return;
-    let frame = 0;
-    let latest = el.clientWidth;
-    let observer: ResizeObserver | null = null;
-    try {
-      observer = new ResizeObserver((entries) => {
-        for (const entry of entries)
-          latest = (entry.target as HTMLElement).clientWidth;
-        if (frame) return;
-        frame = -1;
-        const requestedFrame = requestAnimationFrame(() => {
-          frame = 0;
-          setContainerWidth(latest);
-        });
-        if (frame === -1) frame = requestedFrame;
-      });
-      observer.observe(el);
-    } catch {
-      if (frame > 0) cancelAnimationFrame(frame);
-      observer?.disconnect();
-      return;
-    }
-    return () => {
-      if (frame > 0) cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, []);
 
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const renderIndexRef = React.useRef<DocxRenderIndex | null>(null);
@@ -176,6 +162,32 @@ export function DocxViewerContent({
     projectVisiblePages();
     handleScroll();
   }, [handleScroll, projectVisiblePages]);
+  const measureBeforeLayoutMotionRef = React.useRef(measureScroll);
+  measureBeforeLayoutMotionRef.current = measureScroll;
+  const handleBeforeLayoutMotion = React.useCallback(() => {
+    measureBeforeLayoutMotionRef.current();
+  }, []);
+  const setHostElement = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      const previousElement = hostRef.current;
+      if (previousElement === element) return;
+      previousElement?.removeEventListener(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        handleBeforeLayoutMotion,
+      );
+      hostRef.current = element;
+      rendererEnvironment.setDocumentSurfaceElement(element);
+      if (!element) return;
+      element.addEventListener(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        handleBeforeLayoutMotion,
+      );
+    },
+    [
+      handleBeforeLayoutMotion,
+      rendererEnvironment.setDocumentSurfaceElement,
+    ],
+  );
 
   useKeyedMountEffect(
     joinEffectKey([
@@ -333,19 +345,96 @@ export function DocxViewerContent({
           <div ref={containerRef} className="flex flex-col items-center p-4">
             {!ready ? <DocxSkeleton /> : null}
             <div
-              ref={hostRef}
+              ref={setHostElement}
               className={
                 ready
                   ? "w-full opacity-100 transition-opacity duration-200"
                   : "w-full opacity-0 transition-opacity duration-200"
               }
-              style={{ zoom: scale }}
+              style={{
+                transformOrigin: getDocxDocumentTransformOrigin(
+                  rendererFrame.align,
+                ),
+                zoom: scale,
+              }}
             />
           </div>
         </ScrollArea>
       </DocxViewerBody>
     </DocxViewerFrame>
   );
+}
+
+function useMeasuredDocxContainerInlineSize({ enabled }: { enabled: boolean }) {
+  const [containerElement, setContainerElement] =
+    React.useState<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = React.useState<number | null>(
+    null,
+  );
+
+  React.useLayoutEffect(() => {
+    if (!enabled || !containerElement) {
+      if (!enabled) {
+        setContainerWidth((current) => (current == null ? current : null));
+      }
+      return;
+    }
+
+    let frame = 0;
+    let latest = resolveDocxMeasuredInlineSize(containerElement.clientWidth);
+    setContainerWidth(latest);
+    if (typeof ResizeObserver === "undefined") return;
+
+    let observer: ResizeObserver | null = null;
+    try {
+      observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          latest = resolveDocxMeasuredInlineSize(
+            (entry.target as HTMLElement).clientWidth,
+          );
+        }
+        if (frame) return;
+        frame = -1;
+        const requestedFrame = requestAnimationFrame(() => {
+          frame = 0;
+          setContainerWidth((current) =>
+            current === latest ? current : latest,
+          );
+        });
+        if (frame === -1) frame = requestedFrame;
+      });
+      observer.observe(containerElement);
+    } catch {
+      if (frame > 0) cancelAnimationFrame(frame);
+      observer?.disconnect();
+      return;
+    }
+
+    return () => {
+      if (frame > 0) cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [containerElement, enabled]);
+
+  return {
+    containerRef: setContainerElement,
+    containerWidth,
+  };
+}
+
+function resolveDocxMeasuredInlineSize(value: number) {
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function getDocxDocumentTransformOrigin(align: FileViewerDocumentAlign) {
+  switch (align) {
+    case "center":
+      return "center top";
+    case "end":
+      return "right top";
+    case "start":
+      return "left top";
+  }
 }
 
 function useDocxControlsRegistration({

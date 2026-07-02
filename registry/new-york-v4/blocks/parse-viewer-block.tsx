@@ -5,7 +5,7 @@ import * as React from "react";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerProvider,
   FileViewerInset,
   FileViewerViewport,
@@ -98,7 +98,7 @@ function ParseSourceDocument() {
     >
       <FileViewer>
         <PdfViewerProvider>
-          <FileViewerBody>
+          <FileViewerContent>
             <FileViewerInset>
               <FileViewerViewport>
                 <PdfViewerPages
@@ -110,7 +110,7 @@ function ParseSourceDocument() {
                 />
               </FileViewerViewport>
             </FileViewerInset>
-          </FileViewerBody>
+          </FileViewerContent>
         </PdfViewerProvider>
       </FileViewer>
     </FileViewerProvider>

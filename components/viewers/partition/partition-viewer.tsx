@@ -6,16 +6,14 @@ import { Key, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ViewerSource } from "@/lib/viewer-source";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerLegend,
   FileViewer,
   FileViewerProvider,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PageRibbon } from "@/components/ui/page-ribbon";
@@ -347,7 +345,7 @@ export function PartitionViewer({
       <FileViewerProvider source={source} headerMode="outlets">
         <FileViewer className="bg-background">
           <PartitionViewerFileHeader />
-          <FileViewerBody>
+          <FileViewerContent>
             <FileViewerInset>
               <FileViewerLegend>
                 <PartitionViewerLegend className="px-3 py-2" />
@@ -355,7 +353,7 @@ export function PartitionViewer({
               <PartitionViewerRibbon />
               <PartitionViewerDocument document={document} />
             </FileViewerInset>
-          </FileViewerBody>
+          </FileViewerContent>
         </FileViewer>
       </FileViewerProvider>
     </PartitionViewerProvider>
@@ -365,13 +363,9 @@ export function PartitionViewer({
 function PartitionViewerFileHeader() {
   return (
     <FileViewerHeader>
-      <FileViewerHeaderStart>
-        <FileViewerIdentity meta="hidden" />
+        <FileViewerTitle />
         <PartitionViewerHeaderMeta />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+        <FileViewerControls />
     </FileViewerHeader>
   );
 }

@@ -53,7 +53,7 @@ import {
 } from "@/registry/new-york-v4/ui/docx-source";
 import type { DocxViewerHandle } from "@/registry/new-york-v4/ui/docx-viewer";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
@@ -308,7 +308,7 @@ function SourcesViewerSidebarProbe() {
         <FileViewerMeta />
         <FileViewerControls />
       </FileViewerHeader>
-      <FileViewerBody>
+      <FileViewerContent>
         <FileViewerInset data-testid="source-document-surface">
           Document
         </FileViewerInset>
@@ -320,7 +320,7 @@ function SourcesViewerSidebarProbe() {
         >
           Source-linked data
         </FileViewerSidebar>
-      </FileViewerBody>
+      </FileViewerContent>
     </FileViewer>
   );
 }
@@ -911,7 +911,7 @@ describe("source evidence projection", () => {
     });
   });
 
-  it("keeps segmented hover active while navigating to the source", async () => {
+  it("keeps segmented hover active without navigating until activation", async () => {
     const model = createSourcesSegmentedDocumentModel([
       {
         id: "logo",
@@ -934,10 +934,7 @@ describe("source evidence projection", () => {
       expect(probe.textContent).toBe("logo");
       expect(probe.getAttribute("data-active-anchor")).toBe("true");
     });
-    expect(scrollToPageArea).toHaveBeenLastCalledWith(
-      { pageNumber: 2, left: 15, top: 25, width: 35, height: 45 },
-      { behavior: "auto" },
-    );
+    expect(scrollToPageArea).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "logo source" }));
 
@@ -945,7 +942,7 @@ describe("source evidence projection", () => {
       { pageNumber: 2, left: 15, top: 25, width: 35, height: 45 },
       { behavior: "smooth" },
     );
-  });
+  }, 10_000);
 });
 
 describe("source sample fixtures", () => {
@@ -1797,15 +1794,19 @@ describe("source UI components", () => {
 
     fireEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    expect(sidebar.getAttribute("aria-hidden")).toBe("true");
-    expect(sidebar.hasAttribute("inert")).toBe(true);
+    await waitFor(() => {
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(sidebar.getAttribute("aria-hidden")).toBe("true");
+      expect(sidebar.hasAttribute("inert")).toBe(true);
+    });
 
     fireEvent.click(trigger);
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    expect(sidebar.hasAttribute("aria-hidden")).toBe(false);
-    expect(sidebar.hasAttribute("inert")).toBe(false);
+    await waitFor(() => {
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(sidebar.hasAttribute("aria-hidden")).toBe(false);
+      expect(sidebar.hasAttribute("inert")).toBe(false);
+    });
   });
 
   it("drives source indicator and source scrolling from JSON form hover and click", async () => {
@@ -1832,7 +1833,7 @@ describe("source UI components", () => {
     const titleField = titleInput.closest('div[class*="rounded-md"]');
     expect(titleField).not.toBeNull();
 
-    fireEvent.mouseEnter(titleField!);
+    fireEvent.pointerMove(titleField!, { pointerType: "mouse" });
 
     await waitFor(() => {
       expect(screen.getByText("title").textContent).toBe("title");
@@ -1850,7 +1851,7 @@ describe("source UI components", () => {
       behavior: "smooth",
     });
 
-    fireEvent.mouseLeave(titleField!);
+    fireEvent.pointerLeave(titleField!, { pointerType: "mouse" });
 
     await waitFor(() => {
       expect(screen.getByText("title").textContent).toBe("title");

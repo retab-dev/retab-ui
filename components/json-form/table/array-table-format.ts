@@ -1,11 +1,18 @@
-import type { DataCellKind } from "@/components/ui/data-cell";
 import {
   enumLabel,
   enumValueEquals,
 } from "@/components/json-form/scalar-control";
 import type { Column } from "@/components/json-form/schema-model";
 
-export type ArrayTableDataCellKind = Exclude<DataCellKind, "select">;
+export type ArrayTableDataCellKind =
+  | "text"
+  | "number"
+  | "integer"
+  | "boolean"
+  | "select"
+  | "date"
+  | "time"
+  | "date-time";
 
 export function formatArrayTableCellValue({
   value,
@@ -28,6 +35,7 @@ export function formatArrayTableCellValue({
 }
 
 export function dataCellKindForColumn(column: Column): ArrayTableDataCellKind {
+  if (column.kind === "enum") return "select";
   if (column.kind === "number" || column.kind === "integer") return column.kind;
   if (column.kind === "boolean") return "boolean";
   if (column.schema.format === "date-time") return "date-time";

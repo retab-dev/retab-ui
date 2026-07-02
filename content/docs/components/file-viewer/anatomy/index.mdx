@@ -1,6 +1,6 @@
 ---
 title: Anatomy
-description: "The compound File Viewer structure: root, header, body, sidebar slot, inset, viewport, and routed document."
+description: "The compound File Viewer structure: root, header, content, sidebar slot, inset, viewport, and routed document."
 ---
 
 `FileViewerPreview` is the one-line preview shell:
@@ -16,16 +16,12 @@ chrome, compose the same primitive parts explicitly:
 <FileViewerProvider source={source} defaultSidebarOpen>
   <FileViewer>
     <FileViewerHeader>
-      <FileViewerHeaderStart>
-        <FileViewerSidebarTrigger />
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+      <FileViewerSidebarTrigger />
+      <FileViewerTitle />
+      <FileViewerControls />
     </FileViewerHeader>
 
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerSidebar aria-label="Document navigation">
         <FileViewerThumbnails />
       </FileViewerSidebar>
@@ -35,7 +31,7 @@ chrome, compose the same primitive parts explicitly:
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
@@ -49,14 +45,15 @@ chrome, compose the same primitive parts explicitly:
 - `FileViewerPreview` composes the provider, frame, inset, viewport, and
   routed document for the one-line preview case.
 - `FileViewerHeader` owns the full-width file row.
-- `FileViewerBody` owns the horizontal layout under the header.
+- `FileViewerContent` owns the horizontal layout under the header.
 - `FileViewerSidebar` is the optional navigation slot. It does not decide what
   the rows mean.
 - `FileViewerInset` owns the main file inset beside the sidebar.
-- `FileViewerViewport` owns the measured viewport boundary inside the inset.
+- `FileViewerViewport` owns the scroll and clipping boundary inside the inset.
 - `FileViewerDocument` renders the routed file renderer.
-- `FileViewerStates` provide the shared loading, empty, unavailable, error, and
-  unsupported surfaces.
+- `FileViewerLoadingState`, `FileViewerEmptyState`,
+  `FileViewerUnavailableState`, `FileViewerErrorState`, and
+  `FileViewerUnsupportedState` provide shared state surfaces.
 
 Navigation components live inside `FileViewerSidebar`. They are not part of the
 irreducible shell:

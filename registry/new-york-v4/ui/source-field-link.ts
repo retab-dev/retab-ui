@@ -40,7 +40,6 @@ export function useSegmentedSourceFieldLink(
       }
 
       link.previewItem(path);
-      link.navigateItem(path, { behavior: "auto", clearPreview: false });
     },
     [link],
   );

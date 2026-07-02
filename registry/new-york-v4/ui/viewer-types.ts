@@ -19,6 +19,26 @@ export type ViewerDocumentReadingAnchorTarget<Anchor> = {
   viewportBlockSize: number;
 };
 
+export type ViewerDocumentTransitionSource =
+  | "none"
+  | "viewer-shell"
+  | "document-layout";
+
+export type ViewerDocumentLayoutPolicy = "live" | "frozen" | "target";
+export type ViewerDocumentScrollPolicy = "preserve" | "defer" | "rebase";
+export type ViewerDocumentVisualPolicy =
+  | "none"
+  | "document-flip"
+  | "shell-transform";
+
+export type ViewerDocumentTransition = {
+  layoutPolicy: ViewerDocumentLayoutPolicy;
+  scrollPolicy: ViewerDocumentScrollPolicy;
+  source: ViewerDocumentTransitionSource;
+  transitionId: number | string | null;
+  visualPolicy: ViewerDocumentVisualPolicy;
+};
+
 export type ViewerDocumentLayoutModel<Anchor> = {
   blockSize: number;
   captureReadingAnchor: (
@@ -29,6 +49,7 @@ export type ViewerDocumentLayoutModel<Anchor> = {
   ) => number | null;
   inlineSize: number;
   isTransitioning?: boolean;
+  transition?: ViewerDocumentTransition;
 };
 
 export type ViewerDocumentPhysicalScrollPosition = {

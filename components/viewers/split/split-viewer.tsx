@@ -8,11 +8,9 @@ import { segmentsPageCount, toSegments } from "@/lib/segments";
 import { cn } from "@/lib/utils";
 import type { ViewerSource } from "@/lib/viewer-source";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerLegend,
   FileViewer,
   FileViewerProvider,
@@ -20,7 +18,7 @@ import {
   FileViewerSidebarContent,
   FileViewerSidebarTrigger,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { SegmentLegend } from "@/components/ui/segment-legend";
@@ -71,9 +69,9 @@ export function SplitViewer({
         headerMode="outlets"
         defaultSidebarOpen
       >
-        <FileViewer className="bg-background" sidebarMode="inline">
+        <FileViewer className="bg-background">
           <SplitViewerFileHeader />
-          <FileViewerBody>
+          <FileViewerContent>
             <SplitViewerSidebar />
             <FileViewerInset>
               <FileViewerLegend>
@@ -81,7 +79,7 @@ export function SplitViewer({
               </FileViewerLegend>
               <SplitViewerDocument document={document} />
             </FileViewerInset>
-          </FileViewerBody>
+          </FileViewerContent>
         </FileViewer>
       </FileViewerProvider>
     </SplitViewerProvider>
@@ -91,13 +89,9 @@ export function SplitViewer({
 function SplitViewerFileHeader() {
   return (
     <FileViewerHeader>
-      <FileViewerHeaderStart>
         <FileViewerSidebarTrigger />
-        <FileViewerIdentity meta="hidden" />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+        <FileViewerTitle />
+        <FileViewerControls />
     </FileViewerHeader>
   );
 }

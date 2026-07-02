@@ -1,27 +1,32 @@
 "use client";
 
 import * as React from "react";
+import { PanelLeft, PanelRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import {
-  ViewerHeader,
-  ViewerSidebarTrigger,
-  type ViewerSidebarTriggerProps,
-} from "./viewer";
+import { Button } from "./button";
+import { Spinner } from "./spinner";
 import { useFileViewerControlsState } from "./file-viewer-controls-context";
 import { useFileViewerRequiredResourceState } from "./file-viewer-resource-state";
-import { useFileViewerContext } from "./file-viewer-context";
+import {
+  useFileViewerContext,
+  useFileViewerShell,
+} from "./file-viewer-context";
+import { resolveFileViewerSidebarTriggerAccessibilityProps } from "./file-viewer-accessibility";
 import { ViewerControls } from "./viewer-controls";
 import { ViewerHeaderOutlet } from "./viewer-header-outlet";
 
-export type FileViewerHeaderProps = React.ComponentProps<typeof ViewerHeader>;
-export type FileViewerHeaderStartProps = React.ComponentProps<"div">;
-export type FileViewerHeaderEndProps = React.ComponentProps<"div">;
-export type FileViewerIdentityProps = React.ComponentProps<"div"> & {
-  meta?: "hidden" | "responsive" | "visible";
+type ButtonProps = React.ComponentProps<typeof Button> & {
+  loading?: boolean;
 };
-export type FileViewerToolbarProps = Omit<
+
+export type FileViewerHeaderProps = React.ComponentProps<"div">;
+export type FileViewerTitleProps = React.ComponentProps<"span">;
+export type FileViewerMetaProps = React.ComponentProps<"span"> & {
+  visibility?: "responsive" | "visible";
+};
+export type FileViewerControlsProps = Omit<
   React.ComponentProps<typeof ViewerControls>,
   | "downloads"
   | "loading"
@@ -31,7 +36,7 @@ export type FileViewerToolbarProps = Omit<
   | "title"
   | "zoom"
 >;
-export type FileViewerSidebarTriggerProps = ViewerSidebarTriggerProps;
+export type FileViewerSidebarTriggerProps = ButtonProps;
 
 export function FileViewerHeader({
   children,
@@ -39,137 +44,129 @@ export function FileViewerHeader({
   ...props
 }: FileViewerHeaderProps) {
   const { hasHeaderOutlets, headerMode } = useFileViewerContext();
-  const content = children ?? (
-    <>
-      <FileViewerHeaderStart>
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
-    </>
-  );
+  const content = children ?? <FileViewerDefaultHeaderContent />;
 
   if (headerMode === "outlets" && hasHeaderOutlets) {
     return <>{content}</>;
   }
 
   return (
-    <ViewerHeader
-      data-file-viewer-slot="header"
+    <div
       data-slot="file-viewer-header"
       className={cn(
-        "flex min-h-10 flex-wrap items-center gap-2 px-2 py-1 sm:flex-nowrap sm:py-0",
+        "bg-card flex min-h-10 shrink-0 flex-wrap items-center gap-2 border-b px-2 py-1 sm:flex-nowrap sm:py-0",
         className,
       )}
       {...props}
     >
       {content}
-    </ViewerHeader>
+    </div>
   );
 }
 
-export function FileViewerHeaderStart({
-  children,
-  className,
-  ...props
-}: FileViewerHeaderStartProps) {
+function FileViewerDefaultHeaderContent() {
   const { hasHeaderOutlets, headerMode } = useFileViewerContext();
-  const content = (
-    <div
-      data-file-viewer-slot="header-start"
-      data-slot="file-viewer-header-start"
-      className={cn("flex min-w-0 flex-1 items-center gap-2", className)}
+
+  if (headerMode === "outlets" && hasHeaderOutlets) {
+    return (
+      <>
+        <FileViewerTitle />
+        <FileViewerMeta />
+        <FileViewerControls />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div
+        data-slot="file-viewer-header-title-group"
+        className="flex min-w-0 flex-1 items-baseline gap-2"
+      >
+        <FileViewerTitle />
+        <FileViewerMeta />
+      </div>
+      <FileViewerControls />
+    </>
+  );
+}
+
+export function FileViewerTitle({ className, ...props }: FileViewerTitleProps) {
+  const { hasHeaderOutlets, headerMode } = useFileViewerContext();
+  const { descriptor } = useFileViewerRequiredResourceState();
+  const title = (
+    <span
+      data-slot="file-viewer-title"
+      className={cn(
+        "text-foreground min-w-0 truncate text-[13px] leading-5 font-medium",
+        className,
+      )}
+      title={descriptor.displayName}
       {...props}
     >
-      {children}
-    </div>
+      {descriptor.displayName}
+    </span>
   );
 
   if (headerMode === "outlets" && hasHeaderOutlets) {
-    return <ViewerHeaderOutlet name="identity">{content}</ViewerHeaderOutlet>;
+    return <ViewerHeaderOutlet name="titleGroup">{title}</ViewerHeaderOutlet>;
   }
 
-  return content;
+  return title;
 }
 
-export function FileViewerHeaderEnd({
-  children,
+export function FileViewerMeta({
   className,
+  visibility = "responsive",
   ...props
-}: FileViewerHeaderEndProps) {
+}: FileViewerMetaProps) {
   const { hasHeaderOutlets, headerMode } = useFileViewerContext();
-  const content = (
-    <div
-      data-file-viewer-slot="header-end"
-      data-slot="file-viewer-header-end"
-      className={cn("ms-auto flex shrink-0 items-center gap-1", className)}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-
-  if (headerMode === "outlets" && hasHeaderOutlets) {
-    return <ViewerHeaderOutlet name="toolbar">{content}</ViewerHeaderOutlet>;
-  }
-
-  return content;
-}
-
-export function FileViewerIdentity({
-  className,
-  meta = "responsive",
-  ...props
-}: FileViewerIdentityProps) {
   const { descriptor, resource } = useFileViewerRequiredResourceState();
   const metaText =
     resource.mimeType || descriptor.mimeType || descriptor.category;
-  const shouldShowMeta = meta !== "hidden" && Boolean(metaText);
 
-  return (
-    <div
-      data-file-viewer-slot="identity"
-      data-slot="file-viewer-identity"
-      className={cn("flex min-w-0 items-baseline gap-2", className)}
+  if (!metaText) return null;
+
+  const meta = (
+    <span
+      data-slot="file-viewer-meta"
+      className={cn(
+        "text-muted-foreground min-w-0 shrink truncate text-xs",
+        visibility === "responsive" && "hidden sm:inline",
+        className,
+      )}
       {...props}
     >
-      <span
-        className="text-foreground min-w-0 truncate text-[13px] leading-5 font-medium"
-        title={descriptor.displayName}
-      >
-        {descriptor.displayName}
-      </span>
-      {shouldShowMeta ? (
-        <span
-          className={cn(
-            "text-muted-foreground min-w-0 shrink truncate text-xs",
-            meta === "responsive" && "hidden sm:inline",
-          )}
-        >
-          {metaText}
-        </span>
-      ) : null}
-    </div>
+      {metaText}
+    </span>
   );
+
+  if (headerMode === "outlets" && hasHeaderOutlets) {
+    return <ViewerHeaderOutlet name="titleGroup">{meta}</ViewerHeaderOutlet>;
+  }
+
+  return meta;
 }
 
-export function FileViewerToolbar({
+export function FileViewerControls({
   className,
   extra,
   ...props
-}: FileViewerToolbarProps) {
+}: FileViewerControlsProps) {
   const { resource } = useFileViewerRequiredResourceState();
   const controlsState = useFileViewerControlsState();
   const downloads = controlsState?.downloads ?? [resource.originalDownload];
+  const { hasHeaderOutlets, headerMode } = useFileViewerContext();
 
-  return (
+  const controls = (
     <ViewerControls
       {...props}
       data-file-viewer-controls={controlsState ? "ready" : "idle"}
-      data-file-viewer-slot="toolbar"
-      data-slot="file-viewer-toolbar"
-      className={cn("h-8 min-w-0 border-b-0 bg-transparent px-0", className)}
+      data-slot="file-viewer-controls"
+      className={cn(
+        "ms-auto h-8 min-w-0 border-b-0 bg-transparent px-0",
+        className,
+      )}
       downloads={downloads}
       extra={extra ?? controlsState?.extra}
       loading={controlsState?.loading ?? false}
@@ -178,18 +175,84 @@ export function FileViewerToolbar({
       zoom={controlsState?.zoom ?? null}
     />
   );
+
+  if (headerMode === "outlets" && hasHeaderOutlets) {
+    return <ViewerHeaderOutlet name="controls">{controls}</ViewerHeaderOutlet>;
+  }
+
+  return controls;
 }
 
 export function FileViewerSidebarTrigger({
   className,
+  disabled,
+  loading,
+  onClick,
+  children,
+  size = "icon",
+  variant = "ghost",
+  "aria-label": ariaLabel = "Toggle sidebar",
   ...props
 }: FileViewerSidebarTriggerProps) {
+  const {
+    canToggleSidebar,
+    elementRegistry,
+    mode,
+    side,
+    isSidebarInteractive,
+    sidebarId,
+    sidebarState,
+    toggleSidebarRequestedOpen,
+  } = useFileViewerShell("FileViewerSidebarTrigger");
+  const isDisabled = Boolean(disabled || loading || !canToggleSidebar);
+  const Icon = side === "right" ? PanelRight : PanelLeft;
+  const setTriggerElement = React.useCallback(
+    (element: HTMLButtonElement | null) => {
+      elementRegistry.registerSidebarTriggerElement(element);
+    },
+    [elementRegistry],
+  );
+  const accessibilityProps = resolveFileViewerSidebarTriggerAccessibilityProps({
+    ariaLabel,
+    canToggleSidebar,
+    isDisabled,
+    isSidebarInteractive,
+    sidebarId,
+  });
+
   return (
-    <ViewerSidebarTrigger
-      data-file-viewer-slot="sidebar-trigger"
+    <Button
+      ref={setTriggerElement}
+      {...accessibilityProps}
+      className={cn("size-8", className)}
+      data-file-viewer-sidebar-mode={mode}
+      data-file-viewer-sidebar-side={side}
+      data-file-viewer-sidebar-state={sidebarState}
+      data-side={side}
       data-slot="file-viewer-sidebar-trigger"
-      className={className}
+      disabled={isDisabled}
+      onClick={(event) => {
+        if (isDisabled) {
+          event.preventDefault();
+          return;
+        }
+
+        onClick?.(event);
+        if (!event.defaultPrevented) {
+          toggleSidebarRequestedOpen();
+        }
+      }}
+      size={size}
+      variant={variant}
       {...props}
-    />
+    >
+      {loading ? <Spinner className="size-4 animate-spin" /> : null}
+      {children ?? (
+        <>
+          {loading ? null : <Icon />}
+          <span className="sr-only">Toggle sidebar</span>
+        </>
+      )}
+    </Button>
   );
 }

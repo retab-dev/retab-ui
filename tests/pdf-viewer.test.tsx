@@ -22,7 +22,7 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
   FileViewerSidebar,
   FileViewerInset,
@@ -54,6 +54,7 @@ import {
   getPdfPageLayout,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { PdfPage } from "@/registry/new-york-v4/ui/pdf-viewer-page";
+import { PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY } from "@/registry/new-york-v4/ui/pdf-viewer-pages-layer";
 import {
   PdfThumbnailRail,
   PdfViewerThumbnails,
@@ -187,6 +188,12 @@ function getExpectedPreservedPdfScrollTop({
   }
 
   const readingMarkerOffset = viewportHeight * 0.2;
+  const pageTopInViewport = previousPage.offsetTop - scrollTop;
+
+  if (Math.abs(pageTopInViewport) <= readingMarkerOffset) {
+    return nextPage.offsetTop - Math.round(pageTopInViewport);
+  }
+
   const pageAnchorRatio =
     (scrollTop + readingMarkerOffset - previousPage.offsetTop) /
     previousPage.height;
@@ -925,9 +932,7 @@ describe("PdfViewer", () => {
 
     await waitFor(() => expect(page.render).toHaveBeenCalledTimes(1));
     const renderTask = pdfjsMock.renderTasks[0];
-    const frame = document.querySelector<HTMLElement>(
-      '[data-slot="pdf-page"]',
-    );
+    const frame = document.querySelector<HTMLElement>('[data-slot="pdf-page"]');
     expect(frame?.style.width).toBe("100px");
     expect(frame?.style.height).toBe("200px");
 
@@ -1032,11 +1037,11 @@ describe("PdfViewer", () => {
       "file-viewer-header",
     );
     expect(root?.children[1]?.getAttribute("data-slot")).toBe(
-      "file-viewer-body",
+      "file-viewer-content",
     );
 
     const body = root?.querySelector<HTMLElement>(
-      '[data-slot="file-viewer-body"]',
+      '[data-slot="file-viewer-content"]',
     );
     expect(
       body?.querySelector(':scope > [data-slot="file-viewer-inset"]'),
@@ -1126,6 +1131,10 @@ describe("PdfViewer", () => {
       "[data-slot='scroll-area-viewport']",
     );
     expect(viewport).toBeTruthy();
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 5000,
+    });
     Object.defineProperty(viewport, "scrollTop", {
       configurable: true,
       value: 908,
@@ -1211,6 +1220,10 @@ describe("PdfViewer", () => {
       "[data-slot='scroll-area-viewport']",
     );
     expect(viewport).toBeTruthy();
+    Object.defineProperty(viewport, "scrollHeight", {
+      configurable: true,
+      value: 5000,
+    });
     Object.defineProperty(viewport, "scrollTop", {
       configurable: true,
       value: 1708,
@@ -1321,6 +1334,9 @@ describe("PdfViewer", () => {
     const documentSlot = document.querySelector<HTMLElement>(
       '[data-slot="pdf-viewer-document"]',
     );
+    const visualStage = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-viewer-visual-stage"]',
+    );
     const beforeSpacer = document.querySelector<HTMLElement>(
       '[data-slot="pdf-page-window-before"]',
     );
@@ -1337,6 +1353,9 @@ describe("PdfViewer", () => {
     expect(viewport?.style.overflowAnchor).toBe("none");
     expect(documentSlot?.getAttribute("style")).toContain(
       "contain: layout style",
+    );
+    expect(visualStage?.style.transformOrigin).toBe(
+      `left var(${PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY}, 0px)`,
     );
     expect(beforeSpacer?.getAttribute("style")).toContain(
       "contain: layout size",
@@ -2333,12 +2352,12 @@ describe("PdfViewer", () => {
               <FileViewerTitle />
               <FileViewerControls />
             </FileViewerHeader>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerSidebar>Composed sidebar</FileViewerSidebar>
               <FileViewerInset>
                 <PdfViewerPages bare className="h-full" />
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </PdfViewerProvider>
         </FileViewer>,
       );
@@ -2386,14 +2405,14 @@ describe("PdfViewer", () => {
               <FileViewerTitle />
               <FileViewerControls />
             </FileViewerHeader>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerSidebar aria-label="PDF pages">
                 <CountingThumbnails />
               </FileViewerSidebar>
               <FileViewerInset>
                 <PdfViewerPages bare className="h-full" defaultScale={1} />
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </PdfViewerProvider>
         </FileViewer>,
       );
@@ -2449,14 +2468,14 @@ describe("PdfViewer", () => {
               <FileViewerTitle />
               <FileViewerControls />
             </FileViewerHeader>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerSidebar aria-label="PDF pages">
                 <CountingThumbnails />
               </FileViewerSidebar>
               <FileViewerInset>
                 <PdfViewerPages bare className="h-full" />
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </PdfViewerProvider>
         </FileViewer>,
       );

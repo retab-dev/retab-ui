@@ -1678,8 +1678,11 @@ describe("JsonForm source linking", () => {
     const shell = findAncestorWithClass(input, "bg-primary/5");
     expect(shell.className).toContain("bg-primary/5");
 
+    fireEvent.pointerMove(input, { pointerType: "mouse" });
+    fireEvent.keyDown(document, { key: "Tab" });
     fireEvent.focus(input);
     fireEvent.blur(input);
+    fireEvent.pointerLeave(shell);
     fireEvent.click(input);
 
     expect(onSourceHover).toHaveBeenCalledWith("customer_name");
@@ -1744,6 +1747,7 @@ describe("JsonForm source linking", () => {
     const cell = getTableDataCell("Value A");
     expect(cell).toBeTruthy();
 
+    fireEvent.keyDown(document, { key: "Tab" });
     fireEvent.focus(cell);
     expect(cell.getAttribute("data-source-active")).toBe("true");
     fireEvent.blur(cell);

@@ -2,17 +2,15 @@
 
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -36,17 +34,13 @@ export function FileViewerHeaderExample() {
   return (
     <div className="not-prose bg-background h-[560px] overflow-hidden rounded-xl border">
       <FileViewerProvider source={source} defaultSidebarOpen>
-        <FileViewer sidebarMode="inline" className="bg-background h-full">
+        <FileViewer className="bg-background h-full">
           <FileViewerHeader>
-            <FileViewerHeaderStart>
               <FileViewerSidebarTrigger className="-ml-1" />
-              <FileViewerIdentity />
-            </FileViewerHeaderStart>
-            <FileViewerHeaderEnd>
-              <FileViewerToolbar />
-            </FileViewerHeaderEnd>
+              <FileViewerTitle />
+              <FileViewerControls />
           </FileViewerHeader>
-          <FileViewerBody>
+          <FileViewerContent>
             <FileViewerSidebar
               aria-label="Review sections"
               width="18rem"
@@ -81,7 +75,7 @@ export function FileViewerHeaderExample() {
                 <FileViewerDocument />
               </FileViewerViewport>
             </FileViewerInset>
-          </FileViewerBody>
+          </FileViewerContent>
         </FileViewer>
       </FileViewerProvider>
     </div>

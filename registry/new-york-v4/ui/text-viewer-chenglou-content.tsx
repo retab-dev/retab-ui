@@ -52,6 +52,11 @@ import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 import { patchKeyedDomChildren } from "./text-viewer-dom-projection";
 import { useTextViewerScrollInteractions } from "./text-viewer-scroll-interactions";
+import { resolveFileViewerRendererLayoutInlineSize } from "./file-viewer-renderer-contract";
+import {
+  useOptionalFileViewerRendererEnvironment,
+  useOptionalFileViewerRendererFrame,
+} from "./file-viewer-renderer-frame";
 
 const TEXT_VIEWER_HORIZONTAL_PADDING = 16;
 const TEXT_VIEWER_DEFAULT_VIEWPORT_HEIGHT = 600;
@@ -179,7 +184,7 @@ export function TextViewerContent({
   forwardedRef,
   mode: forcedMode,
   projection = "chenglou",
-}: TextViewerProps & {
+}: Omit<TextViewerProps, "source"> & {
   resource: ViewerResource;
   retryVersion: number;
   forwardedRef?: React.ForwardedRef<TextViewerHandle>;
@@ -229,10 +234,21 @@ export function TextViewerContent({
     height: 0,
     width: 0,
   });
+  const { usesShellGeometry } = useOptionalFileViewerRendererEnvironment();
+  const rendererFrame = useOptionalFileViewerRendererFrame({
+    fallbackInlineSize: viewportSize.width || null,
+  });
   const viewportHeight =
     viewportSize.height || TEXT_VIEWER_DEFAULT_VIEWPORT_HEIGHT;
-  const viewportWidth =
+  const measuredViewportWidth =
     viewportSize.width || TEXT_VIEWER_DEFAULT_VIEWPORT_WIDTH;
+  const viewportWidth = usesShellGeometry
+    ? measuredViewportWidth
+    : (resolveFileViewerRendererLayoutInlineSize({
+        fallbackInlineSize: measuredViewportWidth,
+        rendererFrame,
+      }) ?? measuredViewportWidth);
+  const documentInlineSize = contentWidth + TEXT_VIEWER_HORIZONTAL_PADDING * 2;
 
   const preparedDocument = React.useMemo(
     () =>
@@ -311,31 +327,38 @@ export function TextViewerContent({
     [],
   );
 
-  useKeyedLayoutEffect("mount", () => {
-    const scrollElement = viewportRef.current;
-    if (!scrollElement) return;
+  useKeyedLayoutEffect(
+    joinEffectKey(["viewport-resize", usesShellGeometry]),
+    () => {
+      const scrollElement = viewportRef.current;
+      if (!scrollElement) return;
 
-    const readViewportSize = () => {
-      const nextWidth = scrollElement.clientWidth;
-      const nextHeight = scrollElement.clientHeight;
-      setViewportSize((current) =>
-        current.width === nextWidth && current.height === nextHeight
-          ? current
-          : { height: nextHeight, width: nextWidth },
-      );
-    };
+      const readViewportSize = () => {
+        const nextHeight = scrollElement.clientHeight;
+        setViewportSize((current) => {
+          const nextWidth =
+            usesShellGeometry && current.width > 0
+              ? current.width
+              : scrollElement.clientWidth;
 
-    readViewportSize();
-    const resizeObserver =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(readViewportSize);
-    resizeObserver?.observe(scrollElement);
+          return current.width === nextWidth && current.height === nextHeight
+            ? current
+            : { height: nextHeight, width: nextWidth };
+        });
+      };
 
-    return () => {
-      resizeObserver?.disconnect();
-    };
-  });
+      readViewportSize();
+      const resizeObserver =
+        typeof ResizeObserver === "undefined"
+          ? null
+          : new ResizeObserver(readViewportSize);
+      resizeObserver?.observe(scrollElement);
+
+      return () => {
+        resizeObserver?.disconnect();
+      };
+    },
+  );
 
   useTextViewerScrollInteractions({
     getInteractionTarget: getScrollInteractionTarget,
@@ -345,8 +368,15 @@ export function TextViewerContent({
   });
 
   useKeyedLayoutEffect(
-    joinEffectKey([captureScrollAnchor, viewportWidth]),
+    joinEffectKey([
+      captureScrollAnchor,
+      rendererFrame.documentTransition.layoutPolicy,
+      rendererFrame.documentTransition.transitionId,
+      viewportWidth,
+    ]),
     () => {
+      if (rendererFrame.documentTransition.layoutPolicy === "frozen") return;
+
       const nextContentWidth = Math.max(
         1,
         viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,
@@ -458,7 +488,7 @@ export function TextViewerContent({
   );
 
   useKeyedMountEffect(joinEffectKey([highlightRange, scrollLineRange]), () => {
-    scrollLineRange(highlightRange);
+    scrollLineRange(highlightRange, { behavior: "auto" });
   });
 
   const scrollMarkdownFragment = React.useCallback(
@@ -506,7 +536,10 @@ export function TextViewerContent({
         viewportProps={{ onClickCapture: scrollMarkdownFragment }}
         viewportRef={viewportRef}
       >
-        <div className="relative min-w-0" style={{ minWidth: viewportWidth }}>
+        <div
+          className="relative min-w-0"
+          style={{ minWidth: documentInlineSize }}
+        >
           {mode === "text" ? (
             <DeferredNativeFindIndex
               lineCount={preparedDocument.sourceLineCount}
@@ -521,7 +554,7 @@ export function TextViewerContent({
             data-projection={projection}
             style={{
               height: frame.totalHeight,
-              minWidth: viewportWidth,
+              minWidth: documentInlineSize,
             }}
           />
         </div>

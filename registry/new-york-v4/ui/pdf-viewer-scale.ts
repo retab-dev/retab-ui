@@ -49,11 +49,23 @@ export function getPdfPageDevicePixelRatio({
   );
 }
 
-export function useMeasuredElementWidth() {
+export function useMeasuredElementWidth({
+  enabled = true,
+}: {
+  enabled?: boolean;
+} = {}) {
+  const [element, setElement] = React.useState<HTMLDivElement | null>(null);
   const [width, setWidth] = React.useState<number | null>(null);
 
-  const ref = React.useCallback((element: HTMLDivElement | null) => {
-    if (!element) return;
+  const ref = React.useCallback((nextElement: HTMLDivElement | null) => {
+    setElement(nextElement);
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!enabled || !element) {
+      if (!enabled) setWidth(null);
+      return;
+    }
 
     let frame = 0;
     const measure = () => {
@@ -78,7 +90,7 @@ export function useMeasuredElementWidth() {
       if (frame) cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, []);
+  }, [element, enabled]);
 
   return { ref, width };
 }

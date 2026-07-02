@@ -2,40 +2,38 @@
 
 import * as React from "react";
 
-import {
-  createFileViewerControlsRegistration,
-  resolveFileViewerControlsState,
-  type FileViewerControlsRegistration,
-} from "./file-viewer-controls-store";
+import type { ViewerControlsState } from "./viewer-controls";
+
+export type FileViewerControlsState = ViewerControlsState;
+
+type FileViewerControlsRegistration = {
+  descriptorKey: string;
+  state: FileViewerControlsState | null;
+};
 
 type FileViewerControlsValue = {
-  controlsState: ReturnType<typeof resolveFileViewerControlsState>;
+  controlsState: FileViewerControlsState | null;
 };
 
 const FileViewerControlsContext =
   React.createContext<FileViewerControlsValue | null>(null);
 
 export function useFileViewerControlsController(descriptorKey: string): {
-  controlsValue: {
-    controlsState: ReturnType<typeof resolveFileViewerControlsState>;
-  };
-  handleControlsChange: (
-    state: FileViewerControlsRegistration["state"],
-  ) => void;
+  controlsValue: FileViewerControlsValue;
+  handleControlsChange: (state: FileViewerControlsState | null) => void;
 } {
   const [controlsRegistration, setControlsRegistration] =
-    React.useState<FileViewerControlsRegistration>(() =>
-      createFileViewerControlsRegistration(descriptorKey),
-    );
-  const controlsState = resolveFileViewerControlsState({
-    descriptorKey,
-    registration: controlsRegistration,
-  });
+    React.useState<FileViewerControlsRegistration>(() => ({
+      descriptorKey,
+      state: null,
+    }));
+  const controlsState =
+    controlsRegistration.descriptorKey === descriptorKey
+      ? controlsRegistration.state
+      : null;
   const handleControlsChange = React.useCallback(
-    (state: FileViewerControlsRegistration["state"]) => {
-      setControlsRegistration(
-        createFileViewerControlsRegistration(descriptorKey, state),
-      );
+    (state: FileViewerControlsState | null) => {
+      setControlsRegistration({ descriptorKey, state });
     },
     [descriptorKey],
   );
@@ -57,9 +55,7 @@ export function FileViewerControlsProvider({
   value,
 }: {
   children: React.ReactNode;
-  value: {
-    controlsState: ReturnType<typeof resolveFileViewerControlsState>;
-  };
+  value: FileViewerControlsValue;
 }) {
   return React.createElement(
     FileViewerControlsContext.Provider,

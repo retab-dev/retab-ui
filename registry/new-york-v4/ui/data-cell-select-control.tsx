@@ -98,10 +98,16 @@ export function DataCellSelectControl({
         onBlur={(event) => {
           onBlur?.(event);
           const nextFocusTarget = event.relatedTarget;
+          const isUnknownPopupFocusTarget =
+            select.open && nextFocusTarget === null;
           const isPopupFocus =
             nextFocusTarget instanceof Node &&
             document.getElementById(popupId)?.contains(nextFocusTarget);
-          if (!isPopupFocus && !shouldCancelDismiss("focus-out", undefined)) {
+          if (
+            !isPopupFocus &&
+            !isUnknownPopupFocusTarget &&
+            !shouldCancelDismiss("focus-out", undefined)
+          ) {
             closeActivatedEditor();
           }
         }}

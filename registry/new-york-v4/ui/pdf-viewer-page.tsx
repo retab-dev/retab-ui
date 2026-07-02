@@ -393,10 +393,12 @@ function getPdfDisplayViewportSize({
 }): PdfViewportSize {
   const isRotated = normalizePdfRotation(rotation) % 180 !== 0;
   return {
-    width:
+    width: Math.round(
       (isRotated ? intrinsicViewport.height : intrinsicViewport.width) * scale,
-    height:
+    ),
+    height: Math.round(
       (isRotated ? intrinsicViewport.width : intrinsicViewport.height) * scale,
+    ),
   };
 }
 

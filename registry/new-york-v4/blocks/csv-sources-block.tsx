@@ -13,16 +13,14 @@ import {
 } from "@/components/ui/csv-viewer";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarContent,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { SegmentedDocumentProvider } from "@/components/ui/segmented-document-provider";
@@ -104,17 +102,13 @@ function CsvSourcesContent({
     <FileViewerProvider source={CSV_SOURCE} defaultSidebarOpen>
       <FileViewer
         className="bg-background h-full min-h-[680px]"
-        sidebarSide="right"
+       
       >
         <FileViewerHeader>
-          <FileViewerHeaderStart>
-            <FileViewerIdentity />
-          </FileViewerHeaderStart>
-          <FileViewerHeaderEnd>
-            <FileViewerToolbar />
-          </FileViewerHeaderEnd>
+            <FileViewerTitle />
+            <FileViewerControls />
         </FileViewerHeader>
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>
               <CsvViewerDocument
@@ -138,7 +132,7 @@ function CsvSourcesContent({
               <SourceFieldList fields={FIELDS} link={link} />
             </FileViewerSidebarContent>
           </FileViewerSidebar>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

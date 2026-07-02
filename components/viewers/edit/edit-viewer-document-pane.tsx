@@ -5,7 +5,7 @@ import * as React from "react";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import type { BlobViewerSource, UrlViewerSource } from "@/lib/viewer-source";
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewer,
   FileViewerProvider,
@@ -94,7 +94,7 @@ function SourceDocumentRenderer({
       <FileViewerProvider source={source}>
         <FileViewer>
           <PdfViewerProvider>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerInset>
                 <FileViewerViewport>
                   <PdfViewerPages
@@ -111,7 +111,7 @@ function SourceDocumentRenderer({
                   />
                 </FileViewerViewport>
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </PdfViewerProvider>
         </FileViewer>
       </FileViewerProvider>
@@ -148,13 +148,13 @@ function EditFileViewerDocument({
   return (
     <FileViewerProvider source={source}>
       <FileViewer>
-        <FileViewerBody>
+        <FileViewerContent>
           <FileViewerInset>
             <FileViewerViewport>
               <FileViewerDocument />
             </FileViewerViewport>
           </FileViewerInset>
-        </FileViewerBody>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

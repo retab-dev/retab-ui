@@ -4,8 +4,8 @@ description: File Viewer navigation patterns for thumbnails, attachments, segmen
 component: true
 ---
 
-`FileViewerSidebar` is the optional rail inside `FileViewerBody`. It belongs to
-the File Viewer frame: `FileViewer`, `FileViewerHeader`, `FileViewerBody`,
+`FileViewerSidebar` is the optional rail inside `FileViewerContent`. It belongs to
+the File Viewer frame: `FileViewer`, `FileViewerHeader`, `FileViewerContent`,
 `FileViewerSidebar`, and `FileViewerInset`.
 
 Use it for document-adjacent panels: page sections, attachments, source fields,
@@ -29,29 +29,28 @@ renderer.
 <FileViewerProvider source={source} defaultSidebarOpen>
   <FileViewer sidebarMode="auto">
     <FileViewerHeader>
-      <FileViewerHeaderStart>
-        <FileViewerSidebarTrigger />
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+      <FileViewerSidebarTrigger />
+      <FileViewerTitle className="flex-1" />
+      <FileViewerControls className="ms-auto" />
     </FileViewerHeader>
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerSidebar aria-label="Document sections" width="18rem">
-        <SegmentSidebar
-          segments={segments}
-          interaction={interaction}
-          currentPage={currentPage}
-          onSelect={(segment) => scrollToPage(segment.pages[0])}
-        />
+        <FileViewerSidebarHeader>Sections</FileViewerSidebarHeader>
+        <FileViewerSidebarContent>
+          <SegmentSidebar
+            segments={segments}
+            interaction={interaction}
+            currentPage={currentPage}
+            onSelect={(segment) => scrollToPage(segment.pages[0])}
+          />
+        </FileViewerSidebarContent>
       </FileViewerSidebar>
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
@@ -61,7 +60,8 @@ renderer.
 - `FileViewerProvider` owns sidebar open state and controlled/uncontrolled
   state props.
 - `FileViewer` owns sidebar mode resolution, trigger wiring, the
-  single-primary-sidebar contract, and the sidebar layout transition marker.
+  single-primary-sidebar contract, and the root motion store for inline
+  geometry.
 - `FileViewerSidebar` owns spatial placement, declared width, side override,
   collapse behavior, and the rail's accessible label.
 - `FileViewerInset` owns the main file inset and document frame beside the
@@ -105,17 +105,17 @@ workflow requires it:
 
 ```tsx
 <FileViewerProvider source={source} defaultSidebarOpen>
-  <FileViewer sidebarMode="inline" sidebarSide="right">
-    <FileViewerBody>
+  <FileViewer>
+    <FileViewerContent>
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-      <FileViewerSidebar aria-label="Attachments" width="20rem">
+      <FileViewerSidebar aria-label="Attachments" side="right" width="20rem">
         <AttachmentSidebar items={attachments} selectedId={selectedId} />
       </FileViewerSidebar>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
@@ -124,20 +124,21 @@ workflow requires it:
 with the nearest `FileViewer` frame. In overlay mode, Escape closes the sidebar
 and focus returns to the trigger.
 
-For inline rails, keep the default `sidebarGapTransition="width"` when the
-document should resize with the rail. The sidebar width, gap width, and inset
-document frame then move to the same target inline size. CSS performs the
-linear interpolation, while renderers use the transition marker for anchoring
-and virtualization.
+For inline rails, the document and sidebar resize from one FileViewer motion
+clock. The motion store writes the sidebar gap and document surface transform
+from the same geometry frame so inherited root styles do not invalidate the full
+viewer tree. Renderers use the document-frame contract for fit-width scale,
+anchoring, and virtualization.
 
 ## Structural Attributes
 
 File Viewer sidebar primitives expose stable attributes for local styling and
 tests:
 
-- `data-slot="file-viewer-header"`, `file-viewer-body`,
-  `file-viewer-sidebar`, `file-viewer-inset`, and
-  `file-viewer-sidebar-trigger`;
+- `data-slot="file-viewer-header"`, `file-viewer-content`,
+  `file-viewer-sidebar`, `file-viewer-sidebar-header`,
+  `file-viewer-sidebar-content`, `file-viewer-sidebar-footer`,
+  `file-viewer-inset`, and `file-viewer-sidebar-trigger`;
 - `data-file-viewer-sidebar-mode="inline" | "overlay"`;
 - `data-file-viewer-sidebar-open="true" | "false"`;
 - `data-file-viewer-sidebar-state="expanded" | "collapsed"`;
@@ -154,4 +155,4 @@ but file-viewer examples and app-level styling should prefer the namespaced
 
 ## Source
 
-<ComponentSource src="registry/new-york-v4/ui/file-viewer-body.tsx" />
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-sidebar.tsx" />

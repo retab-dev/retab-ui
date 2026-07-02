@@ -16,6 +16,7 @@ import type {
   ViewerDocumentScrollMetrics,
   ViewerDocumentScrollTargetResolver,
   ViewerDocumentLayoutModel,
+  ViewerDocumentTransition,
 } from "./viewer-types";
 import { useViewerDocumentScroll } from "./viewer-document-scroll";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
@@ -24,12 +25,17 @@ import { joinEffectKey } from "@/lib/effect-key";
 
 const PDF_SCROLL_TARGET_HEADROOM = 48;
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32;
-const PDF_READING_MARKER_RATIO = 0.2;
+export const PDF_READING_MARKER_RATIO = 0.2;
 const PDF_SCROLL_IDLE_MS = 120;
 
 type PdfReadingAnchor =
   | {
       kind: "top";
+    }
+  | {
+      kind: "page-boundary";
+      pageNumber: number;
+      topInViewport: number;
     }
   | {
       kind: "page";
@@ -120,10 +126,26 @@ export function usePdfScrollActivity() {
   return { isScrolling, scrollDirection, handleScrollActivity };
 }
 
+export function getPdfReadingMarkerBlockOffset({
+  scrollTop,
+  viewportHeight,
+}: {
+  scrollTop: number;
+  viewportHeight: number;
+}) {
+  const safeScrollTop = Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0;
+  const safeViewportHeight = Number.isFinite(viewportHeight)
+    ? Math.max(0, viewportHeight)
+    : 0;
+
+  return safeScrollTop + safeViewportHeight * PDF_READING_MARKER_RATIO;
+}
+
 export function usePdfScroll({
   isLayoutTransitioning = false,
   pageCount,
   layout,
+  transition,
   resetKey,
   onVisiblePageChange,
   onScrollProgressChange,
@@ -131,6 +153,7 @@ export function usePdfScroll({
   isLayoutTransitioning?: boolean;
   pageCount: number;
   layout: PdfPageLayoutModel;
+  transition?: ViewerDocumentTransition;
   resetKey?: unknown;
   onVisiblePageChange?: (page: number) => void;
   onScrollProgressChange?: (progress: number) => void;
@@ -146,8 +169,13 @@ export function usePdfScroll({
     ? currentPageState.page
     : 1;
   const documentLayout = React.useMemo(
-    () => createPdfDocumentLayoutModel(layout, isLayoutTransitioning),
-    [isLayoutTransitioning, layout],
+    () =>
+      createPdfDocumentLayoutModel({
+        isTransitioning: isLayoutTransitioning,
+        layout,
+        transition,
+      }),
+    [isLayoutTransitioning, layout, transition],
   );
   const resolveScrollTarget = React.useCallback<
     ViewerDocumentScrollTargetResolver<PdfReadingAnchor, PdfPageAreaTarget>
@@ -206,8 +234,10 @@ export function usePdfScroll({
         : 0;
     onScrollProgressChange?.(progress);
 
-    const markerOffset =
-      metrics.scrollTop + metrics.viewportBlockSize * PDF_READING_MARKER_RATIO;
+    const markerOffset = getPdfReadingMarkerBlockOffset({
+      scrollTop: metrics.scrollTop,
+      viewportHeight: metrics.viewportBlockSize,
+    });
     const visiblePage = findPdfPageByOffset(layout, markerOffset);
     if (
       visiblePage >= 1 &&
@@ -393,10 +423,33 @@ function normalizeOptionalPercent(value: number | undefined) {
   return clamp(value, 0, 100);
 }
 
-function createPdfDocumentLayoutModel(
-  layout: PdfPageLayoutModel,
-  isTransitioning: boolean,
-): PdfDocumentLayoutModel {
+function createPdfDocumentLayoutModel({
+  isTransitioning,
+  layout,
+  transition,
+}: {
+  isTransitioning: boolean;
+  layout: PdfPageLayoutModel;
+  transition?: ViewerDocumentTransition;
+}): PdfDocumentLayoutModel {
+  const documentTransition: ViewerDocumentTransition =
+    transition ??
+    (isTransitioning
+      ? {
+          layoutPolicy: "live",
+          scrollPolicy: "preserve",
+          source: "document-layout",
+          transitionId: null,
+          visualPolicy: "document-flip",
+        }
+      : {
+          layoutPolicy: "live",
+          scrollPolicy: "preserve",
+          source: "none",
+          transitionId: null,
+          visualPolicy: "none",
+        });
+
   return {
     blockSize: layout.totalHeight,
     captureReadingAnchor: (input) => capturePdfReadingAnchor(layout, input),
@@ -404,6 +457,7 @@ function createPdfDocumentLayoutModel(
       getPdfReadingAnchorScrollTop(layout, target),
     inlineSize: layout.maxPageWidth,
     isTransitioning,
+    transition: documentTransition,
   };
 }
 
@@ -424,6 +478,16 @@ function capturePdfReadingAnchor(
   const pageNumber = findPdfPageByOffset(layout, anchorOffset);
   const pageLayout = getPdfPageLayout(layout, pageNumber);
   if (!pageLayout || pageLayout.height <= 0) return null;
+
+  const markerOffset = getPdfReadingAnchorOffset(viewportBlockSize);
+  const pageTopInViewport = pageLayout.offsetTop - scrollTop;
+  if (Math.abs(pageTopInViewport) <= markerOffset) {
+    return {
+      kind: "page-boundary",
+      pageNumber,
+      topInViewport: snapPdfReadingBoundaryOffset(pageTopInViewport),
+    };
+  }
 
   return {
     kind: "page",
@@ -453,16 +517,24 @@ function getPdfReadingAnchorScrollTop(
   const pageLayout = getPdfPageLayout(layout, anchor.pageNumber);
   if (!pageLayout) return null;
 
+  const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
+  if (anchor.kind === "page-boundary") {
+    return clamp(pageLayout.offsetTop - anchor.topInViewport, 0, maxScrollTop);
+  }
+
   const targetTop =
     pageLayout.offsetTop +
     pageLayout.height * anchor.yPercent -
     getPdfReadingAnchorOffset(viewportBlockSize);
-  const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
   return clamp(targetTop, 0, maxScrollTop);
 }
 
 function getPdfReadingAnchorOffset(viewportBlockSize: number) {
   return Math.max(0, viewportBlockSize * PDF_READING_MARKER_RATIO);
+}
+
+function snapPdfReadingBoundaryOffset(offset: number) {
+  return Number.isFinite(offset) ? Math.round(offset) : 0;
 }
 
 function toPdfScrollMetrics(

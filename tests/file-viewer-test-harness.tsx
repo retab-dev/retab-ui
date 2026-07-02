@@ -6,21 +6,18 @@ import type {
 } from "@/registry/new-york-v4/ui/file-viewer";
 import {
   FileViewer as FileViewerFrame,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerMeta,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerPreview,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
-  useFileViewerResource,
   type FileViewerProps,
   type FileViewerProviderProps,
-  type FileViewerToolbarProps,
 } from "@/registry/new-york-v4/ui/file-viewer";
 
 type FileViewerHarnessProps = Omit<FileViewerProps, "sidebarMode"> &
@@ -85,13 +82,13 @@ export function FileViewerHarness({
         {children ?? (
           <>
             <FileViewerHeader />
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerInset>
                 <FileViewerViewport>
                   <FileViewerDocument />
                 </FileViewerViewport>
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </>
         )}
       </FileViewerFrame>
@@ -99,50 +96,16 @@ export function FileViewerHarness({
   );
 }
 
-export function FileViewerTitle(props: React.ComponentProps<"span">) {
-  const resource = useFileViewerResource();
-
-  return (
-    <span data-slot="file-viewer-title" title={resource.fileName} {...props}>
-      {resource.fileName}
-    </span>
-  );
-}
-
-export function FileViewerMeta(props: React.ComponentProps<"span">) {
-  const resource = useFileViewerResource();
-  const metaText =
-    resource.mimeType ||
-    resource.descriptor.mimeType ||
-    resource.descriptor.category;
-
-  return (
-    <span data-slot="file-viewer-meta" {...props}>
-      {metaText}
-    </span>
-  );
-}
-
-export function FileViewerControls({
-  position: _position,
-  subtitle: _subtitle,
-  title: _title,
-  ...props
-}: FileViewerToolbarProps & Record<string, unknown>) {
-  return <FileViewerToolbar {...props} />;
-}
-
 export {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerDocument,
   FileViewerFrame,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerMeta,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerPreview,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 };

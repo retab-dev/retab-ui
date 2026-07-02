@@ -1,16 +1,14 @@
 "use client";
 
 import {
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerLegend,
   FileViewer,
   FileViewerProvider,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
@@ -60,15 +58,11 @@ export function PartitionViewerBlock() {
           <FileViewer className="bg-background">
             <PdfViewerProvider>
               <FileViewerHeader>
-                <FileViewerHeaderStart>
-                  <FileViewerIdentity meta="hidden" />
+                  <FileViewerTitle />
                   <PartitionViewerHeaderMeta />
-                </FileViewerHeaderStart>
-                <FileViewerHeaderEnd>
-                  <FileViewerToolbar />
-                </FileViewerHeaderEnd>
+                  <FileViewerControls />
               </FileViewerHeader>
-              <FileViewerBody>
+              <FileViewerContent>
                 <FileViewerInset>
                   <FileViewerLegend>
                     <PartitionViewerLegend className="px-3 py-2" />
@@ -78,7 +72,7 @@ export function PartitionViewerBlock() {
                     <PartitionSourceDocument />
                   </FileViewerViewport>
                 </FileViewerInset>
-              </FileViewerBody>
+              </FileViewerContent>
             </PdfViewerProvider>
           </FileViewer>
         </FileViewerProvider>

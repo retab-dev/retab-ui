@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import type { SourceFieldLink } from "@/components/ui/source-field-link";
+import { useSourceLinkFocusPreviewIntent } from "@/components/json-form/source-link-focus-intent";
 import {
   useSourceTableHoverController,
   type JsonFormSourceLinkActions,
@@ -68,9 +69,15 @@ function shouldSelectSourceFromKeyDown(event: React.KeyboardEvent): boolean {
   return !(event.target instanceof HTMLTextAreaElement);
 }
 
+function shouldPreviewSourceFromPointerMove(
+  event: React.PointerEvent,
+): boolean {
+  return !event.defaultPrevented && event.pointerType !== "touch";
+}
+
 /**
- * Wraps a scalar leaf so it reports its source path on hover/focus and lights up
- * as a card when active. Without a source link, it renders children unchanged.
+ * Wraps a scalar leaf so it reports its source path from explicit pointer or
+ * keyboard intent. Without a source link, it renders children unchanged.
  */
 export function SourceLinkShell({
   sourcePath,
@@ -81,15 +88,46 @@ export function SourceLinkShell({
 }) {
   const activeSourcePath = useActiveSourcePath();
   const sourceLinkActions = useSourceLinkActions();
+  const shouldPreviewFocus = useSourceLinkFocusPreviewIntent();
+  const focusPreviewedRef = React.useRef(false);
+  const pointerPreviewedRef = React.useRef(false);
   if (!sourceLinkActions) return <>{children}</>;
   const active = activeSourcePath === sourcePath;
 
+  const clearPreviewIfIdle = () => {
+    if (focusPreviewedRef.current || pointerPreviewedRef.current) return;
+    sourceLinkActions.onSourceHover(null);
+  };
+
   return (
     <div
-      onMouseEnter={() => sourceLinkActions.onSourceHover(sourcePath)}
-      onMouseLeave={() => sourceLinkActions.onSourceHover(null)}
-      onFocus={() => sourceLinkActions.onSourceHover(sourcePath)}
-      onBlur={() => sourceLinkActions.onSourceHover(null)}
+      data-source-active={active ? "true" : "false"}
+      data-source-path={sourcePath}
+      onPointerMove={(event) => {
+        if (
+          pointerPreviewedRef.current ||
+          !shouldPreviewSourceFromPointerMove(event)
+        ) {
+          return;
+        }
+        pointerPreviewedRef.current = true;
+        sourceLinkActions.onSourceHover(sourcePath);
+      }}
+      onPointerLeave={() => {
+        if (!pointerPreviewedRef.current) return;
+        pointerPreviewedRef.current = false;
+        clearPreviewIfIdle();
+      }}
+      onFocus={(event) => {
+        if (!shouldPreviewFocus(event)) return;
+        focusPreviewedRef.current = true;
+        sourceLinkActions.onSourceHover(sourcePath);
+      }}
+      onBlur={() => {
+        if (!focusPreviewedRef.current) return;
+        focusPreviewedRef.current = false;
+        clearPreviewIfIdle();
+      }}
       onClick={() => sourceLinkActions.selectSourcePath?.(sourcePath)}
       onKeyDownCapture={(event) => {
         if (shouldSelectSourceFromKeyDown(event)) {

@@ -4,14 +4,12 @@ import * as React from "react";
 
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import { PdfViewerPages, PdfViewerProvider } from "@/components/ui/pdf-viewer";
@@ -144,21 +142,17 @@ function ClassificationPdfDocument() {
       <FileViewer className="h-full rounded-none border-0 bg-transparent">
         <PdfViewerProvider>
           <FileViewerHeader>
-            <FileViewerHeaderStart>
-              <FileViewerIdentity />
-            </FileViewerHeaderStart>
-            <FileViewerHeaderEnd>
-              <FileViewerToolbar />
-            </FileViewerHeaderEnd>
+              <FileViewerTitle />
+              <FileViewerControls />
           </FileViewerHeader>
           <ClassifierViewerLegend />
-          <FileViewerBody>
+          <FileViewerContent>
             <FileViewerInset>
               <FileViewerViewport>
                 <PdfViewerPages bare className="h-full" />
               </FileViewerViewport>
             </FileViewerInset>
-          </FileViewerBody>
+          </FileViewerContent>
         </PdfViewerProvider>
       </FileViewer>
     </FileViewerProvider>

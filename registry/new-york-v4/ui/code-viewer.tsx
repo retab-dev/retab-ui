@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import type { ViewerResource } from "@/lib/viewer-resource";
+
 import { CodeViewerFallback } from "./code-viewer-chrome";
 import { CodeViewerContent } from "./code-viewer-content";
 import type { CodeViewerHandle, CodeViewerProps } from "./code-viewer-types";
@@ -13,6 +15,10 @@ export type {
   CodeViewerHandle,
   CodeViewerProps,
 } from "./code-viewer-types";
+
+export type CodeResourceContentProps = Omit<CodeViewerProps, "source"> & {
+  resource: ViewerResource;
+};
 
 export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
   function CodeViewer(props, ref) {
@@ -28,3 +34,20 @@ export const CodeViewer = React.forwardRef<CodeViewerHandle, CodeViewerProps>(
     );
   },
 );
+
+export const CodeResourceContent = React.forwardRef<
+  CodeViewerHandle,
+  CodeResourceContentProps
+>(function CodeResourceContent({ resource, ...props }, ref) {
+  return (
+    <PlainTextViewerFrame
+      props={props}
+      resource={resource}
+      forwardedRef={ref}
+      clientFallbackPolicy="always"
+      contentResetPolicy="inline-retry"
+      Fallback={CodeViewerFallback}
+      Content={CodeViewerContent}
+    />
+  );
+});

@@ -15,8 +15,8 @@ provider, frame, inset, viewport, and routed document for a single file.
 
 - Renders `FileViewerProvider`, `FileViewer`, `FileViewerInset`,
   `FileViewerViewport`, and `FileViewerDocument` for you.
-- Uses `FileViewerDocument controls="local"` so renderer controls stay inside
-  the routed document instead of requiring a header toolbar.
+- Uses `FileViewerDocument controls` so renderer controls stay inside the
+  routed document instead of requiring header controls.
 - Does not render `FileViewerHeader` or `FileViewerSidebar`. Use the composed
   anatomy when you need a header, navigation rail, or workflow chrome.
 - Is the right leaf for nested attachment previews where a parent viewer already

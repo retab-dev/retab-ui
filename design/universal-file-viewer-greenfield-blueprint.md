@@ -75,13 +75,13 @@ PDF, image, markdown, CSV, DOCX, PPTX, XLSX, HTML, code, and text are adapters. 
 flowchart TD
   Source["ViewerSource"] --> Resource["ViewerResource"]
   Resource --> Shell["FileViewer shell"]
-  Shell --> Geometry["Geometry model"]
+  Shell --> Geometry["Shell geometry contract"]
   Shell --> Viewport["Viewport model"]
   Shell --> Controls["Control registry"]
-  Shell --> Renderer["Renderer adapter"]
+  Viewport --> Runtime["Document runtime"]
+  Runtime --> Renderer["Renderer adapter"]
 
   Geometry --> Viewport
-  Viewport --> Renderer
   Resource --> Renderer
 
   Renderer --> Document["Document model"]
@@ -100,7 +100,7 @@ The shell owns space. The renderer owns document meaning.
 flowchart LR
   App["App"] --> API["Public FileViewer API"]
   API --> Shell["Shell primitives"]
-  Shell --> Runtime["Headless runtime"]
+  Shell --> Runtime["Document runtime"]
   Runtime --> Adapter["Renderer adapter"]
   Adapter --> Format["Format engine"]
 
@@ -110,13 +110,13 @@ flowchart LR
 
 Responsibilities:
 
-| Layer | Owns | Does not own |
-| --- | --- | --- |
-| App | source, composition, product-specific chrome | document layout algorithms |
-| Shell primitives | slots, DOM structure, accessibility, geometry | file parsing |
-| Document runtime | viewport metrics, controls, anchor persistence, render scheduling | shell layout animation |
-| Renderer adapter | intrinsic layout, anchors, render windows, format controls | sidebar width, app chrome |
-| Format engine | low-level parsing/rendering | React composition |
+| Layer            | Owns                                                              | Does not own               |
+| ---------------- | ----------------------------------------------------------------- | -------------------------- |
+| App              | source, composition, product-specific chrome                      | document layout algorithms |
+| Shell primitives | slots, DOM structure, accessibility, geometry                     | file parsing               |
+| Document runtime | viewport metrics, controls, anchor persistence, render scheduling | shell layout animation     |
+| Renderer adapter | intrinsic layout, anchors, render windows, format controls        | sidebar width, app chrome  |
+| Format engine    | low-level parsing/rendering                                       | React composition          |
 
 ## Shadcn Sidebar Lessons
 
@@ -159,45 +159,55 @@ flowchart LR
 
 ## Current Code Lessons
 
-The current code already moved in the right direction, but it still carries mixed ownership.
+The current code has moved to the right primitive boundary: File Viewer owns its
+own shell instead of borrowing the generic `ViewerRoot` runtime.
 
 ```mermaid
 flowchart TD
-  Root["ViewerRoot"] --> Context["sidebar context"]
-  Root --> Attrs["viewer data attributes"]
-  Root --> GeometryStore["JS geometry store"]
-  Root --> ResizeBody["body ResizeObserver"]
+  Provider["FileViewerProvider"] --> Shell["FileViewerShellContext"]
+  Shell --> Root["FileViewer"]
+  Shell --> Body["FileViewerBody"]
+  Shell --> Trigger["FileViewerSidebarTrigger"]
+  Shell --> Sidebar["FileViewerSidebar"]
 
-  Sidebar["ViewerSidebar"] --> Registration["registerSidebar"]
-  Sidebar --> WidthParse["width parsing / measurement"]
-  Sidebar --> GeometryStore
-  Sidebar --> CssState["CSS state classes"]
-
-  Surface["ViewerDocumentFrame"] --> FrameLayout["active / settled inline size"]
-  GeometryStore --> FrameLayout
-  FrameLayout --> Pdf["PdfViewerContent"]
-  Pdf --> Scale["fit-width scale"]
-  Pdf --> Scroll["anchor scroll"]
-  Pdf --> Window["virtual window"]
-  Pdf --> Render["canvas render"]
+  Body --> Inset["FileViewerInset"]
+  Inset --> Contract["document viewport contract"]
+  Contract --> PdfLayout["PDF layout adapter"]
+  PdfLayout --> PdfRuntime["PDF runtime adapter"]
+  PdfRuntime --> PdfPaint["PDF paint layer"]
+  PdfRuntime --> Scale["fit-width scale"]
+  PdfRuntime --> Scroll["anchor scroll"]
+  PdfRuntime --> Window["virtual window"]
+  PdfPaint --> Render["canvas render"]
 ```
 
 What is good:
 
-- `ViewerRoot` behaves like a real primitive owner: it has context, data attributes, ids, and one registered sidebar.
-- `ViewerSidebarTrigger` targets the nearest root implicitly, which is the right composition invariant.
+- `FileViewer` owns file-viewer shell state directly: open state, side, mode,
+  registered sidebar id, declared sidebar width, and transition duration.
+- `FileViewerSidebarTrigger` targets the nearest file-viewer shell implicitly,
+  which is the right composition invariant.
+- Inline sidebar motion is CSS-led through one declared layout scalar:
+  the sidebar gap width.
+- `FileViewerInset` exposes a document viewport contract: active inline size,
+  settled inline size, prepared inline size, and the shell transition duration.
 - `viewer-document-geometry.ts` and `viewer-document-scroll.ts` are the right abstraction direction: anchors and scroll transactions are document concepts, not PDF quirks.
 - The active/settled size split is the correct idea for smooth visual resize without rerasterizing every frame.
 
 What is not good enough:
 
-- `viewer-internals.tsx` owns too many unrelated concepts: contexts, state attributes, geometry store, CSS parsing, DOM measurement, and mode hysteresis.
-- `ViewerSidebar` is half shadcn primitive and half geometry consumer. Inline sidebar motion is driven by `geometry.sidebarInlineSize` rather than a CSS-led gap/panel contract.
-- `ViewerRoot` measures body size and also drives a JavaScript transition clock; the DOM/CSS tree has its own timing.
-- `PdfViewerContent` is still doing too much: resource lifecycle, frame sizing, scale, scroll, virtualization, controls, and render scheduling.
+- PDF document-runtime concerns now have named modules: resource lifecycle,
+  layout/scale, controls, scroll/runtime, and paint. `PdfViewerContent` is the
+  public orchestration boundary.
+- The generic `viewer-*` runtime still exists for other components and renderer
+  dependencies, so the broader viewer ecosystem is not fully greenfield.
+- Fit-width PDF rendering still depends on measuring the viewport after layout.
+  The measurement is now named and centralized, but not eliminated.
 - The tests prove many good contracts, but some tests now preserve implementation shape rather than just user-visible invariants.
 
-The revised blueprint keeps the hard-won generic document abstractions, but moves shell motion back toward the shadcn model.
+The revised blueprint keeps the hard-won generic document abstractions while
+keeping shell motion in the shadcn model: semantic state, data attributes, CSS
+variables, and renderer-facing contracts.
 
 ## Public API
 
@@ -226,7 +236,7 @@ The default composition should be complete. Custom composition should be possibl
   <FileViewer sidebarMode="inline" sidebarSide="right">
     <FileViewerHeader>
       <FileViewerIdentity />
-      <FileViewerToolbar />
+      <FileViewerControls />
       <FileViewerSidebarTrigger />
     </FileViewerHeader>
     <FileViewerBody>
@@ -249,7 +259,7 @@ Public primitives:
 - `FileViewer`
 - `FileViewerHeader`
 - `FileViewerIdentity`
-- `FileViewerToolbar`
+- `FileViewerControls`
 - `FileViewerBody`
 - `FileViewerInset`
 - `FileViewerSidebar`
@@ -270,24 +280,24 @@ The source contract is explicit and boring.
 ```ts
 type ViewerSource =
   | {
-      kind: "url"
-      url: string
-      fileName: string
-      mimeType?: string
-      byteLength?: number
+      kind: "url";
+      url: string;
+      fileName: string;
+      mimeType?: string;
+      byteLength?: number;
     }
   | {
-      kind: "blob"
-      blob: Blob
-      fileName: string
-      mimeType?: string
+      kind: "blob";
+      blob: Blob;
+      fileName: string;
+      mimeType?: string;
     }
   | {
-      kind: "text"
-      text: string
-      fileName: string
-      mimeType: string
-    }
+      kind: "text";
+      text: string;
+      fileName: string;
+      mimeType: string;
+    };
 ```
 
 The viewer never guesses identity from layout. It resolves the renderer from explicit resource metadata:
@@ -316,15 +326,15 @@ The renderer is a pure adapter from resource plus viewport to document model.
 
 ```ts
 type ViewerRenderer<Resource, Anchor, Target> = {
-  id: string
-  match(resource: ViewerResource): boolean
-  load(resource: ViewerResource, signal: AbortSignal): Promise<Resource>
-  getInitialState(resource: Resource): RendererState
-  getLayout(input: RendererLayoutInput<Resource>): ViewerDocumentLayout<Anchor>
-  getRenderWindow(input: RendererWindowInput<Anchor>): ViewerRenderWindow
-  getControls(input: RendererControlsInput<Resource, Target>): ViewerControl[]
-  render(input: RendererPaintInput<Resource, Anchor>): React.ReactNode
-}
+  id: string;
+  match(resource: ViewerResource): boolean;
+  load(resource: ViewerResource, signal: AbortSignal): Promise<Resource>;
+  getInitialState(resource: Resource): RendererState;
+  getLayout(input: RendererLayoutInput<Resource>): ViewerDocumentLayout<Anchor>;
+  getRenderWindow(input: RendererWindowInput<Anchor>): ViewerRenderWindow;
+  getControls(input: RendererControlsInput<Resource, Target>): ViewerControl[];
+  render(input: RendererPaintInput<Resource, Anchor>): React.ReactNode;
+};
 ```
 
 The renderer provides document facts. It does not measure the shell.
@@ -346,23 +356,23 @@ Every renderer returns the same layout shape.
 
 ```ts
 type ViewerDocumentLayout<Anchor> = {
-  inlineSize: number
-  blockSize: number
-  captureAnchor(input: AnchorCaptureInput): Anchor | null
-  resolveAnchor(input: AnchorResolveInput<Anchor>): number | null
-}
+  inlineSize: number;
+  blockSize: number;
+  captureAnchor(input: AnchorCaptureInput): Anchor | null;
+  resolveAnchor(input: AnchorResolveInput<Anchor>): number | null;
+};
 ```
 
 Examples:
 
-| Format | Anchor |
-| --- | --- |
-| PDF | page number plus page-relative Y |
-| image | normalized X/Y |
-| markdown | block id plus offset |
-| code | line number plus column |
-| CSV/XLSX | row id plus row-relative offset |
-| DOCX/PPTX | page/slide id plus offset |
+| Format    | Anchor                           |
+| --------- | -------------------------------- |
+| PDF       | page number plus page-relative Y |
+| image     | normalized X/Y                   |
+| markdown  | block id plus offset             |
+| code      | line number plus column          |
+| CSV/XLSX  | row id plus row-relative offset  |
+| DOCX/PPTX | page/slide id plus offset        |
 
 The shell does not know those anchor types. It only stores and asks the adapter to resolve them.
 
@@ -384,21 +394,21 @@ flowchart TD
 Formula:
 
 ```ts
-sidebarInlineSize = sidebarWidth * sidebarProgress
-viewportInlineSize = rootInlineSize - sidebarInlineSize
-documentInlineSize = constrain(viewportInlineSize, documentMaxInlineSize)
+sidebarInlineSize = sidebarWidth * sidebarProgress;
+viewportInlineSize = rootInlineSize - sidebarInlineSize;
+documentInlineSize = constrain(viewportInlineSize, documentMaxInlineSize);
 ```
 
 There is no separate sidebar animation model, document frame model, and PDF scale model. There is one shell geometry contract, and every renderer receives that contract through the document runtime.
 
 The implementation should express the same geometry twice with the same names:
 
-| Concept | CSS name | Runtime name |
-| --- | --- | --- |
-| sidebar target width | `--viewer-sidebar-width` | `sidebarWidth` |
-| current sidebar size | `--viewer-sidebar-inline-size` | `sidebarInlineSize` |
-| available document size | `--viewer-document-inline-size` | `documentInlineSize` |
-| transition state | `data-state` / `data-transitioning` | `isTransitioning` |
+| Concept                 | CSS name                            | Runtime name         |
+| ----------------------- | ----------------------------------- | -------------------- |
+| sidebar target width    | `--viewer-sidebar-width`            | `sidebarWidth`       |
+| current sidebar size    | `--viewer-sidebar-inline-size`      | `sidebarInlineSize`  |
+| available document size | `--viewer-document-inline-size`     | `documentInlineSize` |
+| transition state        | `data-state` / `data-transitioning` | `isTransitioning`    |
 
 The CSS value is authoritative for shell layout. The runtime value exists so renderers can choose visual size, settled raster size, anchors, and render windows.
 
@@ -466,12 +476,12 @@ The viewport model is format-neutral.
 
 ```ts
 type ViewerViewportModel = {
-  inlineSize: number
-  blockSize: number
-  scrollTop: number
-  scrollLeft: number
-  scrollIntent: "idle" | "user" | "programmatic" | "layout"
-}
+  inlineSize: number;
+  blockSize: number;
+  scrollTop: number;
+  scrollLeft: number;
+  scrollIntent: "idle" | "user" | "programmatic" | "layout";
+};
 ```
 
 The runtime owns scroll intent. Renderers should not infer intent from DOM events.
@@ -498,7 +508,7 @@ sequenceDiagram
   participant Viewport
 
   Runtime->>Renderer: captureAnchor(scrollTop)
-  Runtime->>Runtime: update geometry
+  Runtime->>Runtime: receive new viewport metrics
   Runtime->>Renderer: getLayout(newViewport)
   Runtime->>Renderer: resolveAnchor(anchor)
   Runtime->>Viewport: set scrollTop
@@ -518,10 +528,10 @@ Virtualization is renderer-defined but runtime-coordinated.
 
 ```ts
 type ViewerRenderWindow = {
-  visible: readonly ViewerItemKey[]
-  active: readonly ViewerItemKey[]
-  preload: readonly ViewerItemKey[]
-}
+  visible: readonly ViewerItemKey[];
+  active: readonly ViewerItemKey[];
+  preload: readonly ViewerItemKey[];
+};
 ```
 
 The runtime provides viewport metrics. The renderer returns item keys.
@@ -602,10 +612,28 @@ Controls are registered by renderers and rendered by shell chrome.
 
 ```ts
 type ViewerControl =
-  | { kind: "button"; id: string; label: string; icon: Icon; action: () => void }
-  | { kind: "toggle"; id: string; label: string; pressed: boolean; action: () => void }
-  | { kind: "select"; id: string; label: string; value: string; options: ViewerControlOption[] }
-  | { kind: "status"; id: string; label: string; value: string }
+  | {
+      kind: "button";
+      id: string;
+      label: string;
+      icon: Icon;
+      action: () => void;
+    }
+  | {
+      kind: "toggle";
+      id: string;
+      label: string;
+      pressed: boolean;
+      action: () => void;
+    }
+  | {
+      kind: "select";
+      id: string;
+      label: string;
+      value: string;
+      options: ViewerControlOption[];
+    }
+  | { kind: "status"; id: string; label: string; value: string };
 ```
 
 ```mermaid
@@ -647,8 +675,13 @@ Errors are typed at the boundary where they occur.
 type ViewerError =
   | { kind: "source"; message: string; retryable: boolean }
   | { kind: "resource"; message: string; retryable: boolean }
-  | { kind: "renderer"; rendererId: string; message: string; retryable: boolean }
-  | { kind: "unsupported"; mimeType?: string; fileName?: string }
+  | {
+      kind: "renderer";
+      rendererId: string;
+      message: string;
+      retryable: boolean;
+    }
+  | { kind: "unsupported"; mimeType?: string; fileName?: string };
 ```
 
 The shell renders all errors. Renderers only throw or return typed failures.
@@ -916,17 +949,72 @@ Because this is greenfield, these are explicitly excluded:
 
 There is one model. Call sites update to it.
 
+## Hard Cutover From Current Code
+
+Keep:
+
+- the public file-viewer vocabulary: `FileViewerProvider`, `FileViewer`, `FileViewerBody`, `FileViewerInset`, `FileViewerViewport`, `FileViewerSidebar`, `FileViewerDocument`
+- nearest-root trigger targeting
+- one registered primary sidebar
+- explicit resource identity
+- generic document layout model
+- generic reading anchors
+- generic scroll mapping
+- active/settled render quality split
+- renderer-controlled controls
+
+Split:
+
+- `viewer-internals.tsx` into context, attributes, ids, geometry, measurement, warnings
+- sidebar shell motion from document runtime geometry
+
+Done in the active file viewer:
+
+- `PdfViewerContent` is now orchestration.
+- `pdf-viewer-document-resource.ts` owns PDF resource lifetime, first-page size,
+  and rotation.
+- `pdf-viewer-document-layout.ts` owns document viewport contract consumption,
+  fit-width scale, prepared render scale, page layout, and DPR.
+- `pdf-viewer-document-controls.ts` owns toolbar/control state and external
+  control registration.
+- `pdf-viewer-document-runtime.ts` owns scroll anchoring, virtualization, render
+  scheduling, cache policy, and scroll-interaction suspension.
+- `pdf-viewer-pages-layer.tsx` owns the page-window DOM and page paint.
+
+Remove:
+
+- JavaScript sidebar transition clocks
+- inline sidebar sizing driven by a runtime animation store
+- public `Surface` vocabulary
+- renderer-specific frame rules
+- tests that assert private file shapes instead of architecture invariants
+
+The destination should look like this:
+
+```mermaid
+flowchart TD
+  Primitives["compound primitives"] --> Shell["CSS-led shell"]
+  Shell --> RuntimeBoundary["viewport boundary"]
+  RuntimeBoundary --> DocumentRuntime["document runtime"]
+  DocumentRuntime --> RendererAdapter["renderer adapter"]
+  RendererAdapter --> Paint["paint"]
+
+  Shell -. "data attrs + CSS vars" .-> Primitives
+  DocumentRuntime -. "anchors + windows + quality" .-> RendererAdapter
+```
+
 ## Implementation Order
 
 1. Define types and invariants.
-2. Build headless runtime with a fake renderer.
-3. Build shell primitives on top of the runtime.
-4. Prove sidebar geometry with a synthetic fixed-size document.
+2. Build shadcn-style shell primitives with a synthetic fixed-size document.
+3. Prove sidebar gap and panel remain attached to the viewport edge.
+4. Build the document runtime boundary below `FileViewerViewport`.
 5. Prove anchor persistence with a synthetic paginated document.
-6. Add PDF as the first real adapter.
-7. Add markdown/text/code as semantic DOM adapters.
-8. Add image/table/office adapters.
-9. Add docs and examples last.
+6. Prove active/settled render quality with a synthetic raster document.
+7. Add PDF as the first real adapter.
+8. Add markdown/text/code as semantic DOM adapters.
+9. Add image/table/office adapters.
+10. Add docs and examples last.
 
 ## Tests
 
@@ -937,7 +1025,6 @@ Runtime tests:
 - source normalization
 - renderer matching
 - geometry formulas
-- sidebar progress
 - viewport model
 - anchor capture/resolve
 - render window calculation
@@ -953,9 +1040,11 @@ Renderer adapter tests:
 
 Browser tests:
 
+- sidebar transition starts in the same interaction turn as the trigger click
 - sidebar edge remains attached to document edge
 - no scroll jump while resizing
 - no blank visible window during resize
+- no second animation clock drives sidebar geometry
 - keyboard and pointer controls work
 - mobile overlay mode works
 
@@ -969,6 +1058,8 @@ The greenfield viewer is acceptable only if all of these are true:
 - current reading anchor is stable
 - render window never blanks during geometry transitions
 - expensive render quality catches up after transition, not during every frame
+- shell motion is CSS-led and has one clock
+- renderer work never blocks shell motion
 - every renderer uses the same shell contract
 - shell has no format-specific branch
 - renderer has no shell-specific DOM hack
@@ -979,23 +1070,26 @@ The greenfield viewer is acceptable only if all of these are true:
 
 ```mermaid
 flowchart TD
-  FileViewer["FileViewer"] --> Runtime["ViewerRuntime"]
-  Runtime --> Geometry["Geometry"]
-  Runtime --> Viewport["Viewport"]
-  Runtime --> Resource["Resource"]
-  Runtime --> Renderer["Renderer"]
-  Runtime --> Controls["Controls"]
+  Provider["FileViewerProvider"] --> ShellState["shell state"]
+  ShellState --> FileViewer["FileViewer primitives"]
+  FileViewer --> CssShell["CSS-led shell layout"]
+  CssShell --> Viewport["FileViewerViewport"]
+  Viewport --> Runtime["Document runtime"]
 
+  Runtime --> Resource["Resource"]
+  Runtime --> ViewportState["Viewport state"]
+  Runtime --> Anchor["Anchor"]
+  Runtime --> Window["Window"]
+  Runtime --> Controls["Controls"]
+  Runtime --> Renderer["Renderer"]
   Renderer --> Layout["Layout"]
-  Renderer --> Anchor["Anchor"]
-  Renderer --> Window["Window"]
   Renderer --> Paint["Paint"]
 
-  Geometry --> Layout
-  Viewport --> Anchor
-  Viewport --> Window
+  ViewportState --> Layout
+  Anchor --> Layout
+  Window --> Paint
   Controls --> FileViewer
   Paint --> FileViewer
 ```
 
-This is the version I would build from scratch: one viewer runtime, many renderer adapters, no PDF gravity, no legacy aliases, no duplicated geometry, no after-paint negotiation.
+This is the version I would build from scratch after reviewing the existing code and shadcn sidebar: one shadcn-like shell, one document runtime below the viewport, many renderer adapters, no PDF gravity, no legacy aliases, no duplicated shell motion, no after-paint negotiation for chrome.

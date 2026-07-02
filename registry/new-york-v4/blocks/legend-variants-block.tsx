@@ -6,7 +6,7 @@ import { type SegmentInteraction } from "@/lib/segment-interaction";
 import { segmentsPageCount, toSegments, type Segment } from "@/lib/segments";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerProvider,
   FileViewerInset,
   FileViewerViewport,
@@ -212,7 +212,7 @@ function Cell({
                     >
                       <FileViewer className="h-full">
                         <PdfViewerProvider>
-                          <FileViewerBody>
+                          <FileViewerContent>
                             <FileViewerInset>
                               <FileViewerViewport>
                                 <PdfViewerPages
@@ -222,7 +222,7 @@ function Cell({
                                 />
                               </FileViewerViewport>
                             </FileViewerInset>
-                          </FileViewerBody>
+                          </FileViewerContent>
                         </PdfViewerProvider>
                       </FileViewer>
                     </FileViewerProvider>

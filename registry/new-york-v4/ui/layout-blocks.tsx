@@ -5,7 +5,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerProvider,
   FileViewerInset,
   FileViewerViewport,
@@ -268,7 +268,7 @@ function OcrLayoutBlocksContent({
             <FileViewerProvider source={pdfSource.source}>
               <FileViewer className="h-full">
                 <PdfViewerProvider>
-                  <FileViewerBody>
+                  <FileViewerContent>
                     <FileViewerInset>
                       <FileViewerViewport>
                         <PdfViewerPages
@@ -287,7 +287,7 @@ function OcrLayoutBlocksContent({
                         />
                       </FileViewerViewport>
                     </FileViewerInset>
-                  </FileViewerBody>
+                  </FileViewerContent>
                 </PdfViewerProvider>
               </FileViewer>
             </FileViewerProvider>

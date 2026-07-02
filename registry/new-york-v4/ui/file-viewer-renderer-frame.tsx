@@ -1,0 +1,153 @@
+"use client";
+
+import * as React from "react";
+
+import {
+  useOptionalFileViewerShellStatic,
+  useFileViewerShellStatic,
+} from "./file-viewer-context";
+import {
+  createFileViewerRendererFrame,
+  type FileViewerDocumentAlign,
+  type FileViewerRendererFrame,
+} from "./file-viewer-renderer-contract";
+import { useFileViewerMotionFrame } from "./file-viewer-motion-kernel";
+
+export type FileViewerRendererEnvironment = {
+  setDocumentSurfaceElement: React.RefCallback<HTMLElement>;
+  usesShellGeometry: boolean;
+};
+
+export type FileViewerDocumentFrameState = {
+  align: FileViewerDocumentAlign;
+  element: HTMLDivElement | null;
+  inlineSize: number | null;
+};
+
+const FileViewerDocumentFrameContext =
+  React.createContext<FileViewerDocumentFrameState | null>(null);
+
+export function FileViewerDocumentFrameProvider({
+  children,
+  value,
+}: {
+  children: React.ReactNode;
+  value: FileViewerDocumentFrameState;
+}) {
+  return (
+    <FileViewerDocumentFrameContext.Provider value={value}>
+      {children}
+    </FileViewerDocumentFrameContext.Provider>
+  );
+}
+
+export function useOptionalFileViewerDocumentFrame(): FileViewerDocumentFrameState | null {
+  return React.useContext(FileViewerDocumentFrameContext);
+}
+
+export function useOptionalFileViewerRendererEnvironment(): FileViewerRendererEnvironment {
+  const { elementRegistry, usesShellGeometry } =
+    useFileViewerRendererEnvironmentState();
+  const setDocumentSurfaceElement = React.useCallback(
+    (element: HTMLElement | null) => {
+      elementRegistry?.registerDocumentSurfaceElement(element);
+    },
+    [elementRegistry],
+  );
+
+  return React.useMemo(
+    () => ({
+      setDocumentSurfaceElement,
+      usesShellGeometry,
+    }),
+    [setDocumentSurfaceElement, usesShellGeometry],
+  );
+}
+
+export function useFileViewerRendererFrame({
+  fallbackInlineSize,
+}: {
+  fallbackInlineSize?: number | null;
+} = {}): FileViewerRendererFrame {
+  useFileViewerShellStatic("useFileViewerRendererFrame");
+  return useResolvedFileViewerRendererFrame({
+    fallbackInlineSize,
+    required: true,
+  });
+}
+
+export function useOptionalFileViewerRendererFrame({
+  fallbackInlineSize,
+}: {
+  fallbackInlineSize?: number | null;
+} = {}): FileViewerRendererFrame {
+  return useResolvedFileViewerRendererFrame({
+    fallbackInlineSize,
+    required: false,
+  });
+}
+
+function useResolvedFileViewerRendererFrame({
+  fallbackInlineSize,
+  required,
+}: {
+  fallbackInlineSize?: number | null;
+  required: boolean;
+}): FileViewerRendererFrame {
+  const { motionFrame, shell, usesShellGeometry } =
+    useFileViewerRendererEnvironmentState();
+  const documentFrame = useOptionalFileViewerDocumentFrame();
+
+  if (required && !documentFrame) {
+    throw new Error(
+      "useFileViewerRendererFrame must be used within FileViewerInset.",
+    );
+  }
+
+  const fallbackSize =
+    fallbackInlineSize != null && Number.isFinite(fallbackInlineSize)
+      ? fallbackInlineSize
+      : null;
+
+  return React.useMemo(
+    () =>
+      createFileViewerRendererFrame({
+        align: documentFrame?.align ?? "center",
+        element: documentFrame?.element ?? null,
+        fallbackInlineSize: documentFrame?.inlineSize ?? fallbackSize,
+        motionFrame,
+        motionDurationMs: shell?.motionDurationMs ?? 0,
+        usesShellGeometry,
+      }),
+    [
+      documentFrame?.align,
+      documentFrame?.element,
+      documentFrame?.inlineSize,
+      fallbackSize,
+      motionFrame,
+      shell?.motionDurationMs,
+      usesShellGeometry,
+    ],
+  );
+}
+
+function useFileViewerRendererEnvironmentState() {
+  const shell = useOptionalFileViewerShellStatic();
+  const motionFrame = useFileViewerMotionFrame(shell?.motionKernel);
+  const usesShellGeometry = Boolean(
+    shell &&
+    motionFrame.shellInlineSize > 0 &&
+    shell.mode === "inline" &&
+    (shell.canToggleSidebar || shell.collapsible === "none"),
+  );
+
+  return React.useMemo(
+    () => ({
+      elementRegistry: shell?.elementRegistry,
+      motionFrame,
+      shell,
+      usesShellGeometry,
+    }),
+    [motionFrame, shell, usesShellGeometry],
+  );
+}

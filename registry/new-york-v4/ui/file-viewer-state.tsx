@@ -77,7 +77,6 @@ function FileViewerStateFrame({
 }) {
   return (
     <div
-      data-file-viewer-slot={`${kind}-state`}
       data-slot={stateSlot(kind)}
       role={role}
       className={cn(
@@ -89,7 +88,6 @@ function FileViewerStateFrame({
       {icon ? (
         <div
           aria-hidden
-          data-file-viewer-slot="state-icon"
           data-slot="file-viewer-state-icon"
           className="text-muted-foreground flex size-9 items-center justify-center"
         >
@@ -99,7 +97,6 @@ function FileViewerStateFrame({
       <div className="flex max-w-md min-w-0 flex-col items-center gap-1">
         {title ? (
           <p
-            data-file-viewer-slot="state-title"
             data-slot="file-viewer-state-title"
             className="text-foreground text-sm font-medium"
           >
@@ -108,7 +105,6 @@ function FileViewerStateFrame({
         ) : null}
         {description ? (
           <p
-            data-file-viewer-slot="state-description"
             data-slot="file-viewer-state-description"
             className="text-muted-foreground text-sm"
           >
@@ -119,7 +115,6 @@ function FileViewerStateFrame({
       {children}
       {action ? (
         <div
-          data-file-viewer-slot="state-action"
           data-slot="file-viewer-state-action"
           className="flex items-center justify-center gap-2"
         >
@@ -149,7 +144,6 @@ export function FileViewerLoadingState({
       {children ?? (
         <div
           aria-hidden
-          data-file-viewer-slot="state-skeleton"
           data-slot="file-viewer-state-skeleton"
           className="flex w-full max-w-xs flex-col gap-2"
         >

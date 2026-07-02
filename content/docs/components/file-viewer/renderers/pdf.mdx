@@ -34,18 +34,14 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
   source={{ kind: "url", url, fileName: "document.pdf" }}
   defaultSidebarOpen
 >
-  <FileViewer sidebarMode="inline">
+  <FileViewer>
     <PdfViewerProvider>
       <FileViewerHeader>
-        <FileViewerHeaderStart>
-          <FileViewerSidebarTrigger />
-          <FileViewerIdentity />
-        </FileViewerHeaderStart>
-        <FileViewerHeaderEnd>
-          <FileViewerToolbar />
-        </FileViewerHeaderEnd>
+        <FileViewerSidebarTrigger />
+        <FileViewerTitle />
+        <FileViewerControls />
       </FileViewerHeader>
-      <FileViewerBody>
+      <FileViewerContent>
         <FileViewerSidebar aria-label="PDF pages">
           <PdfViewerThumbnails />
         </FileViewerSidebar>
@@ -54,7 +50,7 @@ your bundler (Vite, webpack, or Turbopack) — there is no runtime CDN call.
             <PdfViewerPages />
           </FileViewerViewport>
         </FileViewerInset>
-      </FileViewerBody>
+      </FileViewerContent>
     </PdfViewerProvider>
   </FileViewer>
 </FileViewerProvider>
@@ -70,9 +66,14 @@ resource, current page, and page-jump command from `PdfViewerProvider`.
 
 Keep `PdfViewerPages` inside `FileViewerViewport`, and keep that viewport
 inside `FileViewerInset`. Fit-to-width scale, virtual page height, and scroll
-anchoring consume the inset's document-frame layout. If a PDF page list is
+anchoring consume the inset's document-frame contract. If a PDF page list is
 mounted in a raw flex surface, the pane can resize before the PDF page geometry
 updates.
+
+The PDF renderer keeps that contract at the layout boundary. Resource lifetime,
+layout/scale, controls, scroll/runtime, and paint each live in separate adapter
+modules, so `PdfViewerPages` stays an orchestration layer rather than a
+format-specific shell.
 
 For non-provider compositions, use the controlled rail directly:
 
@@ -93,7 +94,7 @@ controls the sidebar shell. `thumbnailShape` preserves page aspect with
 ## Usage
 
 `PdfViewer` is the easy API. It is the preassembled PDF viewer with
-`FileViewerHeader`, `FileViewerBody`, `FileViewerInset`, and
+`FileViewerHeader`, `FileViewerContent`, `FileViewerInset`, and
 `PdfViewerPages`. Compose `PdfViewerThumbnails` inside `FileViewerSidebar` when
 a thumbnail rail is needed.
 
@@ -124,14 +125,10 @@ You can compose workflow chrome around the PDF surface with the same primitives:
   <FileViewer>
     <PdfViewerProvider>
       <FileViewerHeader>
-        <FileViewerHeaderStart>
-          <FileViewerIdentity />
-        </FileViewerHeaderStart>
-        <FileViewerHeaderEnd>
-          <FileViewerToolbar />
-        </FileViewerHeaderEnd>
+        <FileViewerTitle />
+        <FileViewerControls />
       </FileViewerHeader>
-      <FileViewerBody>
+      <FileViewerContent>
         <FileViewerSidebar aria-label="Workflow pages">
           <PageRibbon />
         </FileViewerSidebar>
@@ -140,7 +137,7 @@ You can compose workflow chrome around the PDF surface with the same primitives:
             <PdfViewerPages bare className="h-full" />
           </FileViewerViewport>
         </FileViewerInset>
-      </FileViewerBody>
+      </FileViewerContent>
     </PdfViewerProvider>
   </FileViewer>
 </FileViewerProvider>

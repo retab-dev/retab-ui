@@ -4,9 +4,12 @@ import * as React from "react";
 
 import { getFixedGridCanvasStyle } from "@/components/ui/fixed-grid-layout";
 import { WithDescription } from "@/components/json-form/disclosure";
-import { joinJsonFormPath } from "@/components/json-form/path-codec";
 import { labelFor, type Column } from "@/components/json-form/schema-model";
 import { useSourceLinkedTableCells } from "@/components/json-form/source-link";
+import {
+  createArrayTableActiveCellStore,
+  type ArrayTableActiveCellStore,
+} from "@/components/json-form/table/array-table-active-cell-store";
 import {
   FixedArrayTableBody,
   StaticArrayTableBody,
@@ -34,9 +37,11 @@ export function ArrayTable({
 }) {
   const template = `${columns.map(() => "minmax(9rem, 1fr)").join(" ")} 2.25rem`;
   const minWidth = columns.length * 150 + 36;
-  const [activeEditorPath, setActiveEditorPath] = React.useState<string | null>(
-    null,
-  );
+  const activeCellStoreRef = React.useRef<ArrayTableActiveCellStore | null>(null);
+  if (!activeCellStoreRef.current) {
+    activeCellStoreRef.current = createArrayTableActiveCellStore();
+  }
+  const activeCellStore = activeCellStoreRef.current;
   const tableRef = React.useRef<HTMLDivElement>(null);
   const sourceTable = useSourceLinkedTableCells({
     tableRef,
@@ -78,9 +83,9 @@ export function ArrayTable({
       sourceTable.selectCellSource(cell);
       if (cell.dataset.tableCellEditable !== "true") return;
       const path = cell.dataset.tableCellPath;
-      if (path) setActiveEditorPath(path);
+      if (path) activeCellStore.setActivePath(path);
     },
-    [sourceTable],
+    [activeCellStore, sourceTable],
   );
 
   const handleTableKeyDown = React.useCallback(
@@ -92,9 +97,9 @@ export function ArrayTable({
       if (!path) return;
       sourceTable.selectCellSource(cell);
       event.preventDefault();
-      setActiveEditorPath(path);
+      activeCellStore.setActivePath(path);
     },
-    [sourceTable],
+    [activeCellStore, sourceTable],
   );
 
   const renderRow = React.useCallback(
@@ -110,16 +115,11 @@ export function ArrayTable({
         sourceLinked={sourceLinked}
         template={template}
         rowTopPx={rowTopPx}
-        activeEditorPath={
-          activeEditorPath?.startsWith(`${joinJsonFormPath(name, index)}.`)
-            ? activeEditorPath
-            : null
-        }
-        subscribeToRow={!virtualize}
-        setActiveEditorPath={setActiveEditorPath}
+        activeCellStore={activeCellStore}
       />
     ),
     [
+      activeCellStore,
       name,
       sourcePath,
       fields.length,
@@ -128,8 +128,6 @@ export function ArrayTable({
       canRemove,
       sourceLinked,
       template,
-      activeEditorPath,
-      virtualize,
     ],
   );
 
@@ -169,9 +167,7 @@ export function ArrayTable({
         </div>
         {virtualize ? (
           <FixedArrayTableBody
-            name={name}
             fields={fields}
-            activeEditorPath={activeEditorPath}
             scrollHandlers={scrollHandlers}
             renderItem={renderRow}
           />

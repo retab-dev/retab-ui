@@ -13,22 +13,21 @@ register their operational controls into the same header surface.
 ## Usage
 
 Compose the header explicitly, with the sidebar trigger in the start group when
-the body has a sidebar:
+`FileViewerContent` has a sidebar:
 
 ```tsx
 <FileViewerHeader>
-  <FileViewerHeaderStart>
-    <FileViewerSidebarTrigger />
-    <FileViewerIdentity />
-  </FileViewerHeaderStart>
-  <FileViewerHeaderEnd>
-    <FileViewerToolbar />
-  </FileViewerHeaderEnd>
+  <FileViewerSidebarTrigger />
+  <div className="flex min-w-0 flex-1 items-baseline gap-2">
+    <FileViewerTitle />
+    <FileViewerMeta />
+  </div>
+  <FileViewerControls />
 </FileViewerHeader>
 ```
 
 Rendered without children, `FileViewerHeader` falls back to the default
-identity and toolbar composition:
+title/meta/controls composition:
 
 ```tsx
 <FileViewerHeader />
@@ -38,20 +37,21 @@ identity and toolbar composition:
 
 - Renders a `data-slot="file-viewer-header"` row with a flex layout that wraps on
   narrow widths and lines up on wider ones.
-- With no children, it renders `FileViewerIdentity` on the left and
-  `FileViewerToolbar` on the right, so the common case needs no inner markup.
+- With no children, it renders `FileViewerTitle` and `FileViewerMeta` on the
+  left and `FileViewerControls` on the right, so the common case needs no inner
+  markup.
 - It owns layout only. Renderer-specific controls register into file-viewer
-  state and surface through `FileViewerToolbar`; the header never takes
+  state and surface through `FileViewerControls`; the header never takes
   PDF- or spreadsheet-specific props.
 - Use it for file identity and controls. Keep domain workflow state out of the
   header unless the file viewer itself owns it.
 
 ## API Reference
 
-| Prop       | Type                                        | Description                                                 |
-| ---------- | ------------------------------------------- | ----------------------------------------------------------- |
-| `children` | `React.ReactNode`                           | Header parts. Omit to use the default identity/toolbar row. |
-| `...props` | `React.ComponentProps<typeof ViewerHeader>` | Standard header props; `className` merges with the layout.  |
+| Prop       | Type                                        | Description                                                    |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------- |
+| `children` | `React.ReactNode`                           | Header parts. Omit to use the default title/meta/controls row. |
+| `...props` | `React.ComponentProps<typeof ViewerHeader>` | Standard header props; `className` merges with the layout.     |
 
 ## Source
 

@@ -58,17 +58,13 @@ Use `AttachmentSidebar` as the content grammar inside the viewer rail:
 
 ```tsx
 <FileViewerProvider source={selected.source} defaultSidebarOpen>
-  <FileViewer sidebarSide="right">
+  <FileViewer>
     <FileViewerHeader>
-      <FileViewerHeaderStart>
         <FileViewerSidebarTrigger />
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+        <FileViewerTitle />
+        <FileViewerControls />
     </FileViewerHeader>
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
@@ -87,7 +83,7 @@ Use `AttachmentSidebar` as the content grammar inside the viewer rail:
           width="20rem"
         />
       </FileViewerSidebar>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```

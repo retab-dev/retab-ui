@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import type { SourceFieldLink } from "@/components/ui/source-field-link";
+import { useSourceLinkFocusPreviewIntent } from "@/components/json-form/source-link-focus-intent";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
@@ -14,7 +15,7 @@ export type JsonFormSourceLinkActions = Omit<
 type SourceTableCell = HTMLElement;
 type SourcePointerPoint = { x: number; y: number };
 type TableSourceHoverState = {
-  phase: "idle" | "hovering" | "scrolling";
+  phase: "idle" | "focusing" | "hovering" | "scrolling";
   pointerPoint: SourcePointerPoint | null;
   sourcePath: string | null;
 };
@@ -47,6 +48,7 @@ export function useSourceTableHoverController({
   const pendingHoverFrameRef = React.useRef<number | null>(null);
   const pendingScrollHoverFrameRef = React.useRef<number | null>(null);
   const latestScrollHoverAtRef = React.useRef(Number.NEGATIVE_INFINITY);
+  const shouldPreviewFocus = useSourceLinkFocusPreviewIntent();
 
   const setActiveSourceCell = React.useCallback((cell: Element | null) => {
     if (activeSourceCellRef.current === cell) return;
@@ -261,11 +263,12 @@ export function useSourceTableHoverController({
   const handleFocus = React.useCallback(
     (event: React.FocusEvent<HTMLElement>) => {
       if (!sourceLinkActions) return;
+      if (!shouldPreviewFocus(event)) return;
       const cell = getCellFromTarget(event.target);
       if (!cell) return;
       const sourcePath = sourcePathForCell(cell);
       hoverStateRef.current = {
-        phase: sourcePath ? "hovering" : "idle",
+        phase: sourcePath ? "focusing" : "idle",
         pointerPoint: hoverStateRef.current.pointerPoint,
         sourcePath,
       };
@@ -274,6 +277,7 @@ export function useSourceTableHoverController({
     },
     [
       sourceLinkActions,
+      shouldPreviewFocus,
       getCellFromTarget,
       setActiveSourceCell,
       sourcePathForCell,
@@ -285,6 +289,13 @@ export function useSourceTableHoverController({
       if (!sourceLinkActions) return;
       const cell = getCellFromTarget(event.target);
       if (!cell || cell.contains(event.relatedTarget as Node | null)) return;
+      const sourcePath = sourcePathForCell(cell);
+      if (
+        hoverStateRef.current.phase !== "focusing" ||
+        hoverStateRef.current.sourcePath !== sourcePath
+      ) {
+        return;
+      }
       hoverStateRef.current = {
         phase: "idle",
         pointerPoint: hoverStateRef.current.pointerPoint,
@@ -293,7 +304,12 @@ export function useSourceTableHoverController({
       setActiveSourceCell(null);
       sourceLinkActions.onSourceHover(null);
     },
-    [sourceLinkActions, getCellFromTarget, setActiveSourceCell],
+    [
+      sourceLinkActions,
+      getCellFromTarget,
+      setActiveSourceCell,
+      sourcePathForCell,
+    ],
   );
 
   return {

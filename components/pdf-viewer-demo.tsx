@@ -2,16 +2,14 @@
 
 import {
   FileViewer,
-  FileViewerBody,
+  FileViewerContent,
   FileViewerHeader,
-  FileViewerHeaderEnd,
-  FileViewerHeaderStart,
-  FileViewerIdentity,
+  FileViewerTitle,
   FileViewerProvider,
   FileViewerSidebar,
   FileViewerSidebarTrigger,
   FileViewerInset,
-  FileViewerToolbar,
+  FileViewerControls,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -31,18 +29,14 @@ export function PdfViewerDemo() {
     // A 96-page NVIDIA 10-K so the continuous-scroll virtualization shows at scale.
     <div className="h-[600px] min-h-0">
       <FileViewerProvider source={PDF_SOURCE} defaultSidebarOpen>
-        <FileViewer sidebarMode="inline" className="h-full">
+        <FileViewer className="h-full">
           <PdfViewerProvider>
             <FileViewerHeader>
-              <FileViewerHeaderStart>
                 <FileViewerSidebarTrigger className="-ml-1" />
-                <FileViewerIdentity />
-              </FileViewerHeaderStart>
-              <FileViewerHeaderEnd>
-                <FileViewerToolbar />
-              </FileViewerHeaderEnd>
+                <FileViewerTitle />
+                <FileViewerControls />
             </FileViewerHeader>
-            <FileViewerBody>
+            <FileViewerContent>
               <FileViewerSidebar
                 aria-label="PDF pages"
                 width="4.5rem"
@@ -55,7 +49,7 @@ export function PdfViewerDemo() {
                   <PdfViewerPages bare className="h-full" />
                 </FileViewerViewport>
               </FileViewerInset>
-            </FileViewerBody>
+            </FileViewerContent>
           </PdfViewerProvider>
         </FileViewer>
       </FileViewerProvider>

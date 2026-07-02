@@ -12,6 +12,7 @@ import {
   joinJsonSourcePath,
 } from "@/components/json-form/path-codec";
 import type { Column } from "@/components/json-form/schema-model";
+import type { ArrayTableActiveCellStore } from "@/components/json-form/table/array-table-active-cell-store";
 import { ArrayTableCell } from "@/components/json-form/table/array-table-cell";
 import { createArrayTableCellModel } from "@/components/json-form/table/array-table-cell-model";
 import { TABLE_ROW_HEIGHT } from "@/components/json-form/table/array-table-config";
@@ -27,9 +28,7 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
   sourceLinked,
   template,
   rowTopPx,
-  activeEditorPath,
-  subscribeToRow,
-  setActiveEditorPath,
+  activeCellStore,
 }: {
   name: string;
   sourcePath: string;
@@ -41,9 +40,7 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
   sourceLinked: boolean;
   template: string;
   rowTopPx?: number;
-  activeEditorPath: string | null;
-  subscribeToRow: boolean;
-  setActiveEditorPath: (path: string | null) => void;
+  activeCellStore: ArrayTableActiveCellStore;
 }) {
   const { control, getValues, setValue } = useFormContext();
   const rowPath = joinJsonFormPath(name, index);
@@ -51,9 +48,8 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
   const watchedRowValue = useWatch({
     control,
     name: rowPath,
-    disabled: !subscribeToRow,
   }) as Record<string, unknown> | undefined;
-  const rowValue = (subscribeToRow ? watchedRowValue : getValues(rowPath)) as
+  const rowValue = (watchedRowValue ?? getValues(rowPath)) as
     | Record<string, unknown>
     | undefined;
   const rowStyle = React.useMemo(
@@ -68,8 +64,8 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
     [rowTopPx, template],
   );
   const closeEditor = React.useCallback(
-    () => setActiveEditorPath(null),
-    [setActiveEditorPath],
+    () => activeCellStore.setActivePath(null),
+    [activeCellStore],
   );
 
   return (
@@ -93,10 +89,10 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
               sourcePath: joinJsonSourcePath(rowSourcePath, column.key),
               column,
               value,
-              activeEditorPath,
               sourceLinked,
             })}
             column={column}
+            activeCellStore={activeCellStore}
             setValue={setValue}
             closeEditor={closeEditor}
           />

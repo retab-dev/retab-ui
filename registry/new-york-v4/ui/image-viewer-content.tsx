@@ -33,6 +33,11 @@ import {
   type ViewerControlsState,
 } from "@/components/ui/viewer-controls";
 
+import { resolveFileViewerRendererLayoutInlineSize } from "./file-viewer-renderer-contract";
+import {
+  useOptionalFileViewerRendererEnvironment,
+  useOptionalFileViewerRendererFrame,
+} from "./file-viewer-renderer-frame";
 import { createImageFrameLayout } from "./image-viewer-virtualization";
 import { joinEffectKey } from "@/lib/effect-key";
 
@@ -56,7 +61,17 @@ export function ImageViewerContent({
 }) {
   const frameSource = React.use(getImageSource(resource.content));
   const sourceLeaseRef = useFrameSourceLease(resource.content, frameSource);
-  const { frameListRef, frameListWidth } = useFrameListWidth();
+  const rendererEnvironment = useOptionalFileViewerRendererEnvironment();
+  const { frameListRef, frameListWidth } = useFrameListWidth({
+    enabled: !rendererEnvironment.usesShellGeometry,
+  });
+  const rendererFrame = useOptionalFileViewerRendererFrame({
+    fallbackInlineSize: frameListWidth,
+  });
+  const frameListLayoutWidth = resolveFileViewerRendererLayoutInlineSize({
+    fallbackInlineSize: frameListWidth,
+    rendererFrame,
+  });
   const {
     rotateClockwise,
     rotation,
@@ -68,7 +83,7 @@ export function ImageViewerContent({
     controlledScale,
     defaultScale,
     onScaleChange,
-    frameListWidth,
+    frameListLayoutWidth,
   );
   const frameLayout = React.useMemo(
     () =>

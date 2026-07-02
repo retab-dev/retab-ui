@@ -280,6 +280,7 @@ export function ImageFrameScroller({
     scale,
     rotation,
   ].join("\u0000");
+  const projectionResetKey = String(sourceKey);
   const {
     scrollPageOffset,
     visibleFrameNumbers,
@@ -353,7 +354,7 @@ export function ImageFrameScroller({
       renderQuality: scrollStateRef.current.isScrolling ? "low" : "high",
       renderedWindow,
       renderFrameNumbers,
-      resetKey: layoutResetKey,
+      resetKey: projectionResetKey,
       rotation,
       scale,
       source,
@@ -366,6 +367,7 @@ export function ImageFrameScroller({
     layout,
     layoutResetKey,
     preloadFrameNumbers,
+    projectionResetKey,
     renderFrameOverlay,
     renderedWindow,
     renderFrameNumbers,

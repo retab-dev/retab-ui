@@ -22,9 +22,9 @@ type DiagramKind =
   | "callout"
   | "document"
   | "header"
+  | "inset"
   | "row"
   | "sidebar"
-  | "surface"
   | "viewport";
 
 type DiagramNodeData = {
@@ -53,13 +53,13 @@ const STRUCTURE_NODES = [
   calloutNode("sidebar-label", "<FileViewerSidebar />", 46, 174, 166, 24),
   calloutNode("inset-label", "<FileViewerInset />", 514, 176, 172, 24),
   calloutNode("viewport-label", "<FileViewerViewport />", 514, 246, 178, 24),
-  calloutNode("body-label", "<FileViewerBody />", 62, 302, 142, 24),
+  calloutNode("body-label", "<FileViewerContent />", 62, 302, 142, 24),
   calloutNode("document-label", "<FileViewerDocument />", 494, 326, 188, 24),
   diagramNode("root", "", "boundary", 248, 72, 224, 274),
   diagramNode("header", "Header", "header", 266, 90, 188, 44),
   diagramNode("body", "", "body", 266, 150, 188, 168),
   diagramNode("sidebar", "Sidebar", "sidebar", 284, 170, 66, 126),
-  diagramNode("inset", "", "surface", 364, 170, 72, 126),
+  diagramNode("inset", "", "inset", 364, 170, 72, 126),
   diagramNode("viewport", "", "viewport", 376, 194, 48, 76),
   diagramNode("document", "", "document", 385, 222, 30, 28),
 ] satisfies DiagramNode[];
@@ -79,25 +79,18 @@ const SIDEBAR_NODES = [
   calloutNode("trigger-label", "<FileViewerSidebarTrigger />", 72, 48, 226, 24),
   calloutNode("registration-label", "one registered sidebar", 444, 48, 198, 24),
   calloutNode("rows-label", "domain rail owns rows", 76, 362, 186, 24),
-  calloutNode(
-    "inset-label",
-    "file pixels stay in inset",
-    424,
-    362,
-    224,
-    24,
-  ),
+  calloutNode("inset-label", "file pixels stay in inset", 424, 362, 224, 24),
   diagramNode("root", "", "boundary", 86, 92, 544, 244),
   diagramNode("header", "", "header", 116, 124, 484, 46),
   diagramNode("trigger", "=", "document", 137, 137, 24, 20),
-  diagramNode("identity", "Identity", "callout", 176, 137, 90, 20),
-  diagramNode("toolbar", "Toolbar", "callout", 500, 137, 84, 20),
+  diagramNode("title-group", "Title group", "callout", 176, 137, 100, 20),
+  diagramNode("controls", "Controls", "callout", 500, 137, 84, 20),
   diagramNode("body", "", "body", 116, 188, 484, 112),
   diagramNode("sidebar", "", "sidebar", 138, 202, 138, 84),
   calloutNode("sidebar-title", "FileViewer", 155, 216, 104, 16),
   diagramNode("thumbs", "Thumbnails", "row", 154, 240, 104, 16),
   diagramNode("segments", "Segments", "row", 154, 260, 104, 16),
-  diagramNode("inset", "Inset", "surface", 306, 202, 256, 84),
+  diagramNode("inset", "Inset", "inset", 306, 202, 256, 84),
   diagramNode("viewport", "", "viewport", 332, 216, 204, 56),
   diagramNode("document", "Document", "document", 382, 228, 104, 32),
 ] satisfies DiagramNode[];
@@ -445,7 +438,7 @@ function nodeClassName(kind: DiagramKind) {
       return "border-[3px] border-neutral-400/50 bg-neutral-200/40 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300";
     case "sidebar":
       return "border-[3px] border-emerald-600/85 bg-emerald-500/20 text-neutral-600 dark:border-emerald-400/80 dark:bg-emerald-500/25 dark:text-neutral-200";
-    case "surface":
+    case "inset":
       return "border-[3px] border-amber-600/85 bg-amber-500/20 text-neutral-600 dark:border-amber-400/80 dark:bg-amber-500/25 dark:text-neutral-200";
     case "viewport":
       return "border-[3px] border-orange-600/80 bg-background text-neutral-600 dark:border-orange-400/80 dark:text-neutral-200";
@@ -463,7 +456,7 @@ function nodeRadius(kind: DiagramKind) {
     case "boundary":
       return 28;
     case "header":
-    case "surface":
+    case "inset":
     case "sidebar":
     case "body":
       return 13;

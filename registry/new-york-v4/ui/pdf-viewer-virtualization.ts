@@ -8,14 +8,21 @@ import {
   PDF_RENDER_WINDOW_OVERSCAN_PX,
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout";
+import type { ViewerDocumentTransition } from "./viewer-types";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
+
+export const PDF_PAGE_WINDOW_RETENTION_MS = 250;
+
+const PDF_SHELL_MOTION_RENDER_WINDOW_VIEWPORT_MULTIPLIER = 2;
+const PDF_SHELL_MOTION_RENDER_WINDOW_PAGE_OVERSCAN = 3;
 
 type PdfPageWindow = {
   scrollPageOffset: number;
   visiblePageNumbers: readonly number[];
   renderPageNumbers: readonly number[];
+  warmPageNumbers: readonly number[];
   preloadPageNumbers: readonly number[];
 };
 
@@ -30,19 +37,40 @@ export function usePdfPageVirtualization({
   isLayoutTransitioning = false,
   layout,
   resetKey,
+  transition,
   viewportElement,
 }: {
   getScrollMetrics?: () => PdfPageVirtualizationScrollMetrics;
   isLayoutTransitioning?: boolean;
   layout: PdfPageLayoutModel;
   resetKey?: unknown;
+  transition?: ViewerDocumentTransition;
   viewportElement: HTMLDivElement | null;
 }) {
   const measureFrameRef = React.useRef(0);
+  const retentionTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const releasedRetentionLayoutRef = React.useRef<PdfPageLayoutModel | null>(
+    null,
+  );
   const hasMeasuredScrollRef = React.useRef(false);
   const lastMeasuredLayoutRef = React.useRef(layout);
   const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey);
   const lastMeasuredScrollTopRef = React.useRef(0);
+  const hasReleasedPageWindowRetention =
+    transition?.source === "viewer-shell" &&
+    transition.layoutPolicy === "target" &&
+    Object.is(releasedRetentionLayoutRef.current, layout);
+  const shouldRetainPreviousPageWindow =
+    shouldRetainPdfPageWindow({
+      isLayoutTransitioning,
+      transition,
+    }) && !hasReleasedPageWindowRetention;
+  const renderWindowTransition =
+    transition?.source === "viewer-shell" && !hasReleasedPageWindowRetention
+      ? transition
+      : undefined;
   const getCurrentScrollMetrics =
     React.useCallback((): PdfPageVirtualizationScrollMetrics => {
       return Object.is(lastMeasuredResetKeyRef.current, resetKey) &&
@@ -60,10 +88,16 @@ export function usePdfPageVirtualization({
     (
       metrics: PdfPageVirtualizationScrollMetrics,
       fitPerfectly = false,
+      overscanPx = getPdfRenderWindowOverscanPx({
+        layout,
+        transition: renderWindowTransition,
+        viewportHeight: metrics.viewportHeight,
+      }),
     ): PdfPageWindow => {
       const renderPageNumbers = getPdfRenderPageNumbers({
         fitPerfectly,
         layout,
+        overscanPx,
         scrollTop: metrics.scrollTop,
         viewportHeight: metrics.viewportHeight,
       });
@@ -76,13 +110,14 @@ export function usePdfPageVirtualization({
           viewportHeight: metrics.viewportHeight,
         }),
         renderPageNumbers,
+        warmPageNumbers: renderPageNumbers,
         preloadPageNumbers: getPdfPreloadPageNumbers({
           layout,
           renderPageNumbers,
         }),
       };
     },
-    [layout],
+    [layout, renderWindowTransition],
   );
   const getCurrentVisiblePageNumbers = React.useCallback((): PdfPageWindow => {
     return getPageWindow(getCurrentScrollMetrics());
@@ -103,6 +138,7 @@ export function usePdfPageVirtualization({
         viewportHeight,
       }),
       renderPageNumbers,
+      warmPageNumbers: renderPageNumbers,
       preloadPageNumbers: getPdfPreloadPageNumbers({
         layout,
         renderPageNumbers,
@@ -110,35 +146,89 @@ export function usePdfPageVirtualization({
     };
   }, [layout, viewportElement]);
   const [state, setState] = React.useState<{
+    isTransitionPageWindow: boolean;
     layout: PdfPageLayoutModel;
     resetKey: unknown;
     pageWindow: PdfPageWindow;
   }>(() => ({
+    isTransitionPageWindow: false,
     layout,
     resetKey,
     pageWindow: getCurrentVisiblePageNumbers(),
   }));
   const pageWindow =
     Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey)
-      ? state.pageWindow
+      ? state.isTransitionPageWindow && !shouldRetainPreviousPageWindow
+        ? getCurrentVisiblePageNumbers()
+        : state.pageWindow
       : Object.is(state.resetKey, resetKey)
         ? createTransitionPageWindow({
             currentPageWindow: getCurrentVisiblePageNumbers(),
-            isLayoutTransitioning,
             layout,
             previousPageWindow: state.pageWindow,
+            shouldRetainPreviousPageWindow,
           })
         : getResetPageWindow();
+  const cancelPageWindowRetentionRelease = React.useCallback(() => {
+    if (retentionTimeoutRef.current === null) return;
+    clearTimeout(retentionTimeoutRef.current);
+    retentionTimeoutRef.current = null;
+  }, []);
+  const schedulePageWindowRetentionRelease = React.useCallback(() => {
+    cancelPageWindowRetentionRelease();
+    retentionTimeoutRef.current = setTimeout(() => {
+      retentionTimeoutRef.current = null;
+      const metrics = getCurrentScrollMetrics();
+      const currentPageWindow = getPageWindow(
+        metrics,
+        false,
+        PDF_RENDER_WINDOW_OVERSCAN_PX,
+      );
+      releasedRetentionLayoutRef.current = layout;
+      lastMeasuredLayoutRef.current = layout;
+      lastMeasuredResetKeyRef.current = resetKey;
+      lastMeasuredScrollTopRef.current = metrics.scrollTop;
+      hasMeasuredScrollRef.current = true;
+      setState((previousState) => {
+        if (!Object.is(previousState.resetKey, resetKey)) {
+          return previousState;
+        }
+
+        return Object.is(previousState.layout, layout) &&
+          !previousState.isTransitionPageWindow &&
+          arePageWindowsEqual(previousState.pageWindow, currentPageWindow)
+          ? previousState
+          : {
+              isTransitionPageWindow: false,
+              layout,
+              resetKey,
+              pageWindow: currentPageWindow,
+            };
+      });
+    }, PDF_PAGE_WINDOW_RETENTION_MS);
+  }, [
+    cancelPageWindowRetentionRelease,
+    getCurrentScrollMetrics,
+    getPageWindow,
+    layout,
+    resetKey,
+  ]);
 
   const measureVisiblePagesNow = React.useCallback(() => {
     measureFrameRef.current = 0;
     const metrics = getCurrentScrollMetrics();
+    const renderOverscanPx = getPdfRenderWindowOverscanPx({
+      layout,
+      transition: renderWindowTransition,
+      viewportHeight: metrics.viewportHeight,
+    });
     const fitPerfectly = shouldFitPdfPerfectly({
       canFitPerfectly:
         hasMeasuredScrollRef.current &&
         Object.is(lastMeasuredLayoutRef.current, layout) &&
         Object.is(lastMeasuredResetKeyRef.current, resetKey),
       previousScrollTop: lastMeasuredScrollTopRef.current,
+      renderOverscanPx,
       scrollTop: metrics.scrollTop,
       viewportHeight: metrics.viewportHeight,
     });
@@ -150,17 +240,32 @@ export function usePdfPageVirtualization({
     setState((previousState) => {
       const nextPageWindow = createTransitionPageWindow({
         currentPageWindow,
-        isLayoutTransitioning,
         layout,
         previousPageWindow: previousState.pageWindow,
+        shouldRetainPreviousPageWindow,
       });
+      const isTransitionPageWindow = shouldRetainPreviousPageWindow;
 
       return Object.is(previousState.layout, layout) &&
         Object.is(previousState.resetKey, resetKey) &&
+        previousState.isTransitionPageWindow === isTransitionPageWindow &&
         arePageWindowsEqual(previousState.pageWindow, nextPageWindow)
         ? previousState
-        : { layout, resetKey, pageWindow: nextPageWindow };
+        : {
+            isTransitionPageWindow,
+            layout,
+            resetKey,
+            pageWindow: nextPageWindow,
+          };
     });
+    if (
+      shouldReleasePdfPageWindowRetention(transition) &&
+      !hasReleasedPageWindowRetention
+    ) {
+      schedulePageWindowRetentionRelease();
+    } else if (!shouldRetainPreviousPageWindow) {
+      cancelPageWindowRetentionRelease();
+    }
     if (fitPerfectly && measureFrameRef.current === 0) {
       measureFrameRef.current = requestAnimationFrame(() =>
         measureVisiblePagesNowRef.current(),
@@ -169,9 +274,14 @@ export function usePdfPageVirtualization({
   }, [
     getCurrentScrollMetrics,
     getPageWindow,
-    isLayoutTransitioning,
     layout,
     resetKey,
+    cancelPageWindowRetentionRelease,
+    schedulePageWindowRetentionRelease,
+    hasReleasedPageWindowRetention,
+    renderWindowTransition,
+    shouldRetainPreviousPageWindow,
+    transition,
   ]);
   const measureVisiblePagesNowRef = React.useRef(measureVisiblePagesNow);
   useKeyedLayoutEffect(joinEffectKey([measureVisiblePagesNow]), () => {
@@ -185,6 +295,26 @@ export function usePdfPageVirtualization({
     );
   }, []);
 
+  useKeyedMountEffect(
+    joinEffectKey([
+      cancelPageWindowRetentionRelease,
+      schedulePageWindowRetentionRelease,
+      shouldRetainPreviousPageWindow,
+      transition?.layoutPolicy,
+      transition?.source,
+    ]),
+    () => {
+      if (
+        shouldReleasePdfPageWindowRetention(transition) &&
+        !hasReleasedPageWindowRetention
+      ) {
+        schedulePageWindowRetentionRelease();
+      } else if (!shouldRetainPreviousPageWindow) {
+        cancelPageWindowRetentionRelease();
+      }
+    },
+  );
+
   useKeyedMountEffect(joinEffectKey([measureVisiblePagesNow]), () => {
     if (measureFrameRef.current) {
       cancelAnimationFrame(measureFrameRef.current);
@@ -197,12 +327,14 @@ export function usePdfPageVirtualization({
     if (measureFrameRef.current) {
       cancelAnimationFrame(measureFrameRef.current);
     }
+    cancelPageWindowRetentionRelease();
   });
 
   return {
     scrollPageOffset: pageWindow.scrollPageOffset,
     visiblePageNumbers: pageWindow.visiblePageNumbers,
     renderPageNumbers: pageWindow.renderPageNumbers,
+    warmPageNumbers: pageWindow.warmPageNumbers,
     preloadPageNumbers: pageWindow.preloadPageNumbers,
     measureVisiblePages,
   };
@@ -210,16 +342,16 @@ export function usePdfPageVirtualization({
 
 function createTransitionPageWindow({
   currentPageWindow,
-  isLayoutTransitioning,
   layout,
   previousPageWindow,
+  shouldRetainPreviousPageWindow,
 }: {
   currentPageWindow: PdfPageWindow;
-  isLayoutTransitioning: boolean;
   layout: PdfPageLayoutModel;
   previousPageWindow: PdfPageWindow;
+  shouldRetainPreviousPageWindow: boolean;
 }): PdfPageWindow {
-  if (!isLayoutTransitioning) return currentPageWindow;
+  if (!shouldRetainPreviousPageWindow) return currentPageWindow;
 
   return {
     scrollPageOffset: currentPageWindow.scrollPageOffset,
@@ -232,6 +364,11 @@ function createTransitionPageWindow({
       layout,
       previousPageWindow.renderPageNumbers,
       currentPageWindow.renderPageNumbers,
+    ),
+    warmPageNumbers: mergePageNumbers(
+      layout,
+      previousPageWindow.warmPageNumbers,
+      currentPageWindow.warmPageNumbers,
     ),
     preloadPageNumbers: mergePageNumbers(
       layout,
@@ -266,6 +403,10 @@ function arePageWindowsEqual(
       nextPageWindow.renderPageNumbers,
     ) &&
     arePageNumbersEqual(
+      previousPageWindow.warmPageNumbers,
+      nextPageWindow.warmPageNumbers,
+    ) &&
+    arePageNumbersEqual(
       previousPageWindow.preloadPageNumbers,
       nextPageWindow.preloadPageNumbers,
     )
@@ -285,11 +426,13 @@ function arePageNumbersEqual(
 function shouldFitPdfPerfectly({
   canFitPerfectly,
   previousScrollTop,
+  renderOverscanPx,
   scrollTop,
   viewportHeight,
 }: {
   canFitPerfectly: boolean;
   previousScrollTop: number;
+  renderOverscanPx: number;
   scrollTop: number;
   viewportHeight: number;
 }) {
@@ -297,6 +440,56 @@ function shouldFitPdfPerfectly({
     canFitPerfectly &&
     viewportHeight > 0 &&
     Math.abs(scrollTop - previousScrollTop) >
-      viewportHeight + PDF_RENDER_WINDOW_OVERSCAN_PX * 2
+      viewportHeight + renderOverscanPx * 2
   );
+}
+
+function getPdfRenderWindowOverscanPx({
+  layout,
+  transition,
+  viewportHeight,
+}: {
+  layout: PdfPageLayoutModel;
+  transition?: ViewerDocumentTransition;
+  viewportHeight: number;
+}) {
+  if (transition?.source !== "viewer-shell") {
+    return PDF_RENDER_WINDOW_OVERSCAN_PX;
+  }
+
+  return Math.max(
+    PDF_RENDER_WINDOW_OVERSCAN_PX,
+    getSafePositiveNumber(viewportHeight) *
+      PDF_SHELL_MOTION_RENDER_WINDOW_VIEWPORT_MULTIPLIER,
+    getSafePositiveNumber(layout.estimatedHeight) *
+      PDF_SHELL_MOTION_RENDER_WINDOW_PAGE_OVERSCAN,
+  );
+}
+
+function shouldRetainPdfPageWindow({
+  isLayoutTransitioning,
+  transition,
+}: {
+  isLayoutTransitioning: boolean;
+  transition?: ViewerDocumentTransition;
+}) {
+  return (
+    isLayoutTransitioning ||
+    (transition?.source === "viewer-shell" &&
+      (transition.layoutPolicy === "frozen" ||
+        transition.layoutPolicy === "target"))
+  );
+}
+
+function shouldReleasePdfPageWindowRetention(
+  transition?: ViewerDocumentTransition,
+) {
+  return (
+    transition?.source === "viewer-shell" &&
+    transition.layoutPolicy === "target"
+  );
+}
+
+function getSafePositiveNumber(value: number) {
+  return Number.isFinite(value) ? Math.max(0, value) : 0;
 }

@@ -65,27 +65,23 @@ chrome:
 <FileViewerProvider source={source} defaultSidebarOpen>
   <FileViewer>
     <FileViewerHeader>
-      <FileViewerHeaderStart>
-        <FileViewerSidebarTrigger />
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+      <FileViewerSidebarTrigger />
+      <FileViewerTitle />
+      <FileViewerControls />
     </FileViewerHeader>
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerSidebar aria-label="Document sections" />
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
 
-`FileViewerIdentity` answers what file this is, and `FileViewerToolbar` renders
+`FileViewerTitle` answers what file this is, and `FileViewerControls` renders
 operational controls registered by the active file renderer.
 `FileViewerDocument` is the routed file renderer.
 
@@ -107,20 +103,16 @@ custom header composition:
 <FileViewerProvider source={source}>
   <FileViewer>
     <FileViewerHeader>
-      <FileViewerHeaderStart>
-        <FileViewerIdentity />
-      </FileViewerHeaderStart>
-      <FileViewerHeaderEnd>
-        <FileViewerToolbar />
-      </FileViewerHeaderEnd>
+      <FileViewerTitle />
+      <FileViewerControls />
     </FileViewerHeader>
-    <FileViewerBody>
+    <FileViewerContent>
       <FileViewerInset>
         <FileViewerViewport>
           <FileViewerDocument />
         </FileViewerViewport>
       </FileViewerInset>
-    </FileViewerBody>
+    </FileViewerContent>
   </FileViewer>
 </FileViewerProvider>
 ```
@@ -179,7 +171,7 @@ File Viewer primitives.
 | `category`           | `FileViewerProvider` | Force a category, bypassing detection.                                                            |
 | `defaultSidebarOpen` | `FileViewerProvider` | Initial sidebar open state for composed viewers.                                                  |
 | `sidebarMode`        | `FileViewer`         | `"auto"`, `"inline"`, or `"overlay"` sidebar layout mode.                                         |
-| `sidebarSide`        | `FileViewer`         | Which side the sidebar mounts on.                                                                 |
+| `side`               | `FileViewerSidebar`  | Which side the sidebar mounts on.                                                                 |
 | `className`          | `FileViewer`         | Optional class on the viewer root element.                                                        |
 
 The `detectCategory(fileName, mimeType?)` helper is also exported if you need to

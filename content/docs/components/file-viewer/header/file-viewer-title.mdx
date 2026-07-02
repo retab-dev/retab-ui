@@ -1,0 +1,30 @@
+---
+title: FileViewerTitle
+description: The current file name in the File Viewer header.
+component: true
+---
+
+`FileViewerTitle` renders the active file display name from
+`FileViewerProvider` state.
+
+```tsx
+<FileViewerTitle />
+```
+
+## Behavior
+
+- Reads `descriptor.displayName` from file viewer context. It does not take a
+  `source`, `title`, or file name prop.
+- Renders a `data-slot="file-viewer-title"` element with truncating text.
+- The file name is the primary identity. Do not add decorative file-type icons
+  beside it unless the surrounding workflow has a stronger reason.
+
+## API Reference
+
+| Prop       | Type                          | Description                                |
+| ---------- | ----------------------------- | ------------------------------------------ |
+| `...props` | `React.ComponentProps<"span">` | Standard span props; `className` is merged. |
+
+## Source
+
+<ComponentSource src="registry/new-york-v4/ui/file-viewer-header.tsx" />

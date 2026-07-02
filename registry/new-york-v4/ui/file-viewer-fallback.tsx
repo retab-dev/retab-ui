@@ -80,7 +80,7 @@ export function ViewerFallback({
 
   // Render the exact per-type skeleton each viewer shows while it parses, so the
   // SSR + chunk-loading paint is identical to the in-viewer loading state (same
-  // toolbar, same body) — no toolbar popping in and no geometry shift as one
+  // controls row, same body) — no controls popping in and no geometry shift as one
   // skeleton hands off to the next.
   switch (category) {
     case "pdf":
@@ -182,7 +182,6 @@ export function ViewerFallback({
       )}
     >
       <div
-        data-file-viewer-slot="document-fallback"
         data-slot="file-viewer-document-fallback"
         className="min-h-0 flex-1 overflow-hidden"
       >

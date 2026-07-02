@@ -36,21 +36,33 @@ const IMAGE_VIEWER_HORIZONTAL_PADDING = 32;
 export const MIN_VIEWER_SCALE = 0.25;
 export const MAX_VIEWER_SCALE = 5;
 
-export function useFrameListWidth() {
+export function useFrameListWidth({
+  enabled = true,
+}: {
+  enabled?: boolean;
+} = {}) {
   const [frameListWidth, setFrameListWidth] = React.useState<number | null>(
     null,
   );
-  const frameListRef = React.useCallback((element: HTMLDivElement | null) => {
-    if (!element) return;
-    setFrameListWidth(element.clientWidth);
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setFrameListWidth((entry.target as HTMLElement).clientWidth);
+  const frameListRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      if (!element) return;
+      if (!enabled) {
+        setFrameListWidth(null);
+        return;
       }
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+
+      setFrameListWidth(element.clientWidth);
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setFrameListWidth((entry.target as HTMLElement).clientWidth);
+        }
+      });
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [enabled],
+  );
 
   return { frameListRef, frameListWidth };
 }

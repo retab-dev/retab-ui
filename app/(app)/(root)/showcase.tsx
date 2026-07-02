@@ -209,7 +209,7 @@ function HomeShowcaseTabs({
 
 function SourcesViewerShowcasePanel() {
   return (
-    <div className="h-[680px] overflow-hidden rounded-xl border shadow-sm [&_[data-file-viewer-slot=legend]]:hidden">
+    <div className="h-[680px] overflow-hidden rounded-xl border shadow-sm [&_[data-slot=file-viewer-legend]]:hidden">
       <DynamicJsonFormSourcesBlock />
     </div>
   );

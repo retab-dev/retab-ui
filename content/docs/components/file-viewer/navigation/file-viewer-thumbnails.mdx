@@ -13,15 +13,11 @@ renderers should follow the same sidebar contract.
   <FileViewer>
     <PdfViewerProvider>
       <FileViewerHeader>
-        <FileViewerHeaderStart>
           <FileViewerSidebarTrigger />
-          <FileViewerIdentity />
-        </FileViewerHeaderStart>
-        <FileViewerHeaderEnd>
-          <FileViewerToolbar />
-        </FileViewerHeaderEnd>
+          <FileViewerTitle />
+          <FileViewerControls />
       </FileViewerHeader>
-      <FileViewerBody>
+      <FileViewerContent>
         <FileViewerSidebar aria-label="PDF pages">
           <PdfViewerThumbnails />
         </FileViewerSidebar>
@@ -30,7 +26,7 @@ renderers should follow the same sidebar contract.
             <PdfViewerPages />
           </FileViewerViewport>
         </FileViewerInset>
-      </FileViewerBody>
+      </FileViewerContent>
     </PdfViewerProvider>
   </FileViewer>
 </FileViewerProvider>

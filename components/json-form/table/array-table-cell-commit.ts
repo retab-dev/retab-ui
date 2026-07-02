@@ -1,7 +1,4 @@
-import {
-  type DataCellCommitValue,
-  type DataCellValueMeta,
-} from "@/components/ui/data-cell";
+import { type DataCellValueMeta } from "@/components/ui/data-cell";
 import { datetimeLocalInputValue } from "@/components/json-form/scalar-control";
 import type { Column } from "@/components/json-form/schema-model";
 
@@ -16,7 +13,7 @@ export type SetArrayTableCellValue = (
 ) => void;
 
 export type CommitArrayTableCellValue = (
-  value: DataCellCommitValue,
+  value: unknown,
   meta?: DataCellValueMeta,
 ) => void;
 
@@ -28,13 +25,15 @@ export function normalizeArrayTableCellValue({
   nextValue,
   meta,
 }: {
-  column: Column;
-  currentValue: unknown;
-  nextValue: DataCellCommitValue;
-  meta?: DataCellValueMeta;
+    column: Column;
+    currentValue: unknown;
+    nextValue: unknown;
+    meta?: DataCellValueMeta;
 }): unknown | typeof NO_ARRAY_TABLE_CELL_COMMIT {
   let normalizedValue: unknown;
-  if (column.kind === "number" || column.kind === "integer") {
+  if (column.kind === "enum") {
+    normalizedValue = nextValue;
+  } else if (column.kind === "number" || column.kind === "integer") {
     if (meta && !meta.isValid) return NO_ARRAY_TABLE_CELL_COMMIT;
     normalizedValue =
       typeof nextValue === "number"
@@ -75,12 +74,12 @@ export function commitArrayTableCellValue({
   path,
   setValue,
 }: {
-  column: Column;
-  currentValue: unknown;
-  meta?: DataCellValueMeta;
-  nextValue: DataCellCommitValue;
-  path: string;
-  setValue: SetArrayTableCellValue;
+    column: Column;
+    currentValue: unknown;
+    meta?: DataCellValueMeta;
+    nextValue: unknown;
+    path: string;
+    setValue: SetArrayTableCellValue;
 }) {
   const normalizedValue = normalizeArrayTableCellValue({
     column,

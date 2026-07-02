@@ -10,6 +10,15 @@ import {
 } from "@/lib/viewer-resource";
 
 import { getPptxFitScale, getPptxResetKey } from "./pptx-viewer-core";
+import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import {
+  resolveFileViewerRendererLayoutInlineSize,
+  type FileViewerDocumentAlign,
+} from "./file-viewer-renderer-contract";
+import {
+  useOptionalFileViewerRendererEnvironment,
+  useOptionalFileViewerRendererFrame,
+} from "./file-viewer-renderer-frame";
 import { PptxViewerFallback } from "./pptx-viewer-fallback";
 import { useRetainedPptxSource } from "./pptx-viewer-hooks";
 import { preloadPptxRenderer } from "./pptx-viewer-renderer";
@@ -126,8 +135,18 @@ function PptxViewerContent({
 
   const [rotation, setRotation] = React.useState(0);
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), []);
-  const { containerRef, viewportWidth } = usePptxViewportWidth();
-  const fitScale = getPptxFitScale(viewportWidth, source.baseSize.width);
+  const rendererEnvironment = useOptionalFileViewerRendererEnvironment();
+  const { containerRef, viewportWidth } = usePptxViewportWidth({
+    enabled: !rendererEnvironment.usesShellGeometry,
+  });
+  const rendererFrame = useOptionalFileViewerRendererFrame({
+    fallbackInlineSize: viewportWidth,
+  });
+  const layoutInlineSize = resolveFileViewerRendererLayoutInlineSize({
+    fallbackInlineSize: viewportWidth,
+    rendererFrame,
+  });
+  const fitScale = getPptxFitScale(layoutInlineSize, source.baseSize.width);
   const { scaleControlsDisabled, setViewerScale, zoomScale } = usePptxZoom({
     controlledScale,
     defaultScale,
@@ -154,6 +173,7 @@ function PptxViewerContent({
     });
   const scrollInteractionRestoreRef = React.useRef<number | null>(null);
   const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
+  const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
 
   const suspendScrollInteractions = React.useCallback(() => {
     const scrollElement = scrollViewportRef.current?.querySelector<HTMLElement>(
@@ -190,6 +210,32 @@ function PptxViewerContent({
     suspendScrollInteractions();
     handleScroll();
   }, [handleScroll, scrollActivity, suspendScrollInteractions]);
+  const measureBeforeLayoutMotionRef = React.useRef(handleScroll);
+  measureBeforeLayoutMotionRef.current = handleScroll;
+  const handleBeforeLayoutMotion = React.useCallback(() => {
+    measureBeforeLayoutMotionRef.current();
+  }, []);
+  const setDocumentSurfaceElement = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      const previousElement = documentSurfaceRef.current;
+      if (previousElement === element) return;
+      previousElement?.removeEventListener(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        handleBeforeLayoutMotion,
+      );
+      documentSurfaceRef.current = element;
+      rendererEnvironment.setDocumentSurfaceElement(element);
+      if (!element) return;
+      element.addEventListener(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        handleBeforeLayoutMotion,
+      );
+    },
+    [
+      handleBeforeLayoutMotion,
+      rendererEnvironment.setDocumentSurfaceElement,
+    ],
+  );
 
   return (
     <div
@@ -222,7 +268,16 @@ function PptxViewerContent({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          ref={setDocumentSurfaceElement}
+          className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+          data-slot="pptx-viewer-document-surface"
+          style={{
+            transformOrigin: getPptxDocumentTransformOrigin(
+              rendererFrame.align,
+            ),
+          }}
+        >
           <div className="relative flex min-h-0 flex-1 flex-col">
             <PptxSlideScroller
               source={source}
@@ -249,6 +304,17 @@ function restorePptxScrollInteractions(element: HTMLElement | null) {
   if (!element) return;
   element.style.removeProperty("pointer-events");
   element.style.removeProperty("overflow-x");
+}
+
+function getPptxDocumentTransformOrigin(align: FileViewerDocumentAlign) {
+  switch (align) {
+    case "center":
+      return "center top";
+    case "end":
+      return "right top";
+    case "start":
+      return "left top";
+  }
 }
 
 function isMobileSafari() {

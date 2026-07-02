@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
-export type ViewerHeaderOutletName = "identity" | "toolbar";
+export type ViewerHeaderOutletName = "titleGroup" | "controls";
 
 type ViewerHeaderOutletContextValue = {
   outlets: Partial<Record<ViewerHeaderOutletName, HTMLElement | null>>;
@@ -21,7 +21,7 @@ export function useViewerHeaderOutletAvailable(name: ViewerHeaderOutletName) {
 }
 
 export function useViewerHeaderOutletsAvailable(
-  names: ViewerHeaderOutletName[] = ["identity", "toolbar"],
+  names: ViewerHeaderOutletName[] = ["titleGroup", "controls"],
 ) {
   const context = useContext(ViewerHeaderOutletContext);
   if (!context) return false;
@@ -55,13 +55,13 @@ export function ViewerHeaderOutlet({
 export function ViewerHeaderOutletStart({ children }: { children: ReactNode }) {
   const hasHeaderOutlets = useViewerHeaderOutlets();
   if (!hasHeaderOutlets) return <>{children}</>;
-  return <ViewerHeaderOutlet name="identity">{children}</ViewerHeaderOutlet>;
+  return <ViewerHeaderOutlet name="titleGroup">{children}</ViewerHeaderOutlet>;
 }
 
 export function ViewerHeaderOutletEnd({ children }: { children: ReactNode }) {
   const hasHeaderOutlets = useViewerHeaderOutlets();
   if (!hasHeaderOutlets) return <>{children}</>;
-  return <ViewerHeaderOutlet name="toolbar">{children}</ViewerHeaderOutlet>;
+  return <ViewerHeaderOutlet name="controls">{children}</ViewerHeaderOutlet>;
 }
 
 export function ViewerHeaderOutletProvider({

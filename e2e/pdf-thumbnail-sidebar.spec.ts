@@ -50,9 +50,7 @@ test("PDF thumbnail sidebar toggles from the viewer header with pointer and keyb
 
   const viewerRoot = page.locator('[data-slot="file-viewer-root"]');
   const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
-  const sidebar = viewerRoot.locator(
-    '[data-slot="file-viewer-sidebar-container"]',
-  );
+  const sidebar = viewerRoot.locator('[data-slot="file-viewer-sidebar"]');
 
   await expect(viewerRoot).toBeVisible();
   await expect(sidebar).toHaveAttribute("aria-label", "PDF pages");
@@ -82,14 +80,11 @@ test("PDF thumbnail sidebar uses overlay dismissal on narrow viewports", async (
 
   const viewerRoot = page.locator('[data-slot="file-viewer-root"]');
   const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
-  const sidebarFrame = viewerRoot.locator('[data-slot="file-viewer-sidebar"]');
-  const sidebar = viewerRoot.locator(
-    '[data-slot="file-viewer-sidebar-container"]',
-  );
+  const sidebar = viewerRoot.locator('[data-slot="file-viewer-sidebar"]');
 
   await expect(viewerRoot).toBeVisible();
-  await expect(sidebarFrame).toHaveAttribute(
-    "data-viewer-sidebar-mode",
+  await expect(sidebar).toHaveAttribute(
+    "data-file-viewer-sidebar-mode",
     "overlay",
   );
   await expect(trigger).toHaveAttribute("aria-expanded", "true");

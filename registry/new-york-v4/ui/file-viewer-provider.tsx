@@ -63,8 +63,8 @@ export function FileViewerProvider({
   const controlsController = useFileViewerControlsController(
     resourceState.descriptorKey,
   );
-  const hasIdentityOutlet = useViewerHeaderOutletAvailable("identity");
-  const hasToolbarOutlet = useViewerHeaderOutletAvailable("toolbar");
+  const hasTitleGroupOutlet = useViewerHeaderOutletAvailable("titleGroup");
+  const hasControlsOutlet = useViewerHeaderOutletAvailable("controls");
   const hasHeaderOutlets = useViewerHeaderOutletsAvailable();
   const resolvedHeaderMode = headerMode ?? "inline";
   const contextValue = React.useMemo<FileViewerContextValue>(
@@ -89,15 +89,16 @@ export function FileViewerProvider({
     ],
   );
   const hasExactlyOneHeaderOutlet =
-    resolvedHeaderMode === "outlets" && hasIdentityOutlet !== hasToolbarOutlet;
+    resolvedHeaderMode === "outlets" &&
+    hasTitleGroupOutlet !== hasControlsOutlet;
 
   useKeyedMountEffect(
     hasExactlyOneHeaderOutlet
       ? joinEffectKey([
           "file-viewer-header-outlet-single-mount",
           diagnosticViewerId,
-          hasIdentityOutlet,
-          hasToolbarOutlet,
+          hasTitleGroupOutlet,
+          hasControlsOutlet,
         ])
       : null,
     () => {
@@ -106,8 +107,8 @@ export function FileViewerProvider({
         message: "file viewer has exactly one header outlet mounted.",
         rootId: diagnosticViewerId,
         details: {
-          identityOutletAvailable: hasIdentityOutlet,
-          toolbarOutletAvailable: hasToolbarOutlet,
+          controlsOutletAvailable: hasControlsOutlet,
+          titleGroupOutletAvailable: hasTitleGroupOutlet,
         },
       });
     },

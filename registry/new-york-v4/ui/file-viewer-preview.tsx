@@ -2,7 +2,11 @@
 
 import { cn } from "@/lib/utils";
 
-import { FileViewerInset, FileViewerViewport } from "./file-viewer-body";
+import {
+  FileViewerContent,
+  FileViewerInset,
+  FileViewerViewport,
+} from "./file-viewer-content";
 import { FileViewerDocument } from "./file-viewer-document";
 import { FileViewer } from "./file-viewer-frame";
 import { FileViewerProvider } from "./file-viewer-provider";
@@ -32,11 +36,13 @@ export function FileViewerPreview({
         data-file-viewer-mode="preview"
         className={cn("h-full min-h-0", className)}
       >
-        <FileViewerInset>
-          <FileViewerViewport>
-            <FileViewerDocument controls="local" />
-          </FileViewerViewport>
-        </FileViewerInset>
+        <FileViewerContent>
+          <FileViewerInset>
+            <FileViewerViewport>
+              <FileViewerDocument controls />
+            </FileViewerViewport>
+          </FileViewerInset>
+        </FileViewerContent>
       </FileViewer>
     </FileViewerProvider>
   );

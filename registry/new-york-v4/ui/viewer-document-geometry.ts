@@ -1,6 +1,9 @@
 import * as React from "react";
 
-import type { ViewerDocumentLayoutModel } from "./viewer-types";
+import type {
+  ViewerDocumentLayoutModel,
+  ViewerDocumentTransition,
+} from "./viewer-types";
 
 const VIEWER_DOCUMENT_FLIP_LAYER_SELECTOR = "[data-viewer-document-flip-layer]";
 const VIEWER_DOCUMENT_FLIP_TRANSITION_MS = 150;
@@ -17,6 +20,7 @@ type ViewerDocumentGeometryLayoutChange =
 
 type ViewerDocumentTransitionAnchor<Anchor> = {
   anchor: Anchor;
+  transitionId: ViewerDocumentTransition["transitionId"];
   viewportBlockSize: number;
 };
 
@@ -36,6 +40,7 @@ export type ViewerDocumentGeometryTransaction<Anchor> = {
   anchor: Anchor;
   previousVisualLayerRect: DOMRectReadOnly | null;
   shouldAnimate: boolean;
+  shouldRestoreScroll: boolean;
   viewportBlockSize: number;
 };
 
@@ -134,10 +139,18 @@ export function useViewerDocumentGeometryTransaction<Anchor>({
       viewportElement: HTMLDivElement;
     }) => {
       if (clearTransition) transitionAnchorRef.current = null;
-      cacheReadingAnchor({ scrollTop, viewportBlockSize });
+      const anchor = cacheReadingAnchor({ scrollTop, viewportBlockSize });
+      if (anchor && shouldRetainViewerDocumentTransitionAnchor(layout)) {
+        const transition = getViewerDocumentTransition(layout);
+        transitionAnchorRef.current = {
+          anchor,
+          transitionId: transition.transitionId,
+          viewportBlockSize,
+        };
+      }
       cacheVisualLayerRect(viewportElement);
     },
-    [cacheReadingAnchor, cacheVisualLayerRect],
+    [cacheReadingAnchor, cacheVisualLayerRect, layout],
   );
 
   const prepare = React.useCallback(
@@ -150,35 +163,64 @@ export function useViewerDocumentGeometryTransaction<Anchor>({
       scrollTop: number;
       viewportBlockSize: number;
     }): ViewerDocumentGeometryTransaction<Anchor> | null => {
-      const isLayoutTransition =
-        previousLayout.isTransitioning === true ||
-        layout.isTransitioning === true;
-      const previousTransitionAnchor = transitionAnchorRef.current;
+      const isLayoutTransition = isViewerDocumentLayoutTransition({
+        layout,
+        previousLayout,
+      });
+      const transition = resolveViewerDocumentTransition({
+        layout,
+        previousLayout,
+      });
+      const previousTransitionAnchor =
+        getReusableViewerDocumentTransitionAnchor({
+          anchor: transitionAnchorRef.current,
+          transition,
+        });
       const cachedReadingAnchor = Object.is(
         readingAnchorRef.current?.resetKey,
         resetKey,
       )
         ? readingAnchorRef.current
         : null;
+      const shouldUseCachedShellTransitionAnchor =
+        isLayoutTransition &&
+        transition.source === "viewer-shell" &&
+        transition.layoutPolicy === "target" &&
+        Boolean(cachedReadingAnchor);
+      const shouldCaptureLiveShellTransitionAnchor =
+        isLayoutTransition &&
+        transition.source === "viewer-shell" &&
+        !previousTransitionAnchor &&
+        !shouldUseCachedShellTransitionAnchor;
+      const liveReadingAnchor = shouldCaptureLiveShellTransitionAnchor
+        ? previousLayout.captureReadingAnchor({
+            scrollTop,
+            viewportBlockSize,
+          })
+        : null;
       const anchor =
         isLayoutTransition && previousTransitionAnchor
           ? previousTransitionAnchor.anchor
-          : isLayoutTransition && cachedReadingAnchor
-            ? cachedReadingAnchor.anchor
-            : previousLayout.captureReadingAnchor({
-                scrollTop,
-                viewportBlockSize,
-              });
+          : liveReadingAnchor
+            ? liveReadingAnchor
+            : isLayoutTransition && cachedReadingAnchor
+              ? cachedReadingAnchor.anchor
+              : previousLayout.captureReadingAnchor({
+                  scrollTop,
+                  viewportBlockSize,
+                });
       if (!anchor) return null;
 
       const transactionViewportBlockSize =
         previousTransitionAnchor?.viewportBlockSize ??
+        (liveReadingAnchor ? viewportBlockSize : null) ??
         cachedReadingAnchor?.viewportBlockSize ??
         viewportBlockSize;
 
-      if (layout.isTransitioning) {
+      if (shouldRetainViewerDocumentTransitionAnchor(layout)) {
         transitionAnchorRef.current = {
           anchor,
+          transitionId: transition.transitionId,
           viewportBlockSize: transactionViewportBlockSize,
         };
       } else {
@@ -188,7 +230,9 @@ export function useViewerDocumentGeometryTransaction<Anchor>({
       return {
         anchor,
         previousVisualLayerRect: visualLayerRectRef.current,
-        shouldAnimate: isLayoutTransition,
+        shouldAnimate:
+          isLayoutTransition && transition.visualPolicy === "document-flip",
+        shouldRestoreScroll: transition.scrollPolicy !== "defer",
         viewportBlockSize: transactionViewportBlockSize,
       };
     },
@@ -254,6 +298,96 @@ export function useViewerDocumentGeometryTransaction<Anchor>({
       reset,
     ],
   );
+}
+
+const VIEWER_DOCUMENT_STABLE_TRANSITION: ViewerDocumentTransition = {
+  layoutPolicy: "live",
+  scrollPolicy: "preserve",
+  source: "none",
+  transitionId: null,
+  visualPolicy: "none",
+};
+
+function getViewerDocumentTransition<Anchor>(
+  layout: ViewerDocumentLayoutModel<Anchor>,
+) {
+  return layout.transition ?? VIEWER_DOCUMENT_STABLE_TRANSITION;
+}
+
+function isViewerDocumentLayoutTransition<Anchor>({
+  layout,
+  previousLayout,
+}: {
+  layout: ViewerDocumentLayoutModel<Anchor>;
+  previousLayout: ViewerDocumentLayoutModel<Anchor>;
+}) {
+  return (
+    previousLayout.isTransitioning === true ||
+    layout.isTransitioning === true ||
+    getViewerDocumentTransition(previousLayout).source !== "none" ||
+    getViewerDocumentTransition(layout).source !== "none"
+  );
+}
+
+function resolveViewerDocumentTransition<Anchor>({
+  layout,
+  previousLayout,
+}: {
+  layout: ViewerDocumentLayoutModel<Anchor>;
+  previousLayout: ViewerDocumentLayoutModel<Anchor>;
+}) {
+  const transition = getViewerDocumentTransition(layout);
+  if (transition.source !== "none") return transition;
+
+  const previousTransition = getViewerDocumentTransition(previousLayout);
+  if (previousTransition.source !== "none") return previousTransition;
+
+  if (
+    previousLayout.isTransitioning === true ||
+    layout.isTransitioning === true
+  ) {
+    return {
+      layoutPolicy: "live",
+      scrollPolicy: "preserve",
+      source: "document-layout",
+      transitionId: null,
+      visualPolicy: "document-flip",
+    } satisfies ViewerDocumentTransition;
+  }
+
+  return VIEWER_DOCUMENT_STABLE_TRANSITION;
+}
+
+function shouldRetainViewerDocumentTransitionAnchor<Anchor>(
+  layout: ViewerDocumentLayoutModel<Anchor>,
+) {
+  const transition = getViewerDocumentTransition(layout);
+  return (
+    layout.isTransitioning === true || transition.layoutPolicy === "frozen"
+  );
+}
+
+function getReusableViewerDocumentTransitionAnchor<Anchor>({
+  anchor,
+  transition,
+}: {
+  anchor: ViewerDocumentTransitionAnchor<Anchor> | null;
+  transition: ViewerDocumentTransition;
+}) {
+  if (!anchor) return null;
+  if (transition.source === "viewer-shell") {
+    return anchor.transitionId !== null &&
+      transition.transitionId !== null &&
+      Object.is(anchor.transitionId, transition.transitionId)
+      ? anchor
+      : null;
+  }
+  if (anchor.transitionId === null || transition.transitionId === null) {
+    return anchor;
+  }
+  return Object.is(anchor.transitionId, transition.transitionId)
+    ? anchor
+    : null;
 }
 
 function playViewerDocumentFlipAnimation({

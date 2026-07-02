@@ -2035,10 +2035,10 @@ describe("split segment composition", () => {
       "file-viewer-header",
     );
     expect(root?.children[1]?.getAttribute("data-slot")).toBe(
-      "file-viewer-body",
+      "file-viewer-content",
     );
     const body = root?.querySelector<HTMLElement>(
-      ':scope > [data-slot="file-viewer-body"]',
+      ':scope > [data-slot="file-viewer-content"]',
     );
     expect(
       body?.querySelector(':scope > [data-slot="viewer-sidebar"]'),

@@ -2,9 +2,8 @@
   "title": "Header",
   "pages": [
     "index",
-    "file-viewer-header-start",
-    "file-viewer-header-end",
-    "file-viewer-identity",
-    "file-viewer-toolbar"
+    "file-viewer-title",
+    "file-viewer-meta",
+    "file-viewer-controls"
   ]
 }

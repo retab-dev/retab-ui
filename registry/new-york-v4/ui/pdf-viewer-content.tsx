@@ -2,64 +2,29 @@
 
 import * as React from "react";
 
-import {
-  clearPdfDocumentResource,
-  readPdfDocumentResource,
-  readPdfPageResource,
-  releasePdfDocumentResource,
-  retainPdfDocumentResource,
-} from "@/lib/pdf-document-resource";
+import { clearPdfDocumentResource } from "@/lib/pdf-document-resource";
 import { cn } from "@/lib/utils";
 import type { ViewerResource } from "@/lib/viewer-resource";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
-  createPdfPageLayout,
-  getPdfPhysicalScrollHeight,
-  getPdfRenderedPageWindow,
-  type PdfPageLayoutModel,
-} from "./pdf-viewer-layout";
-import { PdfPage } from "./pdf-viewer-page";
-import { usePdfPageSizes } from "./pdf-viewer-page-sizes";
-import {
-  usePdfRenderedPageCache,
-  type PdfRenderedPageCache,
-} from "./pdf-viewer-render-cache";
-import {
-  PDF_SCROLLING_PAGE_RENDER_CONCURRENCY,
-  usePdfPageRenderScheduler,
-} from "./pdf-viewer-render-scheduler";
-import {
-  getPdfPageDevicePixelRatio,
-  getPdfFitWidthScale,
-  useMeasuredElementWidth,
-  usePdfScale,
-} from "./pdf-viewer-scale";
-import { usePdfScroll } from "./pdf-viewer-scroll";
-import { PageSkeleton, PdfViewerFallback } from "./pdf-viewer-states";
+  usePdfDocumentControlsRegistration,
+  usePdfDocumentControlsState,
+} from "./pdf-viewer-document-controls";
+import { usePdfDocumentLayout } from "./pdf-viewer-document-layout";
+import { usePdfDocumentResource } from "./pdf-viewer-document-resource";
+import { usePdfDocumentRuntime } from "./pdf-viewer-document-runtime";
+import { PdfDocumentPagesLayer } from "./pdf-viewer-pages-layer";
+import { PdfViewerFallback } from "./pdf-viewer-states";
 import type {
   PageOverlayProps,
   PdfPageRenderTiming,
-  PdfPageSize,
   PdfViewerHandle,
   PdfViewerPerformanceOptions,
 } from "./pdf-viewer-types";
-import { usePdfPageVirtualization } from "./pdf-viewer-virtualization";
 import { useIsClient } from "./use-is-client";
-import {
-  useViewerControlsRegistration,
-  ViewerControls,
-  type ViewerControlsState,
-} from "./viewer-controls";
-import {
-  useOptionalViewerDocumentFrame,
-  useViewerDocumentFrameLayout,
-} from "./viewer-surface";
+import { ViewerControls } from "./viewer-controls";
 import { ViewerErrorBoundary } from "./viewer-error";
-import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
-import { useMountEffect } from "@/hooks/use-mount-effect";
-import { joinEffectKey } from "@/lib/effect-key";
-import type { ViewerDocumentFrameAlign } from "./viewer-types";
 
 export type PdfViewerContentProps = {
   className?: string;
@@ -89,10 +54,6 @@ export type PdfViewerContentProps = {
 export type PdfResourceContentProps = PdfViewerContentProps & {
   resource: ViewerResource;
 };
-
-type PdfDocument = ReturnType<typeof readPdfDocumentResource>;
-type PdfDocumentContent = ViewerResource["content"];
-type PdfPageSizeSetter = ReturnType<typeof usePdfPageSizes>["setPageSize"];
 
 export const PdfResourceContent = React.forwardRef<
   PdfViewerHandle,
@@ -158,204 +119,40 @@ function PdfViewerInner({
   forwardedRef?: React.ForwardedRef<PdfViewerHandle>;
 }) {
   const content = resource.content;
-  const document = readPdfDocumentResource(content);
-  const documentFrame = useOptionalViewerDocumentFrame();
-  if (!documentFrame) {
-    throw new Error(
-      "PdfResourceContent must be rendered inside FileViewerInset. Use <FileViewerInset><FileViewerViewport><PdfViewerPages /></FileViewerViewport></FileViewerInset>.",
-    );
-  }
-  usePdfDocumentResourceLifecycle(content, document);
-
-  const firstPageSize = usePdfFirstPageSize(document);
-  const { ref: containerRef, width: containerWidth } =
-    useMeasuredElementWidth();
-  const documentFrameLayout = useViewerDocumentFrameLayout({
-    documentFrame,
-    fallbackInlineSize: documentFrame?.inlineSize ?? containerWidth,
-  });
-  const fitWidthContainerWidth = documentFrameLayout.settledInlineSize;
-  const { rotation, rotateClockwise } = usePdfDocumentRotation(document);
-  const fitPageWidth =
-    rotation % 180 === 0 ? firstPageSize.width : firstPageSize.height;
-  const { resolvedScale, isFitWidth, zoomIn, zoomOut, fitWidth } = usePdfScale({
+  const document = usePdfDocumentResource(content);
+  const layout = usePdfDocumentLayout({
     controlledScale,
     defaultScale,
-    onScaleChange,
-    containerWidth: fitWidthContainerWidth,
-    fitWidthInlinePadding: documentFrame ? 0 : undefined,
-    pageWidth: fitPageWidth,
-    resetKey: document,
-  });
-  const displayScale =
-    isFitWidth && documentFrame
-      ? getPdfFitWidthScale(
-          documentFrameLayout.activeInlineSize,
-          fitPageWidth,
-          0,
-        )
-      : resolvedScale;
-  const renderScale = getPdfPreparedFitWidthRenderScale({
-    enabled: Boolean(documentFrame && isFitWidth),
-    fallbackScale: resolvedScale,
-    isTransitioning: documentFrameLayout.isTransitioning,
-    maxInlineSize: documentFrameLayout.maxInlineSize,
-    pageWidth: fitPageWidth,
-  });
-
-  const { pageSizeByNumber, setPageSize } = usePdfPageSizes(document);
-  const pageLayout = React.useMemo(
-    () =>
-      createPdfPageLayout({
-        pageCount: document.numPages,
-        defaultPageSize: firstPageSize,
-        pageSizeByNumber,
-        scale: displayScale,
-        rotation,
-      }),
-    [
-      document.numPages,
-      displayScale,
-      firstPageSize,
-      pageSizeByNumber,
-      rotation,
-    ],
-  );
-  const {
-    currentPage,
-    viewportElement,
-    setViewportElement,
-    measureScroll,
-    handleScroll,
-    scrollToPage,
-    scrollToPageArea,
-    getViewportElement,
-    getScrollMetrics,
-  } = usePdfScroll({
-    isLayoutTransitioning: documentFrameLayout.isTransitioning,
-    pageCount: document.numPages,
-    layout: pageLayout,
-    resetKey: document,
-    onVisiblePageChange,
-    onScrollProgressChange,
-  });
-  const {
-    scrollPageOffset,
-    visiblePageNumbers,
-    renderPageNumbers,
-    preloadPageNumbers,
-    measureVisiblePages,
-  } = usePdfPageVirtualization({
-    getScrollMetrics,
-    isLayoutTransitioning: documentFrameLayout.isTransitioning,
-    layout: pageLayout,
-    resetKey: document,
-    viewportElement,
-  });
-  const pageDevicePixelRatio = getPdfPageDevicePixelRatio({
-    devicePixelRatio:
-      (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1,
-    mode: "settled",
-  });
-  const renderedPageCache = usePdfRenderedPageCache(document);
-  const shouldUseRenderedPageCache =
-    performanceOptions?.renderedPageCache !== false;
-  const {
-    activePageNumbers: activeRenderPageNumbers,
-    onPageRenderTiming: handleScheduledPageRenderTiming,
-  } = usePdfPageRenderScheduler({
-    pageNumbers: visiblePageNumbers,
-    lowPriorityPageNumbers:
-      performanceOptions?.directionAwarePreRender === false
-        ? []
-        : [...renderPageNumbers, ...preloadPageNumbers],
-    scale: renderScale,
-    rotation,
-    devicePixelRatio: pageDevicePixelRatio,
-    resetKey: document,
-    maxRunning: PDF_SCROLLING_PAGE_RENDER_CONCURRENCY,
-    maxLowPriorityRunning:
-      performanceOptions?.directionAwarePreRender === false ? 0 : 1,
-  });
-  const handlePageRenderTiming = React.useCallback(
-    (timing: PdfPageRenderTiming) => {
-      handleScheduledPageRenderTiming(timing);
-      onPageRenderTiming?.(timing);
-    },
-    [handleScheduledPageRenderTiming, onPageRenderTiming],
-  );
-  const scrollInteractionRestoreRef = React.useRef<number | null>(null);
-  const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
-
-  usePdfDocumentControlsRegistration({
-    currentPage,
     document,
+    onScaleChange,
+  });
+  const runtime = usePdfDocumentRuntime({
+    document,
+    documentKey: content.key,
+    layout,
+    onPageRenderTiming,
+    onScrollProgressChange,
+    onVisiblePageChange,
+    performanceOptions,
+    renderPageOverlay,
+  });
+  const controlsState = usePdfDocumentControlsState({
+    currentPage: runtime.currentPage,
     download,
     downloadAction: resource.originalDownload,
-    fitWidth,
-    resolvedScale,
-    rotateClockwise,
-    zoomIn,
-    zoomOut,
+    fitWidth: layout.fitWidth,
+    pageCount: document.numPages,
+    resolvedScale: layout.resolvedScale,
+    rotateClockwise: layout.rotateClockwise,
+    zoomIn: layout.zoomIn,
+    zoomOut: layout.zoomOut,
   });
 
-  useKeyedMountEffect(
-    joinEffectKey([
-      document.numPages,
-      displayScale,
-      measureScroll,
-      rotation,
-      viewportElement,
-    ]),
-    () => {
-      measureScroll();
-    },
-  );
-
-  const suspendScrollInteractions = React.useCallback(() => {
-    const scrollElement = viewportElement?.querySelector<HTMLElement>(
-      '[data-slot="pdf-page-sticky-window"]',
-    );
-    if (!scrollElement) return;
-
-    if (scrollInteractionRestoreRef.current !== null) {
-      window.clearTimeout(scrollInteractionRestoreRef.current);
-    }
-    scrollInteractionElementRef.current = scrollElement;
-    scrollElement.style.pointerEvents = "none";
-    if (isMobileSafari()) {
-      scrollElement.style.overflowX = "hidden";
-    }
-    scrollInteractionRestoreRef.current = window.setTimeout(() => {
-      scrollInteractionRestoreRef.current = null;
-      restorePdfScrollInteractions(scrollInteractionElementRef.current);
-      scrollInteractionElementRef.current = null;
-    }, 120);
-  }, [viewportElement]);
-
-  useMountEffect(() => () => {
-    if (scrollInteractionRestoreRef.current !== null) {
-      window.clearTimeout(scrollInteractionRestoreRef.current);
-      scrollInteractionRestoreRef.current = null;
-    }
-    restorePdfScrollInteractions(scrollInteractionElementRef.current);
-    scrollInteractionElementRef.current = null;
-  });
-
-  const handleViewportScroll = React.useCallback(() => {
-    suspendScrollInteractions();
-    handleScroll();
-    measureVisiblePages();
-  }, [handleScroll, measureVisiblePages, suspendScrollInteractions]);
-
+  usePdfDocumentControlsRegistration(controlsState);
   React.useImperativeHandle(
     forwardedRef ?? null,
-    () => ({
-      scrollToPage,
-      scrollToPageArea,
-      getViewportElement,
-    }),
-    [getViewportElement, scrollToPage, scrollToPageArea],
+    () => runtime.handle,
+    [runtime.handle],
   );
 
   return (
@@ -367,395 +164,24 @@ function PdfViewerInner({
       )}
       data-slot="pdf-viewer"
     >
-      {controls ? (
-        <ViewerControls
-          position={{
-            kind: "page",
-            current: currentPage,
-            total: document.numPages,
-          }}
-          zoom={{
-            scale: resolvedScale,
-            onZoomOut: zoomOut,
-            onZoomIn: zoomIn,
-            onFit: fitWidth,
-          }}
-          rotate={{ onRotate: rotateClockwise }}
-          downloads={download ? [resource.originalDownload] : []}
-        />
-      ) : null}
+      {controls ? <ViewerControls {...controlsState} /> : null}
 
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="relative flex min-h-0 flex-1 flex-col">
             <ScrollArea
               className="min-h-0 flex-1"
-              viewportRef={setViewportElement}
+              viewportRef={runtime.setViewportElement}
               viewportProps={{
-                onScroll: handleViewportScroll,
+                onScroll: runtime.handleViewportScroll,
                 style: { overflowAnchor: "none" },
               }}
             >
-              <PdfDocumentPagesLayer
-                containerRef={containerRef}
-                document={document}
-                documentKey={content.key}
-                documentFrameAlign={documentFrame?.align ?? null}
-                layout={pageLayout}
-                physicalScrollHeight={getPdfPhysicalScrollHeight({
-                  totalHeight: pageLayout.totalHeight,
-                  viewportHeight: viewportElement?.clientHeight ?? 0,
-                })}
-                activeRenderPageNumbers={activeRenderPageNumbers}
-                renderPageNumbers={renderPageNumbers}
-                renderCache={
-                  shouldUseRenderedPageCache ? renderedPageCache : undefined
-                }
-                scrollPageOffset={scrollPageOffset}
-                visiblePageNumbers={visiblePageNumbers}
-                viewportHeight={viewportElement?.clientHeight ?? 0}
-                isLayoutTransitioning={documentFrameLayout.isTransitioning}
-                renderPageOverlay={renderPageOverlay}
-                rotation={rotation}
-                scale={displayScale}
-                renderScale={renderScale}
-                devicePixelRatio={pageDevicePixelRatio}
-                onPageRenderTiming={handlePageRenderTiming}
-                setPageSize={setPageSize}
-              />
+              <PdfDocumentPagesLayer {...runtime.pagesLayerProps} />
             </ScrollArea>
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-function restorePdfScrollInteractions(element: HTMLElement | null) {
-  if (!element) return;
-  element.style.removeProperty("pointer-events");
-  element.style.removeProperty("overflow-x");
-}
-
-function isMobileSafari() {
-  if (typeof navigator === "undefined") return false;
-  const userAgent = navigator.userAgent;
-  return (
-    /Safari/i.test(userAgent) &&
-    /Mobile/i.test(userAgent) &&
-    !/CriOS|FxiOS|EdgiOS/i.test(userAgent)
-  );
-}
-
-function usePdfDocumentResourceLifecycle(
-  content: PdfDocumentContent,
-  document: PdfDocument,
-) {
-  useKeyedMountEffect(joinEffectKey([content, document]), () => {
-    retainPdfDocumentResource(content, document);
-    return () => releasePdfDocumentResource(content, document);
-  });
-}
-
-function usePdfFirstPageSize(document: PdfDocument): PdfPageSize {
-  const firstPage = readPdfPageResource(document, 1);
-
-  return React.useMemo<PdfPageSize>(() => {
-    const viewport = firstPage.getViewport({ scale: 1 });
-    return { width: viewport.width, height: viewport.height };
-  }, [firstPage]);
-}
-
-function usePdfDocumentRotation(document: PdfDocument) {
-  const [rotationState, setRotationState] = React.useState<{
-    document: PdfDocument;
-    value: number;
-  }>(() => ({ document, value: 0 }));
-  const rotation = Object.is(rotationState.document, document)
-    ? rotationState.value
-    : 0;
-  const rotateClockwise = React.useCallback(() => {
-    setRotationState((state) => ({
-      document,
-      value:
-        ((Object.is(state.document, document) ? state.value : 0) + 90) % 360,
-    }));
-  }, [document]);
-
-  return { rotation, rotateClockwise };
-}
-
-function getPdfPreparedFitWidthRenderScale({
-  enabled,
-  fallbackScale,
-  isTransitioning,
-  maxInlineSize,
-  pageWidth,
-}: {
-  enabled: boolean;
-  fallbackScale: number;
-  isTransitioning: boolean;
-  maxInlineSize: number | null;
-  pageWidth: number;
-}) {
-  return enabled && !isTransitioning && maxInlineSize != null
-    ? getPdfFitWidthScale(maxInlineSize, pageWidth, 0)
-    : fallbackScale;
-}
-
-function usePdfDocumentControlsRegistration({
-  currentPage,
-  document,
-  download,
-  downloadAction,
-  fitWidth,
-  resolvedScale,
-  rotateClockwise,
-  zoomIn,
-  zoomOut,
-}: {
-  currentPage: number;
-  document: PdfDocument;
-  download: boolean;
-  downloadAction: ViewerResource["originalDownload"];
-  fitWidth: () => void;
-  resolvedScale: number;
-  rotateClockwise: () => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-}) {
-  const onControlsChange = useViewerControlsRegistration();
-  const controlsState = React.useMemo<ViewerControlsState>(
-    () => ({
-      position: {
-        kind: "page",
-        current: currentPage,
-        total: document.numPages,
-      },
-      zoom: {
-        scale: resolvedScale,
-        onZoomOut: zoomOut,
-        onZoomIn: zoomIn,
-        onFit: fitWidth,
-      },
-      rotate: { onRotate: rotateClockwise },
-      downloads: download ? [downloadAction] : [],
-    }),
-    [
-      currentPage,
-      document.numPages,
-      download,
-      downloadAction,
-      fitWidth,
-      resolvedScale,
-      rotateClockwise,
-      zoomIn,
-      zoomOut,
-    ],
-  );
-
-  useKeyedMountEffect(joinEffectKey([onControlsChange, controlsState]), () => {
-    if (!onControlsChange) return;
-    onControlsChange(controlsState);
-    return () => onControlsChange(null);
-  });
-}
-
-type PdfDocumentPagesLayerProps = {
-  containerRef: React.RefCallback<HTMLDivElement>;
-  document: PdfDocument;
-  documentKey: string;
-  documentFrameAlign: ViewerDocumentFrameAlign | null;
-  layout: PdfPageLayoutModel;
-  physicalScrollHeight: number;
-  activeRenderPageNumbers: readonly number[];
-  renderPageNumbers: readonly number[];
-  renderCache?: PdfRenderedPageCache;
-  scrollPageOffset: number;
-  visiblePageNumbers: readonly number[];
-  viewportHeight: number;
-  isLayoutTransitioning: boolean;
-  renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode;
-  rotation: number;
-  scale: number;
-  renderScale: number;
-  devicePixelRatio: number;
-  onPageRenderTiming?: (timing: PdfPageRenderTiming) => void;
-  setPageSize: PdfPageSizeSetter;
-};
-
-function PdfDocumentPagesLayer({
-  containerRef,
-  document,
-  documentKey,
-  documentFrameAlign,
-  layout,
-  physicalScrollHeight,
-  activeRenderPageNumbers,
-  renderPageNumbers,
-  renderCache,
-  scrollPageOffset,
-  visiblePageNumbers,
-  viewportHeight,
-  isLayoutTransitioning,
-  renderPageOverlay,
-  rotation,
-  scale,
-  renderScale,
-  devicePixelRatio,
-  onPageRenderTiming,
-  setPageSize,
-}: PdfDocumentPagesLayerProps) {
-  const visiblePageNumberSet = React.useMemo(
-    () => new Set(visiblePageNumbers),
-    [visiblePageNumbers],
-  );
-  const activeRenderPageNumberSet = React.useMemo(
-    () => new Set(activeRenderPageNumbers),
-    [activeRenderPageNumbers],
-  );
-  const renderedWindow = React.useMemo(
-    () =>
-      getPdfRenderedPageWindow({
-        layout,
-        pageNumbers: renderPageNumbers,
-        physicalScrollHeight,
-        scrollPageOffset,
-        viewportHeight,
-      }),
-    [
-      layout,
-      physicalScrollHeight,
-      renderPageNumbers,
-      scrollPageOffset,
-      viewportHeight,
-    ],
-  );
-  const isInsideDocumentFrame = documentFrameAlign !== null;
-  const documentStyle = {
-    contain: "layout style",
-    height: physicalScrollHeight,
-    minWidth: layout.maxPageWidth,
-    width: layout.maxPageWidth,
-  } satisfies React.CSSProperties;
-
-  const documentContent = (
-    <div
-      data-slot="pdf-viewer-document"
-      data-viewer-document-flip-layer=""
-      data-layout-transitioning={isLayoutTransitioning ? "" : undefined}
-      className={cn(
-        "relative",
-        getPdfDocumentFrameAlignClass(documentFrameAlign),
-      )}
-      style={documentStyle}
-    >
-      {renderedWindow ? (
-        <>
-          <div
-            aria-hidden
-            data-slot="pdf-page-window-before"
-            style={{
-              contain: "layout size",
-              height: renderedWindow.beforeHeight,
-            }}
-          />
-          <div
-            data-slot="pdf-page-sticky-window"
-            className="sticky"
-            style={{
-              bottom: renderedWindow.stickyInset,
-              contain: "layout style inline-size",
-              height: renderedWindow.height,
-              isolation: "isolate",
-              top: renderedWindow.stickyInset,
-            }}
-          >
-            <div
-              data-slot="pdf-page-window"
-              className="relative"
-              style={{
-                contain: "layout style",
-                height: renderedWindow.height,
-              }}
-            >
-              {renderedWindow.pages.map((page) => (
-                <div
-                  key={page.pageNumber}
-                  className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
-                  data-layout-transitioning={
-                    isLayoutTransitioning ? "" : undefined
-                  }
-                  data-slot="pdf-page-slot"
-                  data-page-number={page.pageNumber}
-                  data-visible={
-                    visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
-                  }
-                  style={{
-                    top: page.windowTop,
-                    width: page.width,
-                    minHeight: page.height,
-                  }}
-                >
-                  {activeRenderPageNumberSet.has(page.pageNumber) ? (
-                    <React.Suspense fallback={<PageSkeleton />}>
-                      <PdfPage
-                        document={document}
-                        documentKey={documentKey}
-                        pageNumber={page.pageNumber}
-                        scale={scale}
-                        renderScale={renderScale}
-                        isLayoutTransitioning={isLayoutTransitioning}
-                        rotation={rotation}
-                        devicePixelRatio={devicePixelRatio}
-                        renderCache={renderCache}
-                        renderOverlay={renderPageOverlay}
-                        onRenderTiming={onPageRenderTiming}
-                        onSize={setPageSize}
-                      />
-                    </React.Suspense>
-                  ) : (
-                    <PageSkeleton />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div
-            aria-hidden
-            data-slot="pdf-page-window-after"
-            style={{
-              contain: "layout size",
-              height: renderedWindow.afterHeight,
-            }}
-          />
-        </>
-      ) : null}
-    </div>
-  );
-
-  return (
-    <div
-      ref={containerRef}
-      data-slot="pdf-viewer-fit-width-measure"
-      className={cn(
-        "relative min-w-0",
-        isInsideDocumentFrame && "h-full w-full",
-      )}
-    >
-      {documentContent}
-    </div>
-  );
-}
-
-function getPdfDocumentFrameAlignClass(align: ViewerDocumentFrameAlign | null) {
-  switch (align) {
-    case "center":
-    case null:
-      return "mx-auto";
-    case "end":
-      return "ml-auto";
-    case "start":
-      return "mr-auto";
-  }
 }
