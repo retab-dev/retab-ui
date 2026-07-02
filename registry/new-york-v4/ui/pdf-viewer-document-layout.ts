@@ -97,7 +97,7 @@ export function usePdfDocumentLayout({
     enabled: isFitWidth,
     fallbackScale: resolvedScale,
     frozenInlineSize: rendererFrame.fromInlineSize,
-    isSliding: false, // TEMP baseline probe — restore to rendererFrame.isTransitioning
+    isSliding: rendererFrame.isTransitioning,
     pageWidth: fitPageWidth,
     rasterInlineSize: rendererFrame.rasterInlineSize,
   });
