@@ -23,8 +23,11 @@ import {
 import { cn } from "@/lib/utils";
 
 import {
+  SIDEBAR_MOTION_BENCHMARK_SCROLL_TARGETS,
   runFileViewerSidebarMotionBenchmark,
+  type SidebarMotionBenchmarkActionOrder,
   type SidebarMotionBenchmarkResult,
+  type SidebarMotionBenchmarkScrollTargetId,
 } from "./sidebar-motion-benchmark";
 
 type BenchmarkFormatId =
@@ -52,6 +55,13 @@ type BenchmarkFixture = {
 };
 
 const SIDES: readonly BenchmarkSide[] = ["right", "left"];
+const ACTION_ORDERS = [
+  { id: "close-open", label: "Close then open" },
+  { id: "open-close", label: "Open then close" },
+] satisfies readonly {
+  id: SidebarMotionBenchmarkActionOrder;
+  label: string;
+}[];
 
 const BENCHMARK_FIXTURES: readonly BenchmarkFixture[] = [
   {
@@ -190,14 +200,32 @@ const FORMAT_BY_ID = new Map(
 const CONTRACTS = [
   "overshoot",
   "back-and-forth",
+  "motion samples",
   "scroll drift",
+  "scroll events",
+  "scroll geometry",
+  "state sync",
+  "focus stability",
   "sidebar sync",
+  "renderer continuity",
+  "anchor stability",
+  "cycle invariance",
+  "rapid toggle",
+  "renderer mutations",
+  "resource quiet",
+  "layout shift",
+  "main thread",
+  "visual smoothness",
 ];
 
 export default function FileViewerSidebarBenchmarkPage() {
   const [activeFormatId, setActiveFormatId] =
     React.useState<BenchmarkFormatId>("pdf");
   const [side, setSide] = React.useState<BenchmarkSide>("right");
+  const [actionOrder, setActionOrder] =
+    React.useState<SidebarMotionBenchmarkActionOrder>("close-open");
+  const [scrollTargetId, setScrollTargetId] =
+    React.useState<SidebarMotionBenchmarkScrollTargetId>("deep");
   const [result, setResult] =
     React.useState<SidebarMotionBenchmarkResult | null>(null);
   const [isRunning, setIsRunning] = React.useState(false);
@@ -207,9 +235,15 @@ export default function FileViewerSidebarBenchmarkPage() {
     setIsRunning(true);
     setResult(null);
     try {
-      setResult(await runFileViewerSidebarMotionBenchmark());
+      setResult(
+        await runFileViewerSidebarMotionBenchmark({
+          actionOrder,
+          scrollTargetId,
+        }),
+      );
     } catch (error) {
       setResult({
+        actionOrder,
         durationMs: 0,
         format: activeFormatId,
         metrics: [
@@ -223,17 +257,21 @@ export default function FileViewerSidebarBenchmarkPage() {
           },
         ],
         sampledFrameCount: 0,
+        scrollTarget: scrollTargetId,
         side,
         status: "failed",
       });
     } finally {
       setIsRunning(false);
     }
-  }, [activeFormatId, side]);
+  }, [actionOrder, activeFormatId, scrollTargetId, side]);
 
-  useKeyedMountEffect(joinEffectKey([activeFormatId, side]), () => {
-    setResult(null);
-  });
+  useKeyedMountEffect(
+    joinEffectKey([activeFormatId, side, actionOrder, scrollTargetId]),
+    () => {
+      setResult(null);
+    },
+  );
 
   return (
     <main className="bg-background flex h-svh min-h-0 flex-col gap-3 p-4">
@@ -288,6 +326,52 @@ export default function FileViewerSidebarBenchmarkPage() {
             </button>
           ))}
         </div>
+        <div
+          aria-label="Action order"
+          className="flex shrink-0 items-center rounded-md border p-0.5"
+          role="group"
+        >
+          {ACTION_ORDERS.map((option) => (
+            <button
+              key={option.id}
+              aria-pressed={actionOrder === option.id}
+              className={cn(
+                "h-8 rounded px-3 text-sm font-medium transition-colors",
+                actionOrder === option.id
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              data-benchmark-action-order-option={option.id}
+              type="button"
+              onClick={() => setActionOrder(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div
+          aria-label="Scroll target"
+          className="flex min-w-0 flex-wrap items-center gap-1"
+          role="group"
+        >
+          {SIDEBAR_MOTION_BENCHMARK_SCROLL_TARGETS.map((target) => (
+            <button
+              key={target.id}
+              aria-pressed={scrollTargetId === target.id}
+              className={cn(
+                "h-8 rounded-md border px-3 text-sm font-medium transition-colors",
+                scrollTargetId === target.id
+                  ? "bg-foreground text-background border-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              data-benchmark-scroll-target-option={target.id}
+              type="button"
+              onClick={() => setScrollTargetId(target.id)}
+            >
+              {target.label}
+            </button>
+          ))}
+        </div>
       </section>
 
       <section
@@ -332,7 +416,7 @@ export default function FileViewerSidebarBenchmarkPage() {
                       Motion contracts
                     </div>
                     <div className="text-muted-foreground mt-1 text-xs">
-                      {activeFixture.label} · {side}
+                      {activeFixture.label} · {side} · {scrollTargetId}
                     </div>
                   </div>
                   <div className="grid gap-2" data-benchmark-contracts="">
@@ -400,12 +484,15 @@ function BenchmarkResult({
     <div
       className="grid gap-2"
       data-benchmark-run-status={result.status}
+      data-benchmark-run-action-order={result.actionOrder}
       data-benchmark-run-format={result.format}
+      data-benchmark-run-scroll-target={result.scrollTarget}
       data-benchmark-run-side={result.side}
     >
       <div className="flex items-center justify-between gap-3 text-xs">
         <span className="text-muted-foreground">
-          {result.sampledFrameCount} frames
+          {result.sampledFrameCount} frames · {result.scrollTarget} ·{" "}
+          {result.actionOrder}
         </span>
         <span
           className={cn(

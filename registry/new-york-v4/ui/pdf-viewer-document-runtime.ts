@@ -3,16 +3,15 @@
 import * as React from "react";
 
 import { joinEffectKey } from "@/lib/effect-key";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
 import { getPdfPhysicalScrollHeight } from "./pdf-viewer-layout";
 import type { PdfDocumentLayoutState } from "./pdf-viewer-document-layout";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
-import {
-  PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY,
-  type PdfDocumentPagesLayerProps,
-} from "./pdf-viewer-pages-layer";
+import type { PdfDocumentPagesLayerProps } from "./pdf-viewer-pages-layer";
+import { PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY } from "./pdf-viewer-motion-contract";
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
 import {
@@ -78,15 +77,36 @@ export function usePdfDocumentRuntime({
     onScrollProgressChange,
   });
   const documentSurfaceElementRef = React.useRef<HTMLElement | null>(null);
+  const anchorGeometryRef = React.useRef({
+    isSliding: false,
+    settleScale: null as number | null,
+    totalBlockSize: 0,
+  });
+  anchorGeometryRef.current = {
+    isSliding: layout.rendererFrame.isTransitioning,
+    settleScale:
+      layout.rendererFrame.fromInlineSize != null &&
+      layout.rendererFrame.toInlineSize != null &&
+      layout.rendererFrame.fromInlineSize > 0
+        ? layout.rendererFrame.toInlineSize /
+          layout.rendererFrame.fromInlineSize
+        : null,
+    totalBlockSize: layout.pageLayout.totalHeight,
+  };
   const writeDocumentAnchorBlockOffset = React.useCallback(() => {
     const documentSurfaceElement = documentSurfaceElementRef.current;
     if (!documentSurfaceElement) return;
 
     const metrics = getScrollMetrics();
+    const anchorGeometry = anchorGeometryRef.current;
     documentSurfaceElement.style.setProperty(
       PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY,
       `${getPdfReadingMarkerBlockOffset({
         scrollTop: metrics.scrollTop,
+        settleScale: anchorGeometry.isSliding
+          ? anchorGeometry.settleScale
+          : null,
+        totalBlockSize: anchorGeometry.totalBlockSize,
         viewportHeight: metrics.viewportHeight,
       })}px`,
     );
@@ -95,9 +115,7 @@ export function usePdfDocumentRuntime({
     measureScroll();
     writeDocumentAnchorBlockOffset();
   }, [measureScroll, writeDocumentAnchorBlockOffset]);
-  const measureBeforeLayoutMotionRef = React.useRef(
-    measureBeforeLayoutMotion,
-  );
+  const measureBeforeLayoutMotionRef = React.useRef(measureBeforeLayoutMotion);
   measureBeforeLayoutMotionRef.current = measureBeforeLayoutMotion;
   const handleBeforeLayoutMotion = React.useCallback(() => {
     measureBeforeLayoutMotionRef.current();
@@ -200,6 +218,20 @@ export function usePdfDocumentRuntime({
     },
   );
 
+  // The before-layout-motion event fires before the motion target is known,
+  // so the slide-start commit rewrites the block anchor with the
+  // rebase-aware value; layout effects run before the first scaled tick.
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      layout.rendererFrame.isTransitioning,
+      writeDocumentAnchorBlockOffset,
+    ]),
+    () => {
+      if (!layout.rendererFrame.isTransitioning) return;
+      writeDocumentAnchorBlockOffset();
+    },
+  );
+
   const handleViewportScroll = React.useCallback(() => {
     suspendScrollInteractions();
     handleScroll();
@@ -243,13 +275,13 @@ export function usePdfDocumentRuntime({
       renderPageNumbers,
       renderPageOverlay,
       renderScale: layout.renderScale,
+      resolveSurfaceMotionStyle: layout.resolveSurfaceMotionStyle,
       rotation: layout.rotation,
       scale: layout.displayScale,
       scrollPageOffset,
       setDocumentSurfaceElement,
       setScrollInteractionElement,
       setPageSize: layout.setPageSize,
-      visualScale: layout.visualScale,
       viewportHeight: viewportElement?.clientHeight ?? 0,
       visiblePageNumbers,
     },

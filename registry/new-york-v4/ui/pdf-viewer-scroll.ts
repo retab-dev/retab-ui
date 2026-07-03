@@ -126,19 +126,55 @@ export function usePdfScrollActivity() {
   return { isScrolling, scrollDirection, handleScrollActivity };
 }
 
+// The block transform-origin B must satisfy B·(1 − settleScale) = T − T′,
+// where T′ is the scroll top the settle rebase will choose — otherwise the
+// counter-scaled stage drifts vertically mid-slide and snaps back at settle.
+// Unclamped, the reading-anchor rebase targets (T + M)·s − M and the formula
+// reduces to the plain marker offset T + M. At the scroll extremes the rebase
+// clamps (a document at the top stays at the top), so the prediction clamps
+// the same way; without `settleScale` the plain marker offset is returned.
 export function getPdfReadingMarkerBlockOffset({
   scrollTop,
+  settleScale,
+  totalBlockSize,
   viewportHeight,
 }: {
   scrollTop: number;
+  settleScale?: number | null;
+  totalBlockSize?: number;
   viewportHeight: number;
 }) {
   const safeScrollTop = Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0;
   const safeViewportHeight = Number.isFinite(viewportHeight)
     ? Math.max(0, viewportHeight)
     : 0;
+  const markerOffset =
+    safeScrollTop + safeViewportHeight * PDF_READING_MARKER_RATIO;
 
-  return safeScrollTop + safeViewportHeight * PDF_READING_MARKER_RATIO;
+  if (
+    settleScale == null ||
+    !Number.isFinite(settleScale) ||
+    settleScale <= 0 ||
+    Math.abs(1 - settleScale) <= 0.001
+  ) {
+    return markerOffset;
+  }
+
+  const settledMaxScrollTop =
+    totalBlockSize != null && Number.isFinite(totalBlockSize)
+      ? Math.max(0, totalBlockSize * settleScale - safeViewportHeight)
+      : Number.POSITIVE_INFINITY;
+  const settledScrollTop =
+    safeScrollTop <= 0
+      ? 0
+      : clamp(
+          markerOffset * settleScale -
+            safeViewportHeight * PDF_READING_MARKER_RATIO,
+          0,
+          settledMaxScrollTop,
+        );
+
+  return (safeScrollTop - settledScrollTop) / (1 - settleScale);
 }
 
 export function usePdfScroll({

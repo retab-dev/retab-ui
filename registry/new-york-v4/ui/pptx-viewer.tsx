@@ -135,9 +135,10 @@ function PptxViewerContent({
 
   const [rotation, setRotation] = React.useState(0);
   const scrollActivity = React.useMemo(() => createPptxScrollActivity(), []);
-  const rendererEnvironment = useOptionalFileViewerRendererEnvironment();
+  const { registerDocumentSurface, usesShellGeometry } =
+    useOptionalFileViewerRendererEnvironment();
   const { containerRef, viewportWidth } = usePptxViewportWidth({
-    enabled: !rendererEnvironment.usesShellGeometry,
+    enabled: !usesShellGeometry,
   });
   const rendererFrame = useOptionalFileViewerRendererFrame({
     fallbackInlineSize: viewportWidth,
@@ -215,6 +216,7 @@ function PptxViewerContent({
   const handleBeforeLayoutMotion = React.useCallback(() => {
     measureBeforeLayoutMotionRef.current();
   }, []);
+  const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
   const setDocumentSurfaceElement = React.useCallback(
     (element: HTMLDivElement | null) => {
       const previousElement = documentSurfaceRef.current;
@@ -223,18 +225,19 @@ function PptxViewerContent({
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
+      surfaceCleanupRef.current?.();
+      surfaceCleanupRef.current = null;
       documentSurfaceRef.current = element;
-      rendererEnvironment.setDocumentSurfaceElement(element);
       if (!element) return;
+      surfaceCleanupRef.current = registerDocumentSurface({
+        element,
+      });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
     },
-    [
-      handleBeforeLayoutMotion,
-      rendererEnvironment.setDocumentSurfaceElement,
-    ],
+    [handleBeforeLayoutMotion, registerDocumentSurface],
   );
 
   return (

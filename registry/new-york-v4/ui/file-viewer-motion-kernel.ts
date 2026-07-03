@@ -24,12 +24,28 @@ import {
 export type FileViewerMotionKernel = {
   getInteractiveSnapshot: () => FileViewerMotionFrame;
   getSnapshot: () => FileViewerMotionFrame;
-  setDocumentSurfaceElement: (element: HTMLElement | null) => void;
+  setDocumentSurface: (surface: FileViewerDocumentSurface | null) => void;
   setSidebarGapElement: (element: HTMLElement | null) => void;
   startMotion: (target: FileViewerMotionTarget) => void;
   subscribe: (listener: () => void) => () => void;
   syncTarget: (target: FileViewerMotionTarget) => void;
 };
+
+export type FileViewerDocumentSurface = {
+  element: HTMLElement;
+  resolveMotionStyle?: FileViewerDocumentSurfaceMotionResolver | null;
+};
+
+export type FileViewerDocumentSurfaceMotionStyle = {
+  customProperties?: Readonly<Record<string, string | null>>;
+  transform: string;
+  transformOrigin: string;
+  willChange: string;
+};
+
+export type FileViewerDocumentSurfaceMotionResolver = (
+  frame: FileViewerMotionFrame,
+) => FileViewerDocumentSurfaceMotionStyle | null;
 
 type FileViewerActiveMotion = {
   durationMs: number;
@@ -42,6 +58,7 @@ type FileViewerActiveMotion = {
 export const DEFAULT_FILE_VIEWER_MOTION_FRAME: FileViewerMotionFrame = {
   shellInlineSize: 0,
   durationMs: 150,
+  fallbackSurfaceScale: 1,
   fromInlineSize: 0,
   layoutInlineSize: 0,
   mode: "overlay",
@@ -53,7 +70,6 @@ export const DEFAULT_FILE_VIEWER_MOTION_FRAME: FileViewerMotionFrame = {
   sidebarInlineSize: 0,
   sidebarWidth: 0,
   toInlineSize: 0,
-  visualScale: 1,
 };
 
 export function createFileViewerMotionKernel(): FileViewerMotionKernel {
@@ -68,7 +84,8 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
     side: DEFAULT_FILE_VIEWER_MOTION_FRAME.side,
     sidebarWidth: 0,
   };
-  let documentSurfaceElement: HTMLElement | null = null;
+  let documentSurface: FileViewerDocumentSurface | null = null;
+  let documentSurfaceCustomProperties = new Set<string>();
   let sidebarGapElement: HTMLElement | null = null;
   let activeMotion: FileViewerActiveMotion | null = null;
   let rafHandle = 0;
@@ -158,7 +175,8 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
       sidebarInlineSize,
       sidebarWidth: motion.to.sidebarWidth,
       toInlineSize: motion.to.layoutInlineSize,
-      visualScale: fromInlineSize > 0 ? layoutInlineSize / fromInlineSize : 1,
+      fallbackSurfaceScale:
+        fromInlineSize > 0 ? layoutInlineSize / fromInlineSize : 1,
     };
   };
 
@@ -217,7 +235,7 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
   };
 
   const dispatchBeforeLayoutMotion = () => {
-    documentSurfaceElement?.dispatchEvent(
+    documentSurface?.element.dispatchEvent(
       new Event(FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT),
     );
   };
@@ -281,8 +299,15 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
     getInteractiveSnapshot: () =>
       activeMotion ? readMotionSample(activeMotion) : interactiveFrame,
     getSnapshot: () => contractFrame,
-    setDocumentSurfaceElement: (element) => {
-      documentSurfaceElement = element;
+    setDocumentSurface: (surface) => {
+      const previousSurface = documentSurface;
+      if (
+        previousSurface &&
+        (!surface || previousSurface.element !== surface.element)
+      ) {
+        clearDocumentSurfaceStyle(previousSurface.element);
+      }
+      documentSurface = surface;
       writeDocumentSurfaceStyle(interactiveFrame);
     },
     setSidebarGapElement: (element) => {
@@ -315,13 +340,62 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
   }
 
   function writeDocumentSurfaceStyle(nextFrame: FileViewerMotionFrame) {
-    if (!documentSurfaceElement) return;
+    if (!documentSurface) return;
 
+    const { element, resolveMotionStyle } = documentSurface;
+    const resolvedStyle = resolveMotionStyle?.(nextFrame);
+    if (resolvedStyle) {
+      writeDocumentSurfaceCustomProperties(
+        element,
+        resolvedStyle.customProperties,
+      );
+      element.style.transform = resolvedStyle.transform;
+      element.style.transformOrigin = resolvedStyle.transformOrigin;
+      element.style.willChange = resolvedStyle.willChange;
+      return;
+    }
+
+    writeDocumentSurfaceCustomProperties(element, null);
     const isSliding = nextFrame.phase === "sliding";
-    const isScaled = Math.abs(nextFrame.visualScale - 1) > 0.001;
-    documentSurfaceElement.style.transform =
-      isSliding || isScaled ? `scale(${nextFrame.visualScale})` : "";
-    documentSurfaceElement.style.willChange = isSliding ? "transform" : "";
+    const isScaled = Math.abs(nextFrame.fallbackSurfaceScale - 1) > 0.001;
+    element.style.transform =
+      isSliding || isScaled ? `scale(${nextFrame.fallbackSurfaceScale})` : "";
+    element.style.willChange = isSliding ? "transform" : "";
+  }
+
+  function writeDocumentSurfaceCustomProperties(
+    element: HTMLElement,
+    customProperties:
+      | Readonly<Record<string, string | null>>
+      | null
+      | undefined,
+  ) {
+    const nextNames = new Set(Object.keys(customProperties ?? {}));
+    for (const name of documentSurfaceCustomProperties) {
+      if (!nextNames.has(name)) {
+        element.style.removeProperty(name);
+      }
+    }
+
+    for (const [name, value] of Object.entries(customProperties ?? {})) {
+      if (value == null) {
+        element.style.removeProperty(name);
+      } else {
+        element.style.setProperty(name, value);
+      }
+    }
+
+    documentSurfaceCustomProperties = nextNames;
+  }
+
+  function clearDocumentSurfaceStyle(element: HTMLElement) {
+    element.style.transform = "";
+    element.style.transformOrigin = "";
+    element.style.willChange = "";
+    for (const name of documentSurfaceCustomProperties) {
+      element.style.removeProperty(name);
+    }
+    documentSurfaceCustomProperties = new Set();
   }
 }
 

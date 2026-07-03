@@ -1,6 +1,9 @@
 "use client";
 
-import type { FileViewerMotionKernel } from "./file-viewer-motion-kernel";
+import type {
+  FileViewerDocumentSurface,
+  FileViewerMotionKernel,
+} from "./file-viewer-motion-kernel";
 
 export const FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT =
   "file-viewer:before-layout-motion";
@@ -15,7 +18,7 @@ export type FileViewerElements = {
 
 export type FileViewerElementRegistry = {
   getElements: () => FileViewerElements;
-  registerDocumentSurfaceElement: (element: HTMLElement | null) => void;
+  registerDocumentSurface: (surface: FileViewerDocumentSurface) => () => void;
   registerSidebarElement: (element: HTMLElement | null) => void;
   registerSidebarGapElement: (element: HTMLDivElement | null) => void;
   registerSidebarTriggerElement: (element: HTMLElement | null) => void;
@@ -36,13 +39,20 @@ export function createFileViewerElementRegistry({
     sidebarTriggerElement: null,
     viewerShellElement: null,
   };
+  let documentSurfaceRegistration = 0;
 
   return {
     getElements: () => elements,
-    registerDocumentSurfaceElement: (element) => {
-      if (elements.documentSurfaceElement === element) return;
-      elements.documentSurfaceElement = element;
-      motionKernel.setDocumentSurfaceElement(element);
+    registerDocumentSurface: (surface) => {
+      documentSurfaceRegistration += 1;
+      const registration = documentSurfaceRegistration;
+      elements.documentSurfaceElement = surface.element;
+      motionKernel.setDocumentSurface(surface);
+      return () => {
+        if (documentSurfaceRegistration !== registration) return;
+        elements.documentSurfaceElement = null;
+        motionKernel.setDocumentSurface(null);
+      };
     },
     registerSidebarElement: (element) => {
       if (elements.sidebarElement === element) return;

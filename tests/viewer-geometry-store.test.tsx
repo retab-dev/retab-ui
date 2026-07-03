@@ -442,7 +442,7 @@ describe("createViewerGeometryStore", () => {
     const documentSurfaceElement = document.createElement("div");
 
     store.setSidebarGapElement(sidebarGapElement);
-    store.setDocumentSurfaceElement(documentSurfaceElement);
+    store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget({
       shellInlineSize: 840,
       durationMs: 150,
@@ -461,7 +461,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 420,
       fromInlineSize: 420,
       toInlineSize: 420,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(sidebarGapElement.style.flexBasis).toBe("420px");
@@ -486,7 +486,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 420,
       fromInlineSize: 420,
       toInlineSize: 840,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(sidebarGapElement.style.flexBasis).toBe("420px");
@@ -503,7 +503,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 210,
       fromInlineSize: 420,
       toInlineSize: 840,
-      visualScale: 1.5,
+      fallbackSurfaceScale: 1.5,
     });
     expect(sidebarGapElement.style.width).toBe("210px");
     expect(sidebarGapElement.style.flexBasis).toBe("210px");
@@ -520,7 +520,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 420,
       toInlineSize: 840,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("0px");
     expect(sidebarGapElement.style.flexBasis).toBe("0px");
@@ -532,7 +532,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 420,
       toInlineSize: 840,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -549,7 +549,7 @@ describe("createViewerGeometryStore", () => {
     }> = [];
 
     store.setSidebarGapElement(sidebarGapElement);
-    store.setDocumentSurfaceElement(documentSurfaceElement);
+    store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget({
       shellInlineSize: 840,
       durationMs: 150,
@@ -599,7 +599,7 @@ describe("createViewerGeometryStore", () => {
     const store = createFileViewerMotionKernel();
     const documentSurfaceElement = document.createElement("div");
 
-    store.setDocumentSurfaceElement(documentSurfaceElement);
+    store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget({
       shellInlineSize: 840,
       durationMs: 150,
@@ -629,7 +629,7 @@ describe("createViewerGeometryStore", () => {
       layoutInlineSize: 630,
       motionProgress: 0.5,
       sidebarInlineSize: 210,
-      visualScale: 1.5,
+      fallbackSurfaceScale: 1.5,
     });
     expect(listener).toHaveBeenCalledTimes(1);
 
@@ -640,7 +640,7 @@ describe("createViewerGeometryStore", () => {
       motionProgress: 1,
       phase: "settling",
       sidebarInlineSize: 0,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -662,7 +662,7 @@ describe("createViewerGeometryStore", () => {
       open: false,
     };
 
-    store.setDocumentSurfaceElement(documentSurfaceElement);
+    store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget(openTarget);
 
     const listener = vi.fn();
@@ -679,7 +679,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 420,
       toInlineSize: 840,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(documentSurfaceElement.style.transform).toBe("");
     expect(listener).toHaveBeenCalledTimes(2);
@@ -702,7 +702,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 840,
       toInlineSize: 840,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(3);
   });
@@ -715,7 +715,7 @@ describe("createViewerGeometryStore", () => {
     const documentSurfaceElement = document.createElement("div");
 
     store.setSidebarGapElement(sidebarGapElement);
-    store.setDocumentSurfaceElement(documentSurfaceElement);
+    store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget({
       shellInlineSize: 840,
       durationMs: 150,
@@ -742,7 +742,7 @@ describe("createViewerGeometryStore", () => {
       open: false,
       phase: "idle",
       sidebarInlineSize: 0,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("0px");
     expect(documentSurfaceElement.style.transform).toBe("");
@@ -756,7 +756,7 @@ describe("createViewerGeometryStore", () => {
     const documentSurfaceElement = document.createElement("div");
 
     store.setSidebarGapElement(sidebarGapElement);
-    store.setDocumentSurfaceElement(documentSurfaceElement);
+    store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget({
       shellInlineSize: 840,
       durationMs: 150,
@@ -785,7 +785,7 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 420,
       fromInlineSize: 420,
       toInlineSize: 840,
-      visualScale: 1,
+      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(documentSurfaceElement.style.transform).toBe("scale(1)");
@@ -796,7 +796,7 @@ describe("createViewerGeometryStore", () => {
       layoutInlineSize: 630,
       motionProgress: 0.5,
       sidebarInlineSize: 210,
-      visualScale: 1.5,
+      fallbackSurfaceScale: 1.5,
     });
     expect(sidebarGapElement.style.width).toBe("210px");
     expect(documentSurfaceElement.style.transform).toBe("scale(1.5)");
@@ -832,7 +832,11 @@ describe("createViewerGeometryStore", () => {
             <FileViewerInset>
               <FileViewerContractSnapshot data-testid="file-contract" />
             </FileViewerInset>
-            <FileViewerSidebar data-testid="file-sidebar" side="right" width="420px">
+            <FileViewerSidebar
+              data-testid="file-sidebar"
+              side="right"
+              width="420px"
+            >
               Sidebar
             </FileViewerSidebar>
           </FileViewerContent>
@@ -988,7 +992,11 @@ describe("createViewerGeometryStore", () => {
             <FileViewerInset>
               <FileViewerContractSnapshot data-testid="file-contract" />
             </FileViewerInset>
-            <FileViewerSidebar data-testid="file-sidebar" side="right" width="420px">
+            <FileViewerSidebar
+              data-testid="file-sidebar"
+              side="right"
+              width="420px"
+            >
               Sidebar
             </FileViewerSidebar>
           </FileViewerContent>
@@ -1049,7 +1057,11 @@ describe("createViewerGeometryStore", () => {
           </FileViewerHeader>
           <FileViewerContent>
             <FileViewerInset>Document</FileViewerInset>
-            <FileViewerSidebar data-testid="file-sidebar" side="right" width="420px">
+            <FileViewerSidebar
+              data-testid="file-sidebar"
+              side="right"
+              width="420px"
+            >
               <FileViewerSidebarCloseButton />
             </FileViewerSidebar>
           </FileViewerContent>
@@ -1088,7 +1100,11 @@ describe("createViewerGeometryStore", () => {
                 Document action
               </button>
             </FileViewerInset>
-            <FileViewerSidebar data-testid="file-sidebar" side="right" width="420px">
+            <FileViewerSidebar
+              data-testid="file-sidebar"
+              side="right"
+              width="420px"
+            >
               Sidebar
             </FileViewerSidebar>
           </FileViewerContent>

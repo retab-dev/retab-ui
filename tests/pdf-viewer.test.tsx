@@ -54,7 +54,6 @@ import {
   getPdfPageLayout,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { PdfPage } from "@/registry/new-york-v4/ui/pdf-viewer-page";
-import { PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY } from "@/registry/new-york-v4/ui/pdf-viewer-pages-layer";
 import {
   PdfThumbnailRail,
   PdfViewerThumbnails,
@@ -1354,9 +1353,7 @@ describe("PdfViewer", () => {
     expect(documentSlot?.getAttribute("style")).toContain(
       "contain: layout style",
     );
-    expect(visualStage?.style.transformOrigin).toBe(
-      `left var(${PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY}, 0px)`,
-    );
+    expect(visualStage?.style.transformOrigin).toBe("");
     expect(beforeSpacer?.getAttribute("style")).toContain(
       "contain: layout size",
     );

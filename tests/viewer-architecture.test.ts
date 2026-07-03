@@ -1112,9 +1112,7 @@ describe("viewer architecture", () => {
       "resolveFileViewerSidebarTriggerAccessibilityProps",
     );
     expect(fileViewerAccessibility).not.toContain("React.");
-    expect(fileViewerFrameController).toContain(
-      "createFileViewerMotionKernel",
-    );
+    expect(fileViewerFrameController).toContain("createFileViewerMotionKernel");
     expect(fileViewerFrameController).toContain("useFileViewerFrameKeyboard");
     expect(fileViewerFrameController).toContain(
       "useFileViewerSidebarOpenController",
@@ -1306,7 +1304,7 @@ describe("viewer architecture", () => {
     expect(fileViewerFrameController).not.toContain("accessibilityState");
     expect(fileViewerElements).toContain("FileViewerElementRegistry");
     expect(fileViewerElements).toContain("registerViewerShellElement");
-    expect(fileViewerElements).toContain("registerDocumentSurfaceElement");
+    expect(fileViewerElements).toContain("registerDocumentSurface");
     expect(fileViewerElements).toContain("registerSidebarElement");
     expect(fileViewerElements).toContain("registerSidebarGapElement");
     expect(fileViewerElements).toContain("registerSidebarTriggerElement");
@@ -1343,15 +1341,13 @@ describe("viewer architecture", () => {
       "transactionToDocumentInlineSize",
     );
     expect(fileViewerMotionKernel).toContain("setSidebarGapElement");
-    expect(fileViewerMotionKernel).toContain("setDocumentSurfaceElement");
+    expect(fileViewerMotionKernel).toContain("setDocumentSurface");
     expect(fileViewerMotionKernel).not.toContain("setSidebarPanelElement");
     expect(fileViewerMotionKernel).toContain("writeSidebarGapStyle");
     expect(fileViewerMotionKernel).toContain("writeDocumentSurfaceStyle");
     expect(fileViewerMotionKernel).not.toContain("writeSidebarPanelStyle");
     expect(fileViewerMotionKernel).toContain("sidebarGapElement.style.width");
-    expect(fileViewerMotionKernel).toContain(
-      "documentSurfaceElement.style.transform",
-    );
+    expect(fileViewerMotionKernel).toContain("element.style.transform");
     expect(fileViewerMotionKernel).not.toContain(
       '"--file-viewer-sidebar-inline-size"',
     );
@@ -1679,14 +1675,10 @@ describe("viewer architecture", () => {
     }
 
     expect(motionWriteOwner).toContain("sidebarGapElement.style.width");
-    expect(motionWriteOwner).toContain(
-      "documentSurfaceElement.style.transform",
-    );
+    expect(motionWriteOwner).toContain("element.style.transform");
     expect(motionWriteOwner).not.toContain("sidebarPanelElement");
     expect(elementRegistry).toContain("motionKernel.setSidebarGapElement");
-    expect(elementRegistry).toContain(
-      "motionKernel.setDocumentSurfaceElement",
-    );
+    expect(elementRegistry).toContain("motionKernel.setDocumentSurface");
     expect(elementRegistry).not.toContain("setSidebarPanelElement");
     expect(frame).not.toContain("motionKernel.setDocumentSurfaceElement");
     expect(frame).not.toContain("motionKernel.setSidebarGapElement");
@@ -2583,7 +2575,7 @@ describe("viewer architecture", () => {
     expect(layout).toContain("useOptionalFileViewerRendererEnvironment");
     expect(layout).toContain("useMeasuredElementWidth({");
     expect(layout).toContain("enabled: !rendererEnvironment.usesShellGeometry");
-    expect(layout).toContain("visualScale");
+    expect(layout).toContain("resolveSurfaceMotionStyle");
     expect(layout).toContain("usePdfScale");
     expect(layout).toContain("createPdfPageLayout");
     expect(controls).toContain("function usePdfDocumentControlsRegistration");
@@ -2597,7 +2589,9 @@ describe("viewer architecture", () => {
     expect(pagesLayer).toContain("setScrollInteractionElement");
     expect(pagesLayer).toContain("useOptionalFileViewerRendererEnvironment");
     expect(pagesLayer).toContain("setDocumentSurfaceElement");
-    expect(pagesLayer).toContain("data-visual-scale");
+    expect(pagesLayer).toContain("PDF_DOCUMENT_MOTION_SCALE_PROPERTY");
+    expect(pagesLayer).toContain("pdf-page-motion-frame");
+    expect(pagesLayer).not.toContain("data-visual-scale");
     expect(pagesLayer).not.toContain("transform: documentTransform");
     expect(pagesLayer).not.toContain('willChange: "transform"');
     expect(pagesLayer).not.toContain(

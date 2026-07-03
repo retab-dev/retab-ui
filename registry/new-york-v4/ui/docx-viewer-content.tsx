@@ -2,12 +2,17 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import { isAbortError, isResourceError } from "@/lib/viewer-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import type {
+  FileViewerDocumentSurfaceMotionResolver,
+  FileViewerDocumentSurfaceMotionStyle,
+} from "./file-viewer-motion-kernel";
 import {
   resolveFileViewerRendererLayoutInlineSize,
   type FileViewerDocumentAlign,
@@ -76,9 +81,10 @@ export function DocxViewerContent({
     getDocxDocumentResource(resource.content, { retainRejected: true }),
   );
   const renderCacheKey = resource.content.key;
-  const rendererEnvironment = useOptionalFileViewerRendererEnvironment();
+  const { registerDocumentSurface, usesShellGeometry } =
+    useOptionalFileViewerRendererEnvironment();
   const { containerRef, containerWidth } = useMeasuredDocxContainerInlineSize({
-    enabled: !rendererEnvironment.usesShellGeometry,
+    enabled: !usesShellGeometry,
   });
   const rendererFrame = useOptionalFileViewerRendererFrame({
     fallbackInlineSize: containerWidth,
@@ -167,6 +173,12 @@ export function DocxViewerContent({
   const handleBeforeLayoutMotion = React.useCallback(() => {
     measureBeforeLayoutMotionRef.current();
   }, []);
+  const resolveSurfaceMotionStyle =
+    React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
+      () => createDocxSurfaceMotionStyleResolver(rendererFrame.align),
+      [rendererFrame.align],
+    );
+  const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
   const setHostElement = React.useCallback(
     (element: HTMLDivElement | null) => {
       const previousElement = hostRef.current;
@@ -175,9 +187,14 @@ export function DocxViewerContent({
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
+      surfaceCleanupRef.current?.();
+      surfaceCleanupRef.current = null;
       hostRef.current = element;
-      rendererEnvironment.setDocumentSurfaceElement(element);
       if (!element) return;
+      surfaceCleanupRef.current = registerDocumentSurface({
+        element,
+        resolveMotionStyle: resolveSurfaceMotionStyle,
+      });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
@@ -185,7 +202,8 @@ export function DocxViewerContent({
     },
     [
       handleBeforeLayoutMotion,
-      rendererEnvironment.setDocumentSurfaceElement,
+      registerDocumentSurface,
+      resolveSurfaceMotionStyle,
     ],
   );
 
@@ -372,7 +390,7 @@ function useMeasuredDocxContainerInlineSize({ enabled }: { enabled: boolean }) {
     null,
   );
 
-  React.useLayoutEffect(() => {
+  useKeyedLayoutEffect(joinEffectKey([containerElement, enabled]), () => {
     if (!enabled || !containerElement) {
       if (!enabled) {
         setContainerWidth((current) => (current == null ? current : null));
@@ -414,7 +432,7 @@ function useMeasuredDocxContainerInlineSize({ enabled }: { enabled: boolean }) {
       if (frame > 0) cancelAnimationFrame(frame);
       observer?.disconnect();
     };
-  }, [containerElement, enabled]);
+  });
 
   return {
     containerRef: setContainerElement,
@@ -435,6 +453,31 @@ function getDocxDocumentTransformOrigin(align: FileViewerDocumentAlign) {
     case "start":
       return "left top";
   }
+}
+
+function createDocxSurfaceMotionStyleResolver(
+  align: FileViewerDocumentAlign,
+): FileViewerDocumentSurfaceMotionResolver {
+  return (frame): FileViewerDocumentSurfaceMotionStyle => {
+    const transformOrigin = getDocxDocumentTransformOrigin(align);
+    const shouldScale =
+      frame.phase === "sliding" &&
+      Math.abs(frame.fallbackSurfaceScale - 1) > 0.001;
+
+    return {
+      transform: shouldScale
+        ? `scaleX(${formatDocxMotionScale(frame.fallbackSurfaceScale)})`
+        : "",
+      transformOrigin,
+      willChange: frame.phase === "sliding" ? "transform" : "",
+    };
+  };
+}
+
+function formatDocxMotionScale(value: number) {
+  if (!Number.isFinite(value)) return "1";
+  const rounded = Number(value.toFixed(6));
+  return Object.is(rounded, -0) ? "0" : String(rounded);
 }
 
 function useDocxControlsRegistration({

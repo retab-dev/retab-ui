@@ -26,7 +26,8 @@ export function useMarkdownGreenfieldRendererFrame({
   fallbackViewportInlineSize: number;
   onBeforeLayoutMotion: () => void;
 }): MarkdownGreenfieldRendererFrame {
-  const rendererEnvironment = useOptionalFileViewerRendererEnvironment();
+  const { registerDocumentSurface, usesShellGeometry } =
+    useOptionalFileViewerRendererEnvironment();
   const rendererFrame = useOptionalFileViewerRendererFrame({
     fallbackInlineSize: fallbackViewportInlineSize,
   });
@@ -36,6 +37,7 @@ export function useMarkdownGreenfieldRendererFrame({
       rendererFrame,
     }) ?? fallbackViewportInlineSize;
   const surfaceRef = React.useRef<HTMLDivElement | null>(null);
+  const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
   const handleBeforeLayoutMotion = React.useCallback(() => {
     onBeforeLayoutMotion();
   }, [onBeforeLayoutMotion]);
@@ -47,18 +49,19 @@ export function useMarkdownGreenfieldRendererFrame({
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
+      surfaceCleanupRef.current?.();
+      surfaceCleanupRef.current = null;
       surfaceRef.current = element;
-      rendererEnvironment.setDocumentSurfaceElement(element);
       if (!element) return;
+      surfaceCleanupRef.current = registerDocumentSurface({
+        element,
+      });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
     },
-    [
-      handleBeforeLayoutMotion,
-      rendererEnvironment.setDocumentSurfaceElement,
-    ],
+    [handleBeforeLayoutMotion, registerDocumentSurface],
   );
 
   return React.useMemo(
@@ -67,13 +70,13 @@ export function useMarkdownGreenfieldRendererFrame({
       transformOrigin: getMarkdownGreenfieldDocumentTransformOrigin(
         rendererFrame.align,
       ),
-      usesShellGeometry: rendererEnvironment.usesShellGeometry,
+      usesShellGeometry,
       viewportInlineSize,
     }),
     [
-      rendererEnvironment.usesShellGeometry,
       rendererFrame.align,
       setDocumentSurfaceElement,
+      usesShellGeometry,
       viewportInlineSize,
     ],
   );

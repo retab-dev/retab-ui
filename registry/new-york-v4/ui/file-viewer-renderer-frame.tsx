@@ -6,6 +6,7 @@ import {
   useOptionalFileViewerShellStatic,
   useFileViewerShellStatic,
 } from "./file-viewer-context";
+import type { FileViewerDocumentSurface } from "./file-viewer-motion-kernel";
 import {
   createFileViewerRendererFrame,
   type FileViewerDocumentAlign,
@@ -14,7 +15,7 @@ import {
 import { useFileViewerMotionFrame } from "./file-viewer-motion-kernel";
 
 export type FileViewerRendererEnvironment = {
-  setDocumentSurfaceElement: React.RefCallback<HTMLElement>;
+  registerDocumentSurface: (surface: FileViewerDocumentSurface) => () => void;
   usesShellGeometry: boolean;
 };
 
@@ -48,19 +49,18 @@ export function useOptionalFileViewerDocumentFrame(): FileViewerDocumentFrameSta
 export function useOptionalFileViewerRendererEnvironment(): FileViewerRendererEnvironment {
   const { elementRegistry, usesShellGeometry } =
     useFileViewerRendererEnvironmentState();
-  const setDocumentSurfaceElement = React.useCallback(
-    (element: HTMLElement | null) => {
-      elementRegistry?.registerDocumentSurfaceElement(element);
-    },
+  const registerDocumentSurface = React.useCallback(
+    (surface: FileViewerDocumentSurface) =>
+      elementRegistry?.registerDocumentSurface(surface) ?? (() => {}),
     [elementRegistry],
   );
 
   return React.useMemo(
     () => ({
-      setDocumentSurfaceElement,
+      registerDocumentSurface,
       usesShellGeometry,
     }),
-    [setDocumentSurfaceElement, usesShellGeometry],
+    [registerDocumentSurface, usesShellGeometry],
   );
 }
 

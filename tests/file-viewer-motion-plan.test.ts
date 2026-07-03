@@ -84,7 +84,7 @@ describe("FileViewer motion plan", () => {
       ),
       isTransitioning: true,
       fromInlineSize: 1000,
-      visualScale: 0.9,
+      fallbackSurfaceScale: 0.9,
     };
     const plan = createFileViewerMotionPlan({
       animate: true,

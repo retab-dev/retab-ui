@@ -21,6 +21,7 @@ export type FileViewerMotionTarget = {
 export type FileViewerMotionFrame = {
   shellInlineSize: number;
   durationMs: number;
+  fallbackSurfaceScale: number;
   fromInlineSize: number;
   layoutInlineSize: number;
   mode: FileViewerSidebarMode;
@@ -32,7 +33,6 @@ export type FileViewerMotionFrame = {
   sidebarInlineSize: number;
   sidebarWidth: number;
   toInlineSize: number;
-  visualScale: number;
 };
 
 export type FileViewerMotionRestFrame = Pick<
@@ -81,12 +81,12 @@ export function createFileViewerIdleMotionFrame(
 ): FileViewerMotionFrame {
   return {
     ...restFrame,
+    fallbackSurfaceScale: 1,
     fromInlineSize: restFrame.layoutInlineSize,
     motionId: null,
     motionProgress: 1,
     phase: "idle",
     toInlineSize: restFrame.layoutInlineSize,
-    visualScale: 1,
   };
 }
 
@@ -120,7 +120,7 @@ export function createFileViewerMotionPlan({
   const nextRestFrame = createFileViewerMotionRestFrame(resolvedTarget);
   const fromInlineSize =
     currentFrame.phase === "sliding" ||
-    !areFileViewerMotionNumbersEqual(currentFrame.visualScale, 1)
+    !areFileViewerMotionNumbersEqual(currentFrame.fallbackSurfaceScale, 1)
       ? currentFrame.fromInlineSize
       : currentRestFrame.layoutInlineSize;
   const shouldAnimate =
@@ -179,11 +179,14 @@ export function areFileViewerMotionFramesEqual(
     ) &&
     previous.phase === next.phase &&
     areFileViewerMotionNumbersEqual(
+      previous.fallbackSurfaceScale,
+      next.fallbackSurfaceScale,
+    ) &&
+    areFileViewerMotionNumbersEqual(
       previous.fromInlineSize,
       next.fromInlineSize,
     ) &&
-    areFileViewerMotionNumbersEqual(previous.toInlineSize, next.toInlineSize) &&
-    areFileViewerMotionNumbersEqual(previous.visualScale, next.visualScale)
+    areFileViewerMotionNumbersEqual(previous.toInlineSize, next.toInlineSize)
   );
 }
 
