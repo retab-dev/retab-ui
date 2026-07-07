@@ -24,7 +24,10 @@ import {
 import type { FileViewerMotionTarget } from "./file-viewer-motion-plan";
 import { useFileViewerSidebarOpenController } from "./file-viewer-sidebar-open-state";
 import { useFileViewerSidebarRegistration } from "./file-viewer-sidebar-registration";
-import { useStableElementSize } from "./viewer-measurement";
+import {
+  readElementRectSnapshot,
+  useStableElementSize,
+} from "./viewer-measurement";
 
 export const FILE_VIEWER_INLINE_BREAKPOINT = 768;
 
@@ -61,7 +64,13 @@ export function useFileViewerFrameController({
 
   const rootId = React.useId();
   const fallbackSidebarId = `${rootId}-sidebar`;
-  const motionKernel = React.useMemo(() => createFileViewerMotionKernel(), []);
+  // The kernel owns time + style writes only; its settle-hold layout reads are
+  // injected from the quarantined measurement module here at the controller
+  // layer.
+  const motionKernel = React.useMemo(
+    () => createFileViewerMotionKernel({ readElementRectSnapshot }),
+    [],
+  );
   const size = useStableElementSize<HTMLDivElement>({
     retainLastNonZero: true,
   });

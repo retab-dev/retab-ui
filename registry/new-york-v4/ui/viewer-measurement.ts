@@ -35,6 +35,17 @@ type RawMeasuredSize = {
   width: number;
 };
 
+// DOM layout reads for viewer chrome are quarantined in this module. The
+// file-viewer motion kernel (time + style writes only) receives this reader by
+// injection from the frame controller instead of touching layout APIs itself.
+export function readElementRectSnapshot(
+  element: HTMLElement | null,
+): readonly number[] {
+  if (!element) return [];
+  const rect = element.getBoundingClientRect();
+  return [rect.left, rect.top, rect.width, rect.height];
+}
+
 function readElementSize(element: HTMLElement): RawMeasuredSize {
   const rect =
     typeof element.getBoundingClientRect === "function"

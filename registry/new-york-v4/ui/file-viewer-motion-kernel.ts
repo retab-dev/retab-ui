@@ -42,6 +42,17 @@ export type FileViewerDocumentSurfaceSettleSnapshotReader = () =>
   | null
   | undefined;
 
+// Layout reads are quarantined outside the kernel (viewer-measurement / the
+// frame controller layer). The kernel owns time and style writes only, so the
+// settle-hold rect reader is injected by its creator rather than imported.
+export type FileViewerElementRectSnapshotReader = (
+  element: HTMLElement | null,
+) => readonly number[];
+
+export type FileViewerMotionKernelOptions = {
+  readElementRectSnapshot?: FileViewerElementRectSnapshotReader | null;
+};
+
 export type FileViewerDocumentSurfaceMotionStyle = {
   customProperties?: Readonly<Record<string, string | null>>;
   transform: string;
@@ -91,7 +102,9 @@ export const DEFAULT_FILE_VIEWER_MOTION_FRAME: FileViewerMotionFrame = {
   toInlineSize: 0,
 };
 
-export function createFileViewerMotionKernel(): FileViewerMotionKernel {
+export function createFileViewerMotionKernel({
+  readElementRectSnapshot = null,
+}: FileViewerMotionKernelOptions = {}): FileViewerMotionKernel {
   const listeners = new Set<() => void>();
   let contractFrame = DEFAULT_FILE_VIEWER_MOTION_FRAME;
   let interactiveFrame = DEFAULT_FILE_VIEWER_MOTION_FRAME;
@@ -488,20 +501,16 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
 
     return values.length > 0 ? values : [0];
   }
-}
 
-function appendElementRectSnapshot(
-  values: number[],
-  element: HTMLElement | null,
-) {
-  if (!element) return;
-  const rect = element.getBoundingClientRect();
-  values.push(
-    toSettleSnapshotNumber(rect.left),
-    toSettleSnapshotNumber(rect.top),
-    toSettleSnapshotNumber(rect.width),
-    toSettleSnapshotNumber(rect.height),
-  );
+  function appendElementRectSnapshot(
+    values: number[],
+    element: HTMLElement | null,
+  ) {
+    if (!readElementRectSnapshot || !element) return;
+    for (const value of readElementRectSnapshot(element)) {
+      values.push(toSettleSnapshotNumber(value));
+    }
+  }
 }
 
 function areSettleSnapshotsEqual(

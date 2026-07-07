@@ -109,7 +109,7 @@ function getFileViewerFitWidthSurfaceMotionStyle({
   // Both branches must resolve to exactly the frozen stage size at motion
   // start (layoutInlineSize === fromInlineSize), or the surface visibly scales
   // on the first frame and — because the transform extends the scroll-measured
-  // bbox — perturbs the scroller's scrollHeight. Renderers size their stage as
+  // bbox — perturbs the scroller's scrollable height. Renderers size their stage as
   // an affine function of the available width (stage = width − padding −
   // scrollbar), so the animating target is the frozen stage plus the width
   // delta, never an absolute refit of the kernel width.

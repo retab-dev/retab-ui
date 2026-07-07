@@ -1338,6 +1338,11 @@
           "path": "registry/new-york-v4/ui/viewer-download.tsx",
           "type": "registry:ui",
           "target": "@ui/viewer-download.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/pdf-viewer-telemetry.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-telemetry.ts"
         }
       ]
     },
@@ -2502,6 +2507,11 @@
           "path": "registry/new-york-v4/ui/use-is-client.ts",
           "type": "registry:ui",
           "target": "@ui/use-is-client.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-fit-width-motion.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-fit-width-motion.ts"
         }
       ]
     },

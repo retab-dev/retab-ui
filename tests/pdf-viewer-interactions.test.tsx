@@ -389,14 +389,18 @@ describe("PdfViewer — rotation cycle", () => {
     });
     await findByTextContent("Page 1 of 1");
 
-    const slot = () =>
-      document.querySelector<HTMLElement>("[data-page-number='1']")!;
-    const upright = { width: "100px", minHeight: "200px" };
-    const sideways = { width: "200px", minHeight: "100px" };
+    // The slot expresses its height as a motion calc(); the inner motion
+    // frame carries the concrete page box in pixels.
+    const pageBox = () =>
+      document
+        .querySelector<HTMLElement>("[data-page-number='1']")!
+        .querySelector<HTMLElement>("[data-slot='pdf-page-motion-frame']")!;
+    const upright = { width: "100px", height: "200px" };
+    const sideways = { width: "200px", height: "100px" };
 
-    const expectBox = (box: { width: string; minHeight: string }) => {
-      expect(slot().style.width).toBe(box.width);
-      expect(slot().style.minHeight).toBe(box.minHeight);
+    const expectBox = (box: { width: string; height: string }) => {
+      expect(pageBox().style.width).toBe(box.width);
+      expect(pageBox().style.height).toBe(box.height);
     };
 
     expectBox(upright);
