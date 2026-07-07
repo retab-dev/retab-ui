@@ -31,6 +31,11 @@ import {
   type SidebarMotionBenchmarkResult,
   type SidebarMotionBenchmarkScrollTargetId,
 } from "./sidebar-motion-benchmark";
+import {
+  runFileViewerSourceSwitchBenchmark,
+  type SourceSwitchBenchmarkOptions,
+  type SourceSwitchBenchmarkResult,
+} from "./source-switch-benchmark";
 
 type BenchmarkFormatId =
   | "pdf"
@@ -63,9 +68,17 @@ type FileViewerSidebarBenchmarkTelemetryApi = {
   ) => Promise<SidebarMotionBenchmarkResult | null>;
 };
 
+type FileViewerSourceSwitchTelemetryApi = {
+  getLastResult: () => SourceSwitchBenchmarkResult | null;
+  run: (
+    options?: SourceSwitchBenchmarkOptions,
+  ) => Promise<SourceSwitchBenchmarkResult | null>;
+};
+
 declare global {
   interface Window {
     __fileViewerSidebarBenchmarkTelemetry?: FileViewerSidebarBenchmarkTelemetryApi;
+    __fileViewerSourceSwitchTelemetry?: FileViewerSourceSwitchTelemetryApi;
   }
 }
 
@@ -246,6 +259,8 @@ export default function FileViewerSidebarBenchmarkPage() {
   const [isRunning, setIsRunning] = React.useState(false);
   const isRunningRef = React.useRef(false);
   const resultRef = React.useRef<SidebarMotionBenchmarkResult | null>(null);
+  const sourceSwitchResultRef =
+    React.useRef<SourceSwitchBenchmarkResult | null>(null);
   const activeFixture =
     FORMAT_BY_ID.get(activeFormatId) ?? BENCHMARK_FIXTURES[0];
   const runTelemetry = React.useCallback(
@@ -309,6 +324,44 @@ export default function FileViewerSidebarBenchmarkPage() {
       return () => {
         if (window.__fileViewerSidebarBenchmarkTelemetry === api) {
           delete window.__fileViewerSidebarBenchmarkTelemetry;
+        }
+      };
+    },
+  );
+
+  const runSourceSwitchTelemetry = React.useCallback(
+    async (options?: SourceSwitchBenchmarkOptions) => {
+      if (isRunningRef.current) return null;
+
+      isRunningRef.current = true;
+      setIsRunning(true);
+      try {
+        const nextResult = await runFileViewerSourceSwitchBenchmark(options);
+        sourceSwitchResultRef.current = nextResult;
+        return nextResult;
+      } finally {
+        isRunningRef.current = false;
+        setIsRunning(false);
+      }
+    },
+    [],
+  );
+
+  useKeyedMountEffect(
+    joinEffectKey([
+      "file-viewer-source-switch-telemetry-api",
+      runSourceSwitchTelemetry,
+    ]),
+    () => {
+      const api: FileViewerSourceSwitchTelemetryApi = {
+        getLastResult: () => sourceSwitchResultRef.current,
+        run: runSourceSwitchTelemetry,
+      };
+      window.__fileViewerSourceSwitchTelemetry = api;
+
+      return () => {
+        if (window.__fileViewerSourceSwitchTelemetry === api) {
+          delete window.__fileViewerSourceSwitchTelemetry;
         }
       };
     },
