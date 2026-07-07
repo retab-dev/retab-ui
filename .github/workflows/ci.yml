@@ -29,8 +29,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm registry:check
-      - run: pnpm vitest run --exclude 'tests/pdf-viewer.test.tsx'
-      - run: node --expose-gc ./node_modules/vitest/vitest.mjs run tests/pdf-viewer.test.tsx --maxWorkers=1 --minWorkers=1 --no-file-parallelism
+      - run: pnpm vitest run
 
   sidebar-motion:
     name: Sidebar motion gates (chromium)

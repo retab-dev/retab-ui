@@ -288,19 +288,7 @@ function stubImageLoading(imageBitmap = bitmap()) {
 }
 
 function stubViewerLayout() {
-  // jsdom only provides a real 2d context when the optional node-canvas
-  // binding loads (true on macOS dev machines, not on CI Linux); without the
-  // stub, ctx.save() throws and the frame reports "Image decode failed".
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-    clearRect: vi.fn(),
-    drawImage: vi.fn(),
-    restore: vi.fn(),
-    rotate: vi.fn(),
-    save: vi.fn(),
-    scale: vi.fn(),
-    translate: vi.fn(),
-    imageSmoothingQuality: "low",
-  } as unknown as CanvasRenderingContext2D);
+  stubCanvasRenderingContext();
   if (!HTMLElement.prototype.getAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
       configurable: true,
@@ -334,6 +322,22 @@ function stubElementClientSize(width: number, height: number) {
   );
 }
 
+function stubCanvasRenderingContext() {
+  // jsdom only provides a real 2d context when the optional node-canvas
+  // binding loads (true on macOS dev machines, not on CI Linux); without the
+  // stub, ctx.save() throws and the frame reports "Image decode failed".
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    clearRect: vi.fn(),
+    drawImage: vi.fn(),
+    restore: vi.fn(),
+    rotate: vi.fn(),
+    save: vi.fn(),
+    scale: vi.fn(),
+    translate: vi.fn(),
+    imageSmoothingQuality: "low",
+  } as unknown as CanvasRenderingContext2D);
+}
+
 function stubObservableLayout({
   frameListWidth = 320,
   clientHeight = 240,
@@ -344,6 +348,7 @@ function stubObservableLayout({
   isIntersecting?: boolean;
 } = {}) {
   stubElementClientSize(frameListWidth, clientHeight);
+  stubCanvasRenderingContext();
   if (!HTMLElement.prototype.getAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
       configurable: true,
