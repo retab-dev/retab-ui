@@ -408,6 +408,13 @@ test.describe("FileViewer sidebar motion benchmark", () => {
         window,
         "__fileViewerSidebarBenchmarkTelemetry",
       ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      // Discarded warm-up run: the first cycle on a cold dev server pays
+      // module compilation and first-raster costs that read as main-thread
+      // long tasks. The asserted run measures the steady state.
+      await telemetry?.run({
+        actionOrder: "close-open",
+        scrollTargetId: "deep",
+      });
       return (
         (await telemetry?.run({
           actionOrder: "close-open",
