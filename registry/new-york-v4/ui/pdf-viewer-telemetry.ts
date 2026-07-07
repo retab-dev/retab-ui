@@ -35,6 +35,7 @@ type PdfViewerTelemetrySample = {
   canvasBitmapWidth: number | null;
   canvasCssHeight: number | null;
   canvasCssWidth: number | null;
+  canvasInkRatio: number | null;
   canvasPixelSignature: string | null;
   canvasRenderSource: string | null;
   canvasRenderStatus: string | null;
@@ -315,6 +316,7 @@ function readPdfViewerTelemetrySample({
     canvasBitmapWidth: primaryPage?.canvasBitmapWidth ?? null,
     canvasCssHeight: primaryPage?.canvasCssHeight ?? null,
     canvasCssWidth: primaryPage?.canvasCssWidth ?? null,
+    canvasInkRatio: primaryPage?.canvasInkRatio ?? null,
     canvasPixelSignature: primaryPage?.canvasPixelSignature ?? null,
     canvasRenderSource: primaryPage?.canvasRenderSource ?? null,
     canvasRenderStatus: primaryPage?.canvasRenderStatus ?? null,
@@ -405,6 +407,7 @@ type PdfViewerTelemetryPage = {
   canvasBitmapWidth: number | null;
   canvasCssHeight: number | null;
   canvasCssWidth: number | null;
+  canvasInkRatio: number | null;
   canvasPixelSignature: string | null;
   canvasRenderSource: string | null;
   canvasRenderStatus: string | null;
@@ -439,7 +442,7 @@ function readPdfViewerTelemetryPages({
         canvas instanceof HTMLCanvasElement ? canvas.height : null;
       const pixelSample =
         canvas instanceof HTMLCanvasElement
-          ? readPdfTelemetryCanvasPixelSignature(canvas)
+          ? readPdfTelemetryCanvasPixels(canvas)
           : null;
 
       return {
@@ -448,7 +451,8 @@ function readPdfViewerTelemetryPages({
         canvasBitmapWidth,
         canvasCssHeight: canvasRect?.height ?? null,
         canvasCssWidth: canvasRect?.width ?? null,
-        canvasPixelSignature: pixelSample,
+        canvasInkRatio: pixelSample?.inkRatio ?? null,
+        canvasPixelSignature: pixelSample?.signature ?? null,
         canvasRenderSource: canvas?.dataset.pdfRenderSource ?? null,
         canvasRenderStatus: canvas?.dataset.pdfRenderStatus ?? null,
         hasCanvasPixels:
@@ -489,48 +493,66 @@ function getPdfTelemetryPrimaryPage({
   );
 }
 
-function readPdfTelemetryCanvasPixelSignature(canvas: HTMLCanvasElement) {
-  if (canvas.width <= 0 || canvas.height <= 0) return null;
+// Downsample the page canvas to 8x8 with a GPU-side drawImage and do a single
+// 64-pixel readback: per-point getImageData forces one full GPU->CPU sync per
+// call and would inflate the main-thread work this telemetry measures. The
+// downsampled cells average their region, so any text or figure reads as
+// non-white ink while a wiped buffer reads fully blank — presence and status
+// attributes cannot distinguish those two.
+const PDF_TELEMETRY_CANVAS_PROBE_SIZE = 8;
+let pdfTelemetryCanvasProbe: {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+} | null = null;
 
+function getPdfTelemetryCanvasProbe() {
+  if (pdfTelemetryCanvasProbe) return pdfTelemetryCanvasProbe;
+  const canvas = document.createElement("canvas");
+  canvas.width = PDF_TELEMETRY_CANVAS_PROBE_SIZE;
+  canvas.height = PDF_TELEMETRY_CANVAS_PROBE_SIZE;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return null;
+  pdfTelemetryCanvasProbe = { canvas, context };
+  return pdfTelemetryCanvasProbe;
+}
 
-  const points = [
-    [0.25, 0.25],
-    [0.5, 0.25],
-    [0.75, 0.25],
-    [0.25, 0.5],
-    [0.5, 0.5],
-    [0.75, 0.5],
-    [0.25, 0.75],
-    [0.5, 0.75],
-    [0.75, 0.75],
-  ];
+function readPdfTelemetryCanvasPixels(canvas: HTMLCanvasElement) {
+  if (canvas.width <= 0 || canvas.height <= 0) return null;
+  const probe = getPdfTelemetryCanvasProbe();
+  if (!probe) return null;
+
+  const size = PDF_TELEMETRY_CANVAS_PROBE_SIZE;
   let hash = 2166136261;
+  let inkCount = 0;
 
   try {
-    for (const [xRatio, yRatio] of points) {
-      const x = clampPdfTelemetryNumber(
-        Math.round(canvas.width * xRatio),
-        0,
-        canvas.width - 1,
-      );
-      const y = clampPdfTelemetryNumber(
-        Math.round(canvas.height * yRatio),
-        0,
-        canvas.height - 1,
-      );
-      const data = context.getImageData(x, y, 1, 1).data;
-      for (const value of data) {
-        hash ^= value;
-        hash = Math.imul(hash, 16777619);
-      }
+    probe.context.clearRect(0, 0, size, size);
+    probe.context.drawImage(canvas, 0, 0, size, size);
+    const { data } = probe.context.getImageData(0, 0, size, size);
+    for (let index = 0; index < data.length; index += 4) {
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+      const alpha = data[index + 3];
+      const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+      if (alpha > 0 && luminance < 245) inkCount += 1;
+      hash ^= red;
+      hash = Math.imul(hash, 16777619);
+      hash ^= green;
+      hash = Math.imul(hash, 16777619);
+      hash ^= blue;
+      hash = Math.imul(hash, 16777619);
+      hash ^= alpha;
+      hash = Math.imul(hash, 16777619);
     }
   } catch {
     return null;
   }
 
-  return hash.toString(16);
+  return {
+    inkRatio: inkCount / (size * size),
+    signature: hash.toString(16),
+  };
 }
 
 function collectPdfViewerTelemetryMetrics(
@@ -738,6 +760,7 @@ function collectPdfTelemetryCanvasContinuityMetric(
 ): PdfViewerTelemetryMetric {
   let missingCanvasFrames = 0;
   let failedCanvasFrames = 0;
+  let whiteoutFrames = 0;
 
   for (const sample of getPdfTelemetryAllSamples(runs)) {
     if (
@@ -756,14 +779,38 @@ function collectPdfTelemetryCanvasContinuityMetric(
     }
   }
 
+  // A whiteout is the blink presence checks cannot see: the same primary page
+  // keeps a sized, "ready" canvas whose buffer momentarily holds zero ink —
+  // a resize wiped it before the redraw landed.
+  for (const run of runs) {
+    const samples = [run.before, ...run.samples, run.after];
+    for (let index = 1; index < samples.length; index += 1) {
+      const previous = samples[index - 1];
+      const current = samples[index];
+      if (
+        previous.primaryPageNumber != null &&
+        previous.primaryPageNumber === current.primaryPageNumber &&
+        previous.canvasInkRatio != null &&
+        previous.canvasInkRatio > 0 &&
+        current.canvasInkRatio === 0
+      ) {
+        whiteoutFrames += 1;
+      }
+    }
+  }
+
   return {
-    budget: "0 missing canvas frames, 0 failed/cancelled visible canvases",
+    budget:
+      "0 missing canvas frames, 0 failed/cancelled visible canvases, 0 whiteouts",
     detail:
-      "The primary visible page canvas must keep pixels while target raster work is pending.",
+      "The primary visible page canvas must keep pixels while target raster work is pending — including its buffer contents, which must never wipe to blank mid-motion.",
     id: "canvas-continuity",
     label: "Canvas continuity",
-    passed: missingCanvasFrames === 0 && failedCanvasFrames === 0,
-    value: `${missingCanvasFrames} missing / ${failedCanvasFrames} failed`,
+    passed:
+      missingCanvasFrames === 0 &&
+      failedCanvasFrames === 0 &&
+      whiteoutFrames === 0,
+    value: `${missingCanvasFrames} missing / ${failedCanvasFrames} failed / ${whiteoutFrames} whiteouts`,
   };
 }
 

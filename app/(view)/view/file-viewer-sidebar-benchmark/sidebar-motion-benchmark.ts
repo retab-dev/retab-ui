@@ -1,6 +1,8 @@
 export type SidebarMotionBenchmarkMetricId =
   | "overshoot"
   | "back-and-forth"
+  | "blink"
+  | "canvas-pixel-continuity"
   | "motion-samples"
   | "scroll-drift"
   | "scroll-events"
@@ -58,9 +60,18 @@ export type SidebarMotionBenchmarkResult = {
   status: "failed" | "passed";
 };
 
+type BenchmarkCanvasPixelSample = {
+  primaryId: string | null;
+  primaryInkRatio: number | null;
+  primarySignature: string | null;
+  visibleCanvasCount: number;
+  visibleInkedCanvasCount: number;
+};
+
 type BenchmarkSample = {
   activeElementRole: string;
   anchors: string[];
+  canvasPixels: BenchmarkCanvasPixelSample;
   clientHeight: number;
   clientWidth: number;
   documentHasFocus: boolean;
@@ -269,6 +280,8 @@ export async function runFileViewerSidebarMotionBenchmark(
   const metrics = [
     collectOvershootMetric(close, open),
     collectBackAndForthMetric(close, open),
+    collectBlinkMetric(close, open),
+    collectCanvasPixelContinuityMetric(close, open),
     collectMotionSamplesMetric(close, open),
     collectScrollDriftMetric(close, open),
     collectScrollEventsMetric(close, open),
@@ -735,6 +748,7 @@ function readSample(runtime: BenchmarkRuntime): BenchmarkSample {
   return {
     activeElementRole: readActiveElementRole(runtime, activeElement),
     anchors: rendererAnchors.map((anchor) => anchor.id),
+    canvasPixels: readCanvasPixelSample(runtime, scrollerRect),
     clientHeight: scroller?.clientHeight ?? 0,
     clientWidth: scroller?.clientWidth ?? 0,
     documentHasFocus: document.hasFocus(),
@@ -758,6 +772,136 @@ function readSample(runtime: BenchmarkRuntime): BenchmarkSample {
     visualTop: visualRect?.top ?? null,
     visualWidth: visualWidthClamped,
     windowScrollY: window.scrollY,
+  };
+}
+
+// Mirror of the simple-pdf-file-viewer's pixel instrumentation: presence and
+// data-attribute checks cannot see a canvas that is mounted and "ready" but
+// momentarily cleared (a resize reassigns width/height, wiping the buffer
+// before the redraw lands) — the whiteout the reader perceives as a blink.
+// Reading the backing buffer is the only signal that catches it; CSS
+// transforms do not affect it, so mid-slide scaling never false-positives.
+// Sampling cost matters: per-point getImageData on the renderer's canvas
+// forces a full GPU→CPU readback per call and inflates the very main-thread
+// metric this benchmark scores. Instead, downsample the canvas to 8x8 with a
+// GPU-side drawImage into a shared probe canvas, then do ONE 64-pixel
+// readback per canvas. Downsampled cells average their region, so a text
+// region reads as gray (< 245 luminance) and a wiped buffer reads blank.
+const BENCHMARK_CANVAS_PROBE_SIZE = 8;
+let benchmarkCanvasProbe: {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+} | null = null;
+
+function getBenchmarkCanvasProbe() {
+  if (benchmarkCanvasProbe) return benchmarkCanvasProbe;
+  const canvas = document.createElement("canvas");
+  canvas.width = BENCHMARK_CANVAS_PROBE_SIZE;
+  canvas.height = BENCHMARK_CANVAS_PROBE_SIZE;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+  benchmarkCanvasProbe = { canvas, context };
+  return benchmarkCanvasProbe;
+}
+
+function readBenchmarkCanvasInk(canvas: HTMLCanvasElement) {
+  if (canvas.width <= 0 || canvas.height <= 0) return null;
+  const probe = getBenchmarkCanvasProbe();
+  if (!probe) return null;
+
+  let hash = 2166136261;
+  let inkCount = 0;
+  const size = BENCHMARK_CANVAS_PROBE_SIZE;
+  try {
+    probe.context.clearRect(0, 0, size, size);
+    probe.context.drawImage(canvas, 0, 0, size, size);
+    const { data } = probe.context.getImageData(0, 0, size, size);
+    for (let index = 0; index < data.length; index += 4) {
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+      const alpha = data[index + 3];
+      const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+      if (alpha > 0 && luminance < 245) inkCount += 1;
+      hash ^= red;
+      hash = Math.imul(hash, 16777619);
+      hash ^= green;
+      hash = Math.imul(hash, 16777619);
+      hash ^= blue;
+      hash = Math.imul(hash, 16777619);
+      hash ^= alpha;
+      hash = Math.imul(hash, 16777619);
+    }
+  } catch {
+    return null;
+  }
+
+  return {
+    inkRatio: inkCount / (size * size),
+    signature: hash.toString(16),
+  };
+}
+
+function readBenchmarkCanvasIdentity(canvas: HTMLCanvasElement) {
+  const keyed = canvas.closest<HTMLElement>(
+    "[data-page], [data-page-number], [data-slide-number], [data-frame-number]",
+  );
+  if (!keyed) return null;
+  return (
+    keyed.dataset.page ??
+    keyed.dataset.pageNumber ??
+    keyed.dataset.slideNumber ??
+    keyed.dataset.frameNumber ??
+    null
+  );
+}
+
+function readCanvasPixelSample(
+  runtime: BenchmarkRuntime,
+  scrollerRect: DOMRect | null,
+): BenchmarkCanvasPixelSample {
+  const canvases = [
+    ...runtime.frame.querySelectorAll<HTMLCanvasElement>("canvas"),
+  ].filter((canvas) => {
+    if (!scrollerRect) return true;
+    const rect = canvas.getBoundingClientRect();
+    return (
+      rect.width > 1 &&
+      rect.height > 1 &&
+      rect.bottom > scrollerRect.top + 1 &&
+      rect.top < scrollerRect.bottom - 1
+    );
+  });
+
+  let visibleInkedCanvasCount = 0;
+  let primaryCanvas: HTMLCanvasElement | null = null;
+  let primaryInk: ReturnType<typeof readBenchmarkCanvasInk> = null;
+  const markerY = scrollerRect
+    ? scrollerRect.top + scrollerRect.height * 0.2
+    : null;
+
+  for (const canvas of canvases) {
+    const ink = readBenchmarkCanvasInk(canvas);
+    if (ink && ink.inkRatio > 0) visibleInkedCanvasCount += 1;
+    if (markerY != null && !primaryCanvas) {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.top <= markerY && rect.bottom >= markerY) {
+        primaryCanvas = canvas;
+        primaryInk = ink;
+      }
+    }
+  }
+  if (!primaryCanvas && canvases.length > 0) {
+    primaryCanvas = canvases[0];
+    primaryInk = readBenchmarkCanvasInk(primaryCanvas);
+  }
+
+  return {
+    primaryId: primaryCanvas ? readBenchmarkCanvasIdentity(primaryCanvas) : null,
+    primaryInkRatio: primaryInk?.inkRatio ?? null,
+    primarySignature: primaryInk?.signature ?? null,
+    visibleCanvasCount: canvases.length,
+    visibleInkedCanvasCount,
   };
 }
 
@@ -792,6 +936,70 @@ function collectOvershootMetric(
     budget: "<= 1.50px",
     detail:
       "Sidebar gap and document frame stay inside their start/end bounds.",
+  };
+}
+
+function blinkFrameCount(run: BenchmarkMotionRun) {
+  return [...run.samples, run.after].filter(
+    (sample) =>
+      sample.canvasPixels.visibleCanvasCount > 0 &&
+      sample.canvasPixels.visibleInkedCanvasCount === 0 &&
+      run.before.canvasPixels.visibleInkedCanvasCount > 0,
+  ).length;
+}
+
+function collectBlinkMetric(
+  close: BenchmarkMotionRun,
+  open: BenchmarkMotionRun,
+): SidebarMotionBenchmarkMetric {
+  const blinkFrames = blinkFrameCount(close) + blinkFrameCount(open);
+
+  return {
+    id: "blink",
+    label: "Blink",
+    passed: blinkFrames === 0,
+    value: `${blinkFrames} frames`,
+    budget: "0 blink frames",
+    detail:
+      "A blink frame has visible canvases but not one holds a single inked pixel — the buffer-cleared whiteout presence checks cannot see. Scoped to canvas-backed formats.",
+  };
+}
+
+function primaryWhiteoutCount(run: BenchmarkMotionRun) {
+  const samples = [run.before, ...run.samples, run.after];
+  let whiteouts = 0;
+
+  for (let index = 1; index < samples.length; index += 1) {
+    const previous = samples[index - 1].canvasPixels;
+    const current = samples[index].canvasPixels;
+    if (
+      previous.primaryId != null &&
+      previous.primaryId === current.primaryId &&
+      previous.primaryInkRatio != null &&
+      previous.primaryInkRatio > 0 &&
+      current.primaryInkRatio === 0
+    ) {
+      whiteouts += 1;
+    }
+  }
+
+  return whiteouts;
+}
+
+function collectCanvasPixelContinuityMetric(
+  close: BenchmarkMotionRun,
+  open: BenchmarkMotionRun,
+): SidebarMotionBenchmarkMetric {
+  const whiteouts = primaryWhiteoutCount(close) + primaryWhiteoutCount(open);
+
+  return {
+    id: "canvas-pixel-continuity",
+    label: "Canvas pixels",
+    passed: whiteouts === 0,
+    value: `${whiteouts} whiteouts`,
+    budget: "0 whiteouts",
+    detail:
+      "The reading-marker canvas never goes from inked to fully blank while it stays the same page — a re-raster must land pixels before the old ones are wiped.",
   };
 }
 

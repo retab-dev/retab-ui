@@ -380,7 +380,7 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       "data-benchmark-run-scroll-target",
       "page-4-gap",
     );
-    await expect(page.locator("[data-benchmark-metric]")).toHaveCount(18);
+    await expect(page.locator("[data-benchmark-metric]")).toHaveCount(20);
   });
 
   test("telemetry runtime exposes full active benchmark result", async ({
@@ -420,7 +420,7 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     expect(result?.format).toBe("tiff");
     expect(result?.status).toBe("passed");
     expect(result?.sampledFrameCount).toBeGreaterThan(80);
-    expect(result?.metrics).toHaveLength(18);
+    expect(result?.metrics).toHaveLength(20);
     expect(result?.runs?.close.samples.length).toBeGreaterThan(20);
     expect(result?.runs?.open.samples.length).toBeGreaterThan(20);
     expect(result?.runs?.rapidToggle.samples.length).toBeGreaterThan(20);
