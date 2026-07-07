@@ -386,7 +386,8 @@ test.describe("FileViewer sidebar motion benchmark", () => {
   test("telemetry runtime exposes full active benchmark result", async ({
     page,
   }) => {
-    test.setTimeout(90_000);
+    // Two full benchmark cycles (discarded warm-up + asserted run).
+    test.setTimeout(180_000);
     const telemetryConsoleMessages: string[] = [];
     page.on("console", (message) => {
       const text = message.text();

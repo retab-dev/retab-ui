@@ -658,6 +658,19 @@ function stubObservableLayout(frameListWidth: number) {
     frameListWidth,
   );
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(240);
+  // jsdom only provides a real 2d context when the optional node-canvas
+  // binding loads (true on macOS dev machines, not on CI Linux); without the
+  // stub, ctx.save() throws and the frame reports "Image decode failed".
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    clearRect: vi.fn(),
+    drawImage: vi.fn(),
+    restore: vi.fn(),
+    rotate: vi.fn(),
+    save: vi.fn(),
+    scale: vi.fn(),
+    translate: vi.fn(),
+    imageSmoothingQuality: "low",
+  } as unknown as CanvasRenderingContext2D);
   if (!HTMLElement.prototype.getAnimations) {
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
       configurable: true,
