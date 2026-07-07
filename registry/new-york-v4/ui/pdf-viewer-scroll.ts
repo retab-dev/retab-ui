@@ -177,6 +177,62 @@ export function getPdfReadingMarkerBlockOffset({
   return (safeScrollTop - settledScrollTop) / (1 - settleScale);
 }
 
+// Fraction of the reading-anchor rebase the scroll can actually absorb: 1 when
+// the settle scroll target lands unclamped (interior of the document), tapering
+// to 0 as the target clamps at the document extremes (a page pinned at the
+// bottom cannot rebase further). The vertical fit-width growth compensation is
+// scaled by this so it is full-strength in the interior and exactly 0 at the
+// clamped bottom, where projecting page slots upward would otherwise create a
+// visible bottom-edge clamp.
+export function getPdfSettleRebaseFraction({
+  scrollTop,
+  settleScale,
+  totalBlockSize,
+  viewportHeight,
+}: {
+  scrollTop: number;
+  settleScale?: number | null;
+  totalBlockSize?: number;
+  viewportHeight: number;
+}) {
+  const safeScrollTop = Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0;
+  const safeViewportHeight = Number.isFinite(viewportHeight)
+    ? Math.max(0, viewportHeight)
+    : 0;
+
+  if (
+    settleScale == null ||
+    !Number.isFinite(settleScale) ||
+    settleScale <= 0 ||
+    Math.abs(1 - settleScale) <= 0.001
+  ) {
+    return 1;
+  }
+
+  const markerOffset =
+    safeScrollTop + safeViewportHeight * PDF_READING_MARKER_RATIO;
+  const unclampedTarget =
+    markerOffset * settleScale - safeViewportHeight * PDF_READING_MARKER_RATIO;
+  const unclampedDelta = unclampedTarget - safeScrollTop;
+  if (Math.abs(unclampedDelta) <= 0.001) return 1;
+
+  // Page-slot projection lifts visible pages around the reading marker. The
+  // scroll can only accommodate that lift up to the slack between the current
+  // scroll position and the current frozen bottom, so bound the effective
+  // rebase by that slack: interior positions have ample slack (fraction -> 1),
+  // the bottom has none (fraction -> 0).
+  const frozenMaxScrollTop =
+    totalBlockSize != null && Number.isFinite(totalBlockSize)
+      ? Math.max(0, totalBlockSize - safeViewportHeight)
+      : Number.POSITIVE_INFINITY;
+  const availableSlack = Math.max(0, frozenMaxScrollTop - safeScrollTop);
+  if (unclampedDelta <= 0) {
+    // Reading line rebases upward (never toward the bottom) — no clamp risk.
+    return 1;
+  }
+  return clamp(availableSlack / unclampedDelta, 0, 1);
+}
+
 export function usePdfScroll({
   isLayoutTransitioning = false,
   pageCount,
@@ -304,12 +360,14 @@ export function usePdfScroll({
   });
 
   const handleScroll = React.useCallback(() => {
-    documentScroll.handleScroll();
+    const result = documentScroll.handleScroll();
+    if (result.source === "internal") return result;
 
-    if (scrollFrameRef.current) return;
+    if (scrollFrameRef.current) return result;
     scrollFrameRef.current = requestAnimationFrame(() =>
       measureScrollRef.current(),
     );
+    return result;
   }, [documentScroll]);
 
   useKeyedMountEffect(joinEffectKey([resetCurrentPage]), () => {

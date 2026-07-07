@@ -19,6 +19,7 @@ import {
   useOptionalFileViewerRendererEnvironment,
   useOptionalFileViewerRendererFrame,
 } from "./file-viewer-renderer-frame";
+import { useReadingFractionRebase } from "./use-reading-fraction-rebase";
 import { PptxViewerFallback } from "./pptx-viewer-fallback";
 import { useRetainedPptxSource } from "./pptx-viewer-hooks";
 import { preloadPptxRenderer } from "./pptx-viewer-renderer";
@@ -172,6 +173,13 @@ function PptxViewerContent({
       onScrollProgressChange,
       onVisibleSlideChange,
     });
+  // Preserve the reading position when the slide surface re-fits to a new width
+  // (the sidebar toggle). The fit-driven zoom scale is the layout key.
+  const { captureReadingFraction } = useReadingFractionRebase({
+    scrollerRef: scrollViewportRef,
+    layoutKey: zoomScale,
+    enabled: usesShellGeometry,
+  });
   const scrollInteractionRestoreRef = React.useRef<number | null>(null);
   const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
   const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
@@ -207,10 +215,21 @@ function PptxViewerContent({
   });
 
   const handleViewportScroll = React.useCallback(() => {
+    captureReadingFraction();
     scrollActivity.handleScroll();
     suspendScrollInteractions();
     handleScroll();
-  }, [handleScroll, scrollActivity, suspendScrollInteractions]);
+  }, [
+    captureReadingFraction,
+    handleScroll,
+    scrollActivity,
+    suspendScrollInteractions,
+  ]);
+  // Held through the whole motion (slide AND settle): the scroll rebase that
+  // realigns the reader to the re-fit width runs during "settling", so the live
+  // window is briefly derived from a not-yet-rebased scroll position. The union
+  // in the scroller keeps the pre-motion slides mounted until the motion idles.
+  const isDocumentTransitioning = rendererFrame.phase !== "idle";
   const measureBeforeLayoutMotionRef = React.useRef(handleScroll);
   measureBeforeLayoutMotionRef.current = handleScroll;
   const handleBeforeLayoutMotion = React.useCallback(() => {
@@ -294,6 +313,7 @@ function PptxViewerContent({
               containerRef={containerRef}
               viewportRef={scrollViewportRef}
               getScrollMetrics={getScrollMetrics}
+              isTransitioning={isDocumentTransitioning}
               onScroll={handleViewportScroll}
             />
           </div>

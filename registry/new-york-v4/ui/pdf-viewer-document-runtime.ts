@@ -7,11 +7,16 @@ import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
-import { getPdfPhysicalScrollHeight } from "./pdf-viewer-layout";
+import {
+  getPdfPageLayout,
+  getPdfPhysicalScrollHeight,
+} from "./pdf-viewer-layout";
 import type { PdfDocumentLayoutState } from "./pdf-viewer-document-layout";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
 import type { PdfDocumentPagesLayerProps } from "./pdf-viewer-pages-layer";
-import { PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY } from "./pdf-viewer-motion-contract";
+import {
+  PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY,
+} from "./pdf-viewer-motion-contract";
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
 import {
@@ -19,7 +24,8 @@ import {
   usePdfPageRenderScheduler,
 } from "./pdf-viewer-render-scheduler";
 import {
-  getPdfReadingMarkerBlockOffset,
+  getPdfSettleRebaseFraction,
+  PDF_READING_MARKER_RATIO,
   usePdfScroll,
 } from "./pdf-viewer-scroll";
 import type {
@@ -81,8 +87,12 @@ export function usePdfDocumentRuntime({
     isSliding: false,
     settleScale: null as number | null,
     totalBlockSize: 0,
+    // Logical offset of the render window's first page; page-slot projection
+    // grows from this origin during shell motion.
+    renderWindowTop: 0,
   });
   anchorGeometryRef.current = {
+    ...anchorGeometryRef.current,
     isSliding: layout.rendererFrame.isTransitioning,
     settleScale:
       layout.rendererFrame.fromInlineSize != null &&
@@ -99,16 +109,35 @@ export function usePdfDocumentRuntime({
 
     const metrics = getScrollMetrics();
     const anchorGeometry = anchorGeometryRef.current;
+    // Vertical growth compensation lever arm. The reading page grows from the
+    // render window top, so its raw drift scales with `readingBlock − windowTop`
+    // (windowReadingOffset). But the settle scroll rebase only absorbs that
+    // drift to the extent the scroll can actually move: near the document
+    // bottom the rebase CLAMPS (scrollTop is pinned at max), so the surface must
+    // NOT translate — a nonzero translateY there shrinks the scroller's
+    // scrollHeight every frame and, with scrollTop pinned, fires native
+    // scroll-clamp events. Scale the lever arm by the clamped/unclamped rebase
+    // ratio: deep → 1 (full compensation, unchanged), true bottom → 0 (exactly
+    // no translate, no scrollHeight perturbation).
+    const readingBlock =
+      Math.max(0, metrics.scrollTop) +
+      Math.max(0, metrics.viewportHeight) * PDF_READING_MARKER_RATIO;
+    const rawWindowReadingOffset = Math.max(
+      0,
+      readingBlock - anchorGeometry.renderWindowTop,
+    );
+    const rebaseFraction = getPdfSettleRebaseFraction({
+      scrollTop: metrics.scrollTop,
+      settleScale: anchorGeometry.isSliding
+        ? anchorGeometry.settleScale
+        : null,
+      totalBlockSize: anchorGeometry.totalBlockSize,
+      viewportHeight: metrics.viewportHeight,
+    });
+    const windowReadingOffset = rawWindowReadingOffset * rebaseFraction;
     documentSurfaceElement.style.setProperty(
-      PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY,
-      `${getPdfReadingMarkerBlockOffset({
-        scrollTop: metrics.scrollTop,
-        settleScale: anchorGeometry.isSliding
-          ? anchorGeometry.settleScale
-          : null,
-        totalBlockSize: anchorGeometry.totalBlockSize,
-        viewportHeight: metrics.viewportHeight,
-      })}px`,
+      PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY,
+      `${windowReadingOffset}px`,
     );
   }, [getScrollMetrics]);
   const measureBeforeLayoutMotion = React.useCallback(() => {
@@ -152,6 +181,14 @@ export function usePdfDocumentRuntime({
     resetKey: document,
     transition: layout.transition,
     viewportElement,
+  });
+  // Page slots scale from the top of the contiguous rendered block around the
+  // reading position. Anchor compensation to that block's first page, ignoring
+  // far-away preload pages that also live in renderPageNumbers.
+  anchorGeometryRef.current.renderWindowTop = getPdfContiguousRenderWindowTop({
+    layout: layout.pageLayout,
+    renderPageNumbers,
+    visiblePageNumbers,
   });
   const renderedPageCache = usePdfRenderedPageCache(document);
   const shouldUseRenderedPageCache =
@@ -234,7 +271,8 @@ export function usePdfDocumentRuntime({
 
   const handleViewportScroll = React.useCallback(() => {
     suspendScrollInteractions();
-    handleScroll();
+    const result = handleScroll();
+    if (result?.source === "internal") return;
     writeDocumentAnchorBlockOffset();
     measureVisiblePages();
   }, [
@@ -287,6 +325,26 @@ export function usePdfDocumentRuntime({
     },
     setViewportElement,
   };
+}
+
+function getPdfContiguousRenderWindowTop({
+  layout,
+  renderPageNumbers,
+  visiblePageNumbers,
+}: {
+  layout: PdfDocumentLayoutState["pageLayout"];
+  renderPageNumbers: readonly number[];
+  visiblePageNumbers: readonly number[];
+}): number {
+  if (renderPageNumbers.length === 0) return 0;
+  const rendered = new Set(renderPageNumbers);
+  const anchor =
+    visiblePageNumbers.length > 0
+      ? Math.min(...visiblePageNumbers)
+      : Math.min(...renderPageNumbers);
+  let firstPage = anchor;
+  while (rendered.has(firstPage - 1)) firstPage -= 1;
+  return getPdfPageLayout(layout, firstPage)?.offsetTop ?? 0;
 }
 
 function usePdfScrollInteractionSuspension(

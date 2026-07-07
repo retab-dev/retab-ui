@@ -31,7 +31,6 @@ import {
 import type { PdfPageSize } from "./pdf-viewer-types";
 import type { ViewerDocumentTransition } from "./viewer-types";
 import {
-  PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY,
   PDF_DOCUMENT_MOTION_SCALE_PROPERTY,
 } from "./pdf-viewer-motion-contract";
 
@@ -212,7 +211,7 @@ function createPdfSurfaceMotionStyleResolver({
         [PDF_DOCUMENT_MOTION_SCALE_PROPERTY]: motionStyle.scale,
       },
       transform: motionStyle.transform,
-      transformOrigin: `0px var(${PDF_DOCUMENT_ANCHOR_BLOCK_PROPERTY}, 0px)`,
+      transformOrigin: "0px 0px",
       willChange: frame.phase === "sliding" ? "transform" : "",
     };
   };

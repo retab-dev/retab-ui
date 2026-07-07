@@ -468,33 +468,48 @@ export function getCurrentImageFrameNumber({
 }
 
 export function useImageFrameVirtualization({
+  freezeWindow = false,
   getScrollMetrics,
   layout,
   resetKey,
+  sourceResetKey,
   viewportElement,
 }: {
+  freezeWindow?: boolean;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
   layout: ImageFrameLayoutModel;
   resetKey?: unknown;
+  // Identity of the underlying source. `resetKey` changes on every re-fit
+  // (scale), but only a `sourceResetKey` change is a genuine new document that
+  // should snap the window back to the top; a re-fit preserves the reading
+  // position, so its window is re-derived from the live scroll instead.
+  sourceResetKey?: unknown;
   viewportElement: HTMLDivElement | null;
 }) {
+  const resolvedSourceResetKey =
+    sourceResetKey === undefined ? resetKey : sourceResetKey;
   const measureFrameRef = React.useRef(0);
   const hasMeasuredScrollRef = React.useRef(false);
-  const lastMeasuredResetKeyRef = React.useRef<unknown>(resetKey);
+  const lastMeasuredSourceResetKeyRef = React.useRef<unknown>(
+    resolvedSourceResetKey,
+  );
   const lastMeasuredScrollTopRef = React.useRef(0);
   const getCurrentScrollMetrics =
     React.useCallback((): ImageFrameVirtualizationScrollMetrics => {
-      return Object.is(lastMeasuredResetKeyRef.current, resetKey) &&
-        getScrollMetrics
-        ? getScrollMetrics()
-        : {
-            scrollPageOffset: 0,
-            scrollTop: Object.is(lastMeasuredResetKeyRef.current, resetKey)
-              ? (viewportElement?.scrollTop ?? 0)
-              : 0,
-            viewportHeight: viewportElement?.clientHeight ?? 0,
-          };
-    }, [getScrollMetrics, resetKey, viewportElement]);
+      const sourceMatches = Object.is(
+        lastMeasuredSourceResetKeyRef.current,
+        resolvedSourceResetKey,
+      );
+      const metrics =
+        sourceMatches && getScrollMetrics
+          ? getScrollMetrics()
+          : {
+              scrollPageOffset: 0,
+              scrollTop: sourceMatches ? (viewportElement?.scrollTop ?? 0) : 0,
+              viewportHeight: viewportElement?.clientHeight ?? 0,
+            };
+      return reconcileImageScrollMetricsWithViewport(metrics, viewportElement);
+    }, [getScrollMetrics, resolvedSourceResetKey, viewportElement]);
   const getFrameWindow = React.useCallback(
     (
       metrics: ImageFrameVirtualizationScrollMetrics,
@@ -552,32 +567,50 @@ export function useImageFrameVirtualization({
   const [state, setState] = React.useState<{
     layout: ImageFrameLayoutModel;
     resetKey: unknown;
+    sourceResetKey: unknown;
     frameWindow: ImageFrameWindow;
   }>(() => ({
     layout,
     resetKey,
+    sourceResetKey: resolvedSourceResetKey,
     frameWindow: getCurrentVisibleFrameNumbers(),
   }));
   const frameWindow =
-    Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey)
+    // While frozen (sidebar transition), keep the last committed window even
+    // when the re-fit changes the layout/resetKey, so the same reading frames
+    // stay mounted through the slide and settle rather than re-deriving from
+    // the transient top-of-document scroll position.
+    freezeWindow ||
+    (Object.is(state.layout, layout) && Object.is(state.resetKey, resetKey))
       ? state.frameWindow
-      : Object.is(state.resetKey, resetKey)
+      : // Snap to the top only for a genuine new document; a re-fit (same
+        // source, changed layout) preserves the reading position, so re-derive
+        // its window from the live scroll rather than resetting to the top.
+        Object.is(state.sourceResetKey, resolvedSourceResetKey)
         ? getCurrentVisibleFrameNumbers()
         : getResetFrameWindow();
 
   const measureVisibleFramesNow = React.useCallback(() => {
     measureFrameRef.current = 0;
+    // While the sidebar slide freezes the layout, the scroll container reports
+    // a transient top-of-document position, so re-deriving the visible-frame
+    // window here would window to the top and rebase the reading frame at
+    // settle. Hold the pre-slide window until the transition is idle again.
+    if (freezeWindow) return;
     const metrics = getCurrentScrollMetrics();
     const fitPerfectly = shouldFitImagePerfectly({
       canFitPerfectly:
         hasMeasuredScrollRef.current &&
-        Object.is(lastMeasuredResetKeyRef.current, resetKey),
+        Object.is(
+          lastMeasuredSourceResetKeyRef.current,
+          resolvedSourceResetKey,
+        ),
       previousScrollTop: lastMeasuredScrollTopRef.current,
       scrollTop: metrics.scrollTop,
       viewportHeight: metrics.viewportHeight,
     });
     const nextFrameWindow = getFrameWindow(metrics, fitPerfectly);
-    lastMeasuredResetKeyRef.current = resetKey;
+    lastMeasuredSourceResetKeyRef.current = resolvedSourceResetKey;
     lastMeasuredScrollTopRef.current = metrics.scrollTop;
     hasMeasuredScrollRef.current = true;
     setState((previousState) =>
@@ -585,14 +618,26 @@ export function useImageFrameVirtualization({
       Object.is(previousState.resetKey, resetKey) &&
       areFrameWindowsEqual(previousState.frameWindow, nextFrameWindow)
         ? previousState
-        : { layout, resetKey, frameWindow: nextFrameWindow },
+        : {
+            layout,
+            resetKey,
+            sourceResetKey: resolvedSourceResetKey,
+            frameWindow: nextFrameWindow,
+          },
     );
     if (fitPerfectly && measureFrameRef.current === 0) {
       measureFrameRef.current = requestAnimationFrame(() =>
         measureVisibleFramesNowRef.current(),
       );
     }
-  }, [getCurrentScrollMetrics, getFrameWindow, layout, resetKey]);
+  }, [
+    freezeWindow,
+    getCurrentScrollMetrics,
+    getFrameWindow,
+    layout,
+    resetKey,
+    resolvedSourceResetKey,
+  ]);
   const measureVisibleFramesNowRef = React.useRef(measureVisibleFramesNow);
   useKeyedLayoutEffect(joinEffectKey([measureVisibleFramesNow]), () => {
     measureVisibleFramesNowRef.current = measureVisibleFramesNow;
@@ -616,6 +661,21 @@ export function useImageFrameVirtualization({
     },
   );
 
+  // When the sidebar transition finishes and the freeze lifts, the reading
+  // position has just been rebased by a settle scroll that may not have landed
+  // in the same commit as this idle edge. Schedule a deferred re-measure so the
+  // held window collapses back to the clean live window off the settled scroll;
+  // without this the post-cycle mounted-frame set can differ from the pre-cycle
+  // set (cycle-invariance "changed").
+  const wasFrozenRef = React.useRef(freezeWindow);
+  useKeyedLayoutEffect(joinEffectKey(["image-freeze-edge", freezeWindow]), () => {
+    const wasFrozen = wasFrozenRef.current;
+    wasFrozenRef.current = freezeWindow;
+    if (wasFrozen && !freezeWindow) {
+      measureVisibleFrames();
+    }
+  });
+
   useMountEffect(() => {
     return () => {
       if (measureFrameRef.current) {
@@ -631,6 +691,24 @@ export function useImageFrameVirtualization({
     preloadFrameNumbers: frameWindow.preloadFrameNumbers,
     measureVisibleFrames,
   };
+}
+
+// On the cold path the document scroll model can momentarily report a
+// top-of-document scrollTop while the viewport is actually scrolled deep, which
+// would clobber the reading-frame window with the top window and then sit there
+// (a stable-but-wrong state the benchmark's stability wait accepts). When the
+// scroll is not page-rebased (no page offset) the logical scrollTop must equal
+// the live DOM scrollTop, so trust the viewport if the metrics disagree at top.
+function reconcileImageScrollMetricsWithViewport(
+  metrics: ImageFrameVirtualizationScrollMetrics,
+  viewportElement: HTMLDivElement | null,
+): ImageFrameVirtualizationScrollMetrics {
+  if (!viewportElement || metrics.scrollPageOffset !== 0) return metrics;
+  const domScrollTop = viewportElement.scrollTop;
+  if (domScrollTop > metrics.scrollTop + 1) {
+    return { ...metrics, scrollTop: domScrollTop };
+  }
+  return metrics;
 }
 
 function getImageFrameNumbersInRange({

@@ -67,6 +67,7 @@ export interface ImageFrameScrollerProps {
   rotation: QuarterTurn;
   frameListRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
+  freezeVisibleFrameWindow?: boolean;
   viewportRef: React.Ref<HTMLDivElement>;
   onScroll: () => void;
   renderFrameOverlay?: ImageViewerProps["renderFrameOverlay"];
@@ -252,6 +253,7 @@ export function ImageFrameScroller({
   rotation,
   frameListRef,
   getScrollMetrics,
+  freezeVisibleFrameWindow = false,
   viewportRef,
   onScroll,
   renderFrameOverlay,
@@ -288,9 +290,11 @@ export function ImageFrameScroller({
     preloadFrameNumbers,
     measureVisibleFrames,
   } = useImageFrameVirtualization({
+    freezeWindow: freezeVisibleFrameWindow,
     getScrollMetrics,
     layout,
     resetKey: layoutResetKey,
+    sourceResetKey: projectionResetKey,
     viewportElement,
   });
   const viewportHeight = viewportElement?.clientHeight ?? 0;

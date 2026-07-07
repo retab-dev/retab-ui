@@ -355,12 +355,16 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
       return;
     }
 
+    // Default (no motion resolver): identity. A surface that has no resolver is
+    // one whose layout already tracks the live animating frame width (docx,
+    // pptx, markdown, image) — it re-fits smoothly on its own, so applying the
+    // `fallbackSurfaceScale` FLIP on top would double-count and overshoot the
+    // target, then snap back at settle. Renderers whose content is a FIXED
+    // raster that cannot re-fit live (PDF) register their own FLIP resolver.
     writeDocumentSurfaceCustomProperties(element, null);
-    const isSliding = nextFrame.phase === "sliding";
-    const isScaled = Math.abs(nextFrame.fallbackSurfaceScale - 1) > 0.001;
-    element.style.transform =
-      isSliding || isScaled ? `scale(${nextFrame.fallbackSurfaceScale})` : "";
-    element.style.willChange = isSliding ? "transform" : "";
+    element.style.transform = "";
+    element.style.transformOrigin = "";
+    element.style.willChange = "";
   }
 
   function writeDocumentSurfaceCustomProperties(

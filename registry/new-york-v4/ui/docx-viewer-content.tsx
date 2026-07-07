@@ -9,10 +9,6 @@ import { isAbortError, isResourceError } from "@/lib/viewer-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
-import type {
-  FileViewerDocumentSurfaceMotionResolver,
-  FileViewerDocumentSurfaceMotionStyle,
-} from "./file-viewer-motion-kernel";
 import {
   resolveFileViewerRendererLayoutInlineSize,
   type FileViewerDocumentAlign,
@@ -173,11 +169,9 @@ export function DocxViewerContent({
   const handleBeforeLayoutMotion = React.useCallback(() => {
     measureBeforeLayoutMotionRef.current();
   }, []);
-  const resolveSurfaceMotionStyle =
-    React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
-      () => createDocxSurfaceMotionStyleResolver(rendererFrame.align),
-      [rendererFrame.align],
-    );
+  // The docx surface re-fits by tracking the live animating frame width, so it
+  // needs no motion resolver — the kernel's identity default is correct (a FLIP
+  // scale on top would double-count the width change and overshoot).
   const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
   const setHostElement = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -191,20 +185,13 @@ export function DocxViewerContent({
       surfaceCleanupRef.current = null;
       hostRef.current = element;
       if (!element) return;
-      surfaceCleanupRef.current = registerDocumentSurface({
-        element,
-        resolveMotionStyle: resolveSurfaceMotionStyle,
-      });
+      surfaceCleanupRef.current = registerDocumentSurface({ element });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
     },
-    [
-      handleBeforeLayoutMotion,
-      registerDocumentSurface,
-      resolveSurfaceMotionStyle,
-    ],
+    [handleBeforeLayoutMotion, registerDocumentSurface],
   );
 
   useKeyedMountEffect(
@@ -453,31 +440,6 @@ function getDocxDocumentTransformOrigin(align: FileViewerDocumentAlign) {
     case "start":
       return "left top";
   }
-}
-
-function createDocxSurfaceMotionStyleResolver(
-  align: FileViewerDocumentAlign,
-): FileViewerDocumentSurfaceMotionResolver {
-  return (frame): FileViewerDocumentSurfaceMotionStyle => {
-    const transformOrigin = getDocxDocumentTransformOrigin(align);
-    const shouldScale =
-      frame.phase === "sliding" &&
-      Math.abs(frame.fallbackSurfaceScale - 1) > 0.001;
-
-    return {
-      transform: shouldScale
-        ? `scaleX(${formatDocxMotionScale(frame.fallbackSurfaceScale)})`
-        : "",
-      transformOrigin,
-      willChange: frame.phase === "sliding" ? "transform" : "",
-    };
-  };
-}
-
-function formatDocxMotionScale(value: number) {
-  if (!Number.isFinite(value)) return "1";
-  const rounded = Number(value.toFixed(6));
-  return Object.is(rounded, -0) ? "0" : String(rounded);
 }
 
 function useDocxControlsRegistration({

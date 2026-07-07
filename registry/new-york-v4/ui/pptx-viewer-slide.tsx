@@ -21,6 +21,7 @@ import {
   createPptxSlideLayout,
   getPptxRenderedSlideWindow,
   getPptxRenderSlides,
+  getPptxSlideTop,
   readPptxScrollMetrics,
   PPTX_RENDER_WINDOW_OVERSCAN_PX,
   type PptxSlideLayout,
@@ -50,6 +51,7 @@ export interface PptxSlideScrollerProps {
   containerRef: React.Ref<HTMLDivElement>;
   viewportRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => PptxScrollMetrics;
+  isTransitioning?: boolean;
   onScroll: () => void;
 }
 
@@ -65,6 +67,7 @@ export function PptxSlideScroller({
   containerRef,
   viewportRef,
   getScrollMetrics,
+  isTransitioning = false,
   onScroll,
 }: PptxSlideScrollerProps) {
   const layout = React.useMemo(
@@ -93,6 +96,8 @@ export function PptxSlideScroller({
   });
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const projectSlidesRef = React.useRef<() => void>(() => {});
+  const isTransitioningRef = React.useRef(isTransitioning);
+  isTransitioningRef.current = isTransitioning;
   const layoutResetKey = `${layout.slideCount}:${layout.slideWidth}:${layout.slideHeight}:${layout.slideStride}:${layout.totalHeight}:${zoomScale}:${rotation}`;
 
   const projectSlides = React.useCallback(() => {
@@ -103,6 +108,7 @@ export function PptxSlideScroller({
       canvas: canvasRef.current,
       eager,
       getScrollMetrics,
+      isTransitioning: isTransitioningRef.current,
       layout,
       onSlideRenderTiming,
       renderSlideOverlay,
@@ -146,6 +152,14 @@ export function PptxSlideScroller({
 
   useKeyedLayoutEffect(joinEffectKey([projectSlides]), () => {
     projectSlides();
+  });
+
+  // The sidebar slide freezes the visible-slide window (see projectPptxSlides).
+  // Once the motion settles — scroll rebased to the re-fit layout — re-derive the
+  // window from the now-correct scroll position so the reading slide is remounted
+  // in place. Runs after the shell's scroll rebase (parent layout effects).
+  useKeyedLayoutEffect(joinEffectKey(["pptx-transition", isTransitioning]), () => {
+    if (!isTransitioning) projectSlides();
   });
 
   useMountEffect(() => () => {
@@ -504,6 +518,7 @@ function projectPptxSlides({
   canvas,
   eager,
   getScrollMetrics,
+  isTransitioning,
   layout,
   onSlideRenderTiming,
   renderSlideOverlay,
@@ -518,6 +533,7 @@ function projectPptxSlides({
   canvas: HTMLDivElement | null;
   eager: boolean;
   getScrollMetrics?: () => PptxScrollMetrics;
+  isTransitioning: boolean;
   layout: PptxSlideLayout;
   onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void;
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode;
@@ -535,10 +551,27 @@ function projectPptxSlides({
   }
 
   const sourceKey = getPptxProjectionSourceKey(source);
+  const nextResetKey = `${sourceKey}:${resetKey}`;
 
-  if (cache.resetKey !== `${sourceKey}:${resetKey}`) {
-    disposePptxSlideProjectionCache(cache);
-    cache.resetKey = `${sourceKey}:${resetKey}`;
+  // Slides mounted before the sidebar motion began. Held for the duration of the
+  // transition so the fit-width re-fit — which shifts the scroll model under the
+  // reader before the shell rebases it — can't churn the reading slide out of the
+  // mounted set. The union keeps geometry live (needed by the scroll rebase) while
+  // guaranteeing continuity; it collapses back to the live window once idle.
+  const heldSlideIndexes =
+    isTransitioning && cache.slides.size > 0
+      ? [...cache.slides.keys()]
+      : [];
+
+  if (cache.resetKey !== nextResetKey) {
+    // The fit-width re-fit changes zoomScale (part of the reset key), but the
+    // mounted slides stay valid — only their size/position changes, re-patched
+    // below. Disposing mid-transition would tear down and remount the reading
+    // slide, defeating the hold; keep the cache and adopt the new key in place.
+    if (heldSlideIndexes.length === 0) {
+      disposePptxSlideProjectionCache(cache);
+    }
+    cache.resetKey = nextResetKey;
   }
 
   const viewportHeight =
@@ -575,12 +608,26 @@ function projectPptxSlides({
   setPptxPixelStyle(canvas, "height", metrics.physicalScrollHeight);
   setPptxPixelStyle(canvas, "min-width", layout.slideWidth);
 
-  const virtualSlides = getPptxRenderSlides({
+  const liveSlides = getPptxRenderSlides({
     fitPerfectly,
     layout,
     scrollTop: metrics.scrollTop,
     viewportHeight: metrics.viewportHeight || viewportHeight,
   });
+  const liveSlideIndexes = new Set(
+    liveSlides.map((virtualSlide) => virtualSlide.index),
+  );
+  // Held-only slides are kept mounted for continuity but must not re-raster: they
+  // retain their existing bitmap (rendered at the pre-motion scale) and are
+  // disposed once the motion idles, so they never pay the settle re-raster cost.
+  const heldOnlyIndexes = new Set(
+    heldSlideIndexes.filter((index) => !liveSlideIndexes.has(index)),
+  );
+  const virtualSlides = unionPptxVirtualSlides(
+    liveSlides,
+    heldSlideIndexes,
+    layout,
+  );
   const renderedWindow = getPptxRenderedSlideWindow({
     layout,
     physicalScrollHeight: metrics.physicalScrollHeight,
@@ -613,28 +660,36 @@ function projectPptxSlides({
 
   let previousShell: HTMLElement | null = null;
   for (const virtualSlide of renderedWindow.slides) {
+    const existingSlide = cache.slides.get(virtualSlide.index);
     const projectedSlide =
-      cache.slides.get(virtualSlide.index) ??
-      createPptxProjectedSlide(virtualSlide);
+      existingSlide ?? createPptxProjectedSlide(virtualSlide);
     patchPptxProjectedSlide(projectedSlide.shell, virtualSlide);
-    renderPptxProjectedSlide({
-      activity,
-      eager,
-      onSlideRenderTiming,
-      projectedSlide,
-      priority: getPptxSlideRenderPriority({
-        layout,
-        scrollDirection,
-        scrollTop: metrics.scrollTop,
-        viewportHeight: metrics.viewportHeight || viewportHeight,
+    // A held-only slide that already has a bitmap keeps it: repositioned above
+    // but not re-rendered, so the transition adds no raster work.
+    const retainHeldRaster =
+      heldOnlyIndexes.has(virtualSlide.index) &&
+      existingSlide != null &&
+      existingSlide.renderKey !== "";
+    if (!retainHeldRaster) {
+      renderPptxProjectedSlide({
+        activity,
+        eager,
+        onSlideRenderTiming,
+        projectedSlide,
+        priority: getPptxSlideRenderPriority({
+          layout,
+          scrollDirection,
+          scrollTop: metrics.scrollTop,
+          viewportHeight: metrics.viewportHeight || viewportHeight,
+          virtualSlide,
+        }),
+        renderSlideOverlay,
+        rotation,
+        source,
         virtualSlide,
-      }),
-      renderSlideOverlay,
-      rotation,
-      source,
-      virtualSlide,
-      zoomScale,
-    });
+        zoomScale,
+      });
+    }
     cache.slides.set(virtualSlide.index, projectedSlide);
     placePptxProjectedSlide(
       projectionWindow.content,
@@ -645,6 +700,31 @@ function projectPptxSlides({
   }
 
   return { fillOverscanNextFrame: fitPerfectly };
+}
+
+function unionPptxVirtualSlides(
+  windowSlides: PptxVirtualSlide[],
+  heldIndexes: number[],
+  layout: PptxSlideLayout,
+): PptxVirtualSlide[] {
+  if (heldIndexes.length === 0) return windowSlides;
+
+  const byIndex = new Map(windowSlides.map((slide) => [slide.index, slide]));
+  for (const index of heldIndexes) {
+    if (byIndex.has(index)) continue;
+    if (index < 0 || index >= layout.slideCount) continue;
+    const slideNumber = index + 1;
+    byIndex.set(index, {
+      height: layout.slideHeight,
+      index,
+      key: String(slideNumber),
+      slideNumber,
+      top: getPptxSlideTop(layout, index),
+      width: layout.slideWidth,
+    });
+  }
+
+  return [...byIndex.values()].sort((a, b) => a.index - b.index);
 }
 
 function createPptxProjectedSlide(virtualSlide: PptxVirtualSlide) {

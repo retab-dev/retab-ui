@@ -38,6 +38,7 @@ import {
   useOptionalFileViewerRendererEnvironment,
   useOptionalFileViewerRendererFrame,
 } from "./file-viewer-renderer-frame";
+import { useReadingFractionRebase } from "./use-reading-fraction-rebase";
 import { createImageFrameLayout } from "./image-viewer-virtualization";
 import { joinEffectKey } from "@/lib/effect-key";
 
@@ -72,6 +73,13 @@ export function ImageViewerContent({
     fallbackInlineSize: frameListWidth,
     rendererFrame,
   });
+  // While the sidebar transition is running, hold the virtualization's
+  // mounted-frame window so the reading frames stay visible instead of
+  // windowing to the top and rebasing at settle. The freeze must span both the
+  // frozen slide and the settling rebase (the scroll container reports a
+  // transient top-of-document position until the settle scroll has landed);
+  // re-derive the window normally only once the transition is idle again.
+  const freezeVisibleFrameWindow = rendererFrame.phase !== "idle";
   const {
     rotateClockwise,
     rotation,
@@ -108,6 +116,27 @@ export function ImageViewerContent({
     onVisibleFrameChange,
   );
   useImageViewerHandle(forwardedRef, getViewportElement, scrollToFrameArea);
+
+  // Preserve the reading position when the image re-fits to a new width (the
+  // sidebar toggle). The fit scale is the layout key; capture the fraction on
+  // scroll and restore it the instant the scale changes.
+  const scrollerRef = React.useRef<HTMLElement | null>(null);
+  const { captureReadingFraction } = useReadingFractionRebase({
+    scrollerRef,
+    layoutKey: scale,
+    enabled: rendererEnvironment.usesShellGeometry,
+  });
+  const setScrollViewportRefWithRebase = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      scrollerRef.current = element;
+      setScrollViewportRef(element);
+    },
+    [setScrollViewportRef],
+  );
+  const handleScrollWithRebase = React.useCallback(() => {
+    captureReadingFraction();
+    handleScroll();
+  }, [captureReadingFraction, handleScroll]);
 
   const frameCount = frameSource.frames.length;
   const countLabel =
@@ -175,8 +204,9 @@ export function ImageViewerContent({
               rotation={rotation}
               frameListRef={frameListRef}
               getScrollMetrics={getScrollMetrics}
-              viewportRef={setScrollViewportRef}
-              onScroll={handleScroll}
+              freezeVisibleFrameWindow={freezeVisibleFrameWindow}
+              viewportRef={setScrollViewportRefWithRebase}
+              onScroll={handleScrollWithRebase}
               renderFrameOverlay={renderFrameOverlay}
               onFrameRenderTiming={onFrameRenderTiming}
             />

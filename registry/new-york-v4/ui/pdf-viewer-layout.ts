@@ -457,10 +457,14 @@ export function getPdfPagedLayoutTop({
   totalHeight: number;
   viewportHeight: number;
 }) {
-  if (!shouldRebasePdfScroll({ totalHeight, viewportHeight })) {
+  const offset = finiteNumber(scrollPageOffset);
+  if (
+    Math.abs(offset) <= 0.001 &&
+    !shouldRebasePdfScroll({ totalHeight, viewportHeight })
+  ) {
     return finiteNumber(logicalTop);
   }
-  return Math.max(0, finiteNumber(logicalTop) - safePadding(scrollPageOffset));
+  return Math.max(0, finiteNumber(logicalTop) - offset);
 }
 
 function getPdfPageNumbersInRange({

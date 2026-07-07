@@ -24,7 +24,10 @@ import type {
   PdfPageSize,
 } from "./pdf-viewer-types";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
-import { PDF_DOCUMENT_MOTION_SCALE_PROPERTY } from "./pdf-viewer-motion-contract";
+import {
+  PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY,
+  PDF_DOCUMENT_MOTION_SCALE_PROPERTY,
+} from "./pdf-viewer-motion-contract";
 
 export type PdfDocumentPagesLayerProps = {
   activeRenderPageNumbers: readonly number[];
@@ -130,18 +133,17 @@ export function PdfDocumentPagesLayer({
     ],
   );
   const isInsideDocumentFrame = documentAlign !== null;
-  const visualStageStyle = {
+  const scrollRangeStyle = {
+    contain: "layout size style",
+    height: physicalScrollHeight,
     minWidth: layout.maxPageWidth,
     width: layout.maxPageWidth,
   } satisfies React.CSSProperties;
-  const motionWindowHeight = renderedWindow
-    ? getPdfMotionWindowHeight(renderedWindow)
-    : null;
-  const motionStickyInset = renderedWindow
-    ? getPdfMotionStickyInset(renderedWindow, viewportHeight)
-    : null;
-  const documentStyle = {
-    contain: "layout style",
+  const visualClipStyle = {
+    contain: "paint style",
+    overflow: "clip",
+  } satisfies React.CSSProperties;
+  const visualStageStyle = {
     height: physicalScrollHeight,
     minWidth: layout.maxPageWidth,
     width: layout.maxPageWidth,
@@ -149,112 +151,92 @@ export function PdfDocumentPagesLayer({
 
   const documentContent = (
     <div
-      ref={setVisualStageElement}
-      data-slot="pdf-viewer-visual-stage"
+      data-slot="pdf-viewer-scroll-range"
       className={cn("relative", getPdfDocumentFrameAlignClass(documentAlign))}
-      style={visualStageStyle}
+      style={scrollRangeStyle}
     >
       <div
-        data-slot="pdf-viewer-document"
+        data-slot="pdf-viewer-visual-clip"
         data-layout-transitioning={isLayoutTransitioning ? "" : undefined}
-        className="relative"
-        style={documentStyle}
+        className="absolute inset-0"
+        style={visualClipStyle}
       >
-        {renderedWindow ? (
-          <>
-            <div
-              aria-hidden
-              data-slot="pdf-page-window-before"
-              style={{
-                contain: "layout size",
-                height: renderedWindow.beforeHeight,
-              }}
-            />
+        <div
+          ref={setVisualStageElement}
+          data-slot="pdf-viewer-visual-stage"
+          className="relative"
+          style={visualStageStyle}
+        >
+          {renderedWindow ? (
             <div
               ref={setScrollInteractionElement}
-              data-slot="pdf-page-sticky-window"
-              className="sticky"
+              data-slot="pdf-page-window"
+              className="absolute inset-0"
               style={{
-                bottom: motionStickyInset ?? renderedWindow.stickyInset,
-                contain: "layout style inline-size",
-                height: motionWindowHeight ?? renderedWindow.height,
+                contain: "layout style",
                 isolation: "isolate",
-                top: motionStickyInset ?? renderedWindow.stickyInset,
               }}
             >
-              <div
-                data-slot="pdf-page-window"
-                className="relative"
-                style={{
-                  contain: "layout style",
-                  height: motionWindowHeight ?? renderedWindow.height,
-                }}
-              >
-                {renderedWindow.pages.map((page, pageIndex) => (
+              {renderedWindow.pages.map((page, pageIndex) => (
+                <div
+                  key={page.pageNumber}
+                  className="absolute left-1/2 flex -translate-x-1/2 items-start justify-center"
+                  data-layout-transitioning={
+                    isLayoutTransitioning ? "" : undefined
+                  }
+                  data-slot="pdf-page-slot"
+                  data-page-number={page.pageNumber}
+                  data-visible={
+                    visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
+                  }
+                  style={{
+                    top: getPdfMotionPageTop({
+                      page,
+                      pageIndex,
+                      windowTop: renderedWindow.beforeHeight,
+                    }),
+                    width: page.width,
+                    height: getPdfMotionLength(page.height),
+                  }}
+                >
                   <div
-                    key={page.pageNumber}
-                    className="absolute left-1/2 flex -translate-x-1/2 items-start justify-center"
-                    data-layout-transitioning={
-                      isLayoutTransitioning ? "" : undefined
-                    }
-                    data-slot="pdf-page-slot"
-                    data-page-number={page.pageNumber}
-                    data-visible={
-                      visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
-                    }
+                    data-slot="pdf-page-motion-frame"
                     style={{
-                      top: getPdfMotionPageTop(page, pageIndex),
+                      height: page.height,
+                      transform: `scaleY(var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1))`,
+                      transformOrigin: "center top",
                       width: page.width,
-                      height: getPdfMotionLength(page.height),
+                      willChange: isLayoutTransitioning
+                        ? "transform"
+                        : undefined,
                     }}
                   >
-                    <div
-                      data-slot="pdf-page-motion-frame"
-                      style={{
-                        height: page.height,
-                        transform: `scaleY(var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1))`,
-                        transformOrigin: "center top",
-                        width: page.width,
-                        willChange: isLayoutTransitioning
-                          ? "transform"
-                          : undefined,
-                      }}
-                    >
-                      {activeRenderPageNumberSet.has(page.pageNumber) ? (
-                        <React.Suspense fallback={<PageSkeleton />}>
-                          <PdfPage
-                            document={document}
-                            documentKey={documentKey}
-                            pageNumber={page.pageNumber}
-                            scale={scale}
-                            renderScale={renderScale}
-                            isLayoutTransitioning={isLayoutTransitioning}
-                            rotation={rotation}
-                            devicePixelRatio={devicePixelRatio}
-                            renderCache={renderCache}
-                            renderOverlay={renderPageOverlay}
-                            onRenderTiming={onPageRenderTiming}
-                            onSize={setPageSize}
-                          />
-                        </React.Suspense>
-                      ) : (
-                        <PageSkeleton />
-                      )}
-                    </div>
+                    {activeRenderPageNumberSet.has(page.pageNumber) ? (
+                      <React.Suspense fallback={<PageSkeleton />}>
+                        <PdfPage
+                          document={document}
+                          documentKey={documentKey}
+                          pageNumber={page.pageNumber}
+                          scale={scale}
+                          renderScale={renderScale}
+                          isLayoutTransitioning={isLayoutTransitioning}
+                          rotation={rotation}
+                          devicePixelRatio={devicePixelRatio}
+                          renderCache={renderCache}
+                          renderOverlay={renderPageOverlay}
+                          onRenderTiming={onPageRenderTiming}
+                          onSize={setPageSize}
+                        />
+                      </React.Suspense>
+                    ) : (
+                      <PageSkeleton />
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-            <div
-              aria-hidden
-              data-slot="pdf-page-window-after"
-              style={{
-                contain: "layout size",
-                height: renderedWindow.afterHeight,
-              }}
-            />
-          </>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -277,39 +259,23 @@ function getPdfMotionLength(length: number) {
   return `calc(${formatPdfMotionLengthBase(length)}px * var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1))`;
 }
 
-function getPdfMotionPageTop(page: PdfRenderedPageLayout, pageIndex: number) {
+function getPdfMotionPageTop({
+  page,
+  pageIndex,
+  windowTop,
+}: {
+  page: PdfRenderedPageLayout;
+  pageIndex: number;
+  windowTop: number;
+}) {
   const gapTotal = pageIndex * PDF_PAGE_GAP;
   const scaledTop = Math.max(0, page.windowTop - gapTotal);
-  if (gapTotal === 0) return getPdfMotionLength(scaledTop);
+  const stableTop = formatPdfMotionLengthBase(windowTop + gapTotal);
+  const motionTop = formatPdfMotionLengthBase(scaledTop);
+  const motionScale = `var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1)`;
+  const anchor = `var(${PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY}, 0px)`;
 
-  return `calc(${formatPdfMotionLengthBase(scaledTop)}px * var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1) + ${gapTotal}px)`;
-}
-
-function getPdfMotionWindowHeight(renderedWindow: {
-  height: number;
-  pages: readonly PdfRenderedPageLayout[];
-}) {
-  const gapTotal = Math.max(0, renderedWindow.pages.length - 1) * PDF_PAGE_GAP;
-  const scaledHeight = Math.max(0, renderedWindow.height - gapTotal);
-  if (gapTotal === 0) return getPdfMotionLength(scaledHeight);
-
-  return `calc(${formatPdfMotionLengthBase(scaledHeight)}px * var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1) + ${gapTotal}px)`;
-}
-
-function getPdfMotionStickyInset(
-  renderedWindow: {
-    height: number;
-    pages: readonly PdfRenderedPageLayout[];
-  },
-  viewportHeight: number,
-) {
-  const motionWindowHeight = getPdfMotionWindowHeight(renderedWindow);
-  const safeViewportHeight =
-    Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 0;
-
-  return `min(0px, calc(${formatPdfMotionLengthBase(
-    safeViewportHeight,
-  )}px - (${motionWindowHeight})))`;
+  return `calc(${stableTop}px + ${motionTop}px * ${motionScale} + (1 - ${motionScale}) * ${anchor})`;
 }
 
 function formatPdfMotionLengthBase(value: number) {

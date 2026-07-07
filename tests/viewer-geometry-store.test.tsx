@@ -490,8 +490,8 @@ describe("createViewerGeometryStore", () => {
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(sidebarGapElement.style.flexBasis).toBe("420px");
-    expect(documentSurfaceElement.style.transform).toBe("scale(1)");
-    expect(documentSurfaceElement.style.willChange).toBe("transform");
+    expect(documentSurfaceElement.style.transform).toBe("");
+    expect(documentSurfaceElement.style.willChange).toBe("");
     expect(listener).toHaveBeenCalledTimes(1);
 
     frames.advance(75);
@@ -507,7 +507,7 @@ describe("createViewerGeometryStore", () => {
     });
     expect(sidebarGapElement.style.width).toBe("210px");
     expect(sidebarGapElement.style.flexBasis).toBe("210px");
-    expect(documentSurfaceElement.style.transform).toBe("scale(1.5)");
+    expect(documentSurfaceElement.style.transform).toBe("");
     expect(listener).toHaveBeenCalledTimes(1);
 
     frames.advance(75);
@@ -591,7 +591,7 @@ describe("createViewerGeometryStore", () => {
       open: false,
       phase: "sliding",
     });
-    expect(documentSurfaceElement.style.transform).toBe("scale(1)");
+    expect(documentSurfaceElement.style.transform).toBe("");
   });
 
   it("publishes the FileViewer motion boundary without subscribing to the hot motion path", () => {
@@ -788,7 +788,7 @@ describe("createViewerGeometryStore", () => {
       fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
-    expect(documentSurfaceElement.style.transform).toBe("scale(1)");
+    expect(documentSurfaceElement.style.transform).toBe("");
 
     frames.advance(75);
 
@@ -799,7 +799,7 @@ describe("createViewerGeometryStore", () => {
       fallbackSurfaceScale: 1.5,
     });
     expect(sidebarGapElement.style.width).toBe("210px");
-    expect(documentSurfaceElement.style.transform).toBe("scale(1.5)");
+    expect(documentSurfaceElement.style.transform).toBe("");
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
