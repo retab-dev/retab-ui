@@ -1352,6 +1352,13 @@ describe("PdfViewer document lifecycle", () => {
     viewport!.getBoundingClientRect = () =>
       ({ top: 0, height: 500 }) as DOMRect;
 
+    // The mount-time fit-width refit restores scroll with an internal write,
+    // which suppresses scroll events for 120ms; wait it out so this scroll is
+    // classified as a user scroll instead of the refit's own echo.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    });
+
     await act(async () => {
       fireEvent.scroll(viewport!);
     });

@@ -189,7 +189,10 @@ function getExpectedPreservedPdfScrollTop({
   const readingMarkerOffset = viewportHeight * 0.2;
   const pageTopInViewport = previousPage.offsetTop - scrollTop;
 
-  if (Math.abs(pageTopInViewport) <= readingMarkerOffset) {
+  // Mirrors capturePdfReadingAnchor: the page-boundary anchor only applies
+  // inside the PDF_READING_BOUNDARY_SNAP_PX (24px) band around a page top.
+  const boundarySnap = Math.min(readingMarkerOffset, 24);
+  if (Math.abs(pageTopInViewport) <= boundarySnap) {
     return nextPage.offsetTop - Math.round(pageTopInViewport);
   }
 
@@ -1332,46 +1335,35 @@ describe("PdfViewer core", () => {
     const viewport = document.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]',
     );
-    const documentSlot = document.querySelector<HTMLElement>(
-      '[data-slot="pdf-viewer-document"]',
+    const scrollRange = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-viewer-scroll-range"]',
+    );
+    const visualClip = document.querySelector<HTMLElement>(
+      '[data-slot="pdf-viewer-visual-clip"]',
     );
     const visualStage = document.querySelector<HTMLElement>(
       '[data-slot="pdf-viewer-visual-stage"]',
     );
-    const beforeSpacer = document.querySelector<HTMLElement>(
-      '[data-slot="pdf-page-window-before"]',
-    );
-    const stickyWindow = document.querySelector<HTMLElement>(
-      '[data-slot="pdf-page-sticky-window"]',
-    );
     const renderWindow = document.querySelector<HTMLElement>(
       '[data-slot="pdf-page-window"]',
     );
-    const afterSpacer = document.querySelector<HTMLElement>(
-      '[data-slot="pdf-page-window-after"]',
-    );
 
     expect(viewport?.style.overflowAnchor).toBe("none");
-    expect(documentSlot?.getAttribute("style")).toContain(
-      "contain: layout style",
+    expect(scrollRange?.getAttribute("style")).toContain(
+      "contain: layout size style",
     );
+    expect(visualClip?.getAttribute("style")).toContain("contain: paint style");
+    expect(visualClip?.getAttribute("style")).toContain("overflow: clip");
     expect(visualStage?.style.transformOrigin).toBe("");
-    expect(beforeSpacer?.getAttribute("style")).toContain(
-      "contain: layout size",
-    );
-    expect(stickyWindow?.getAttribute("style")).toContain(
-      "contain: layout style inline-size",
-    );
-    expect(stickyWindow?.getAttribute("style")).toContain("isolation: isolate");
     expect(renderWindow?.getAttribute("style")).toContain(
       "contain: layout style",
     );
-    expect(afterSpacer?.getAttribute("style")).toContain(
-      "contain: layout size",
+    expect(renderWindow?.getAttribute("style")).toContain(
+      "isolation: isolate",
     );
 
     fireEvent.scroll(viewport!);
-    expect(stickyWindow?.style.pointerEvents).toBe("none");
+    expect(renderWindow?.style.pointerEvents).toBe("none");
   });
 
   it("does not keep rejected document loads cached for the same source", async () => {
