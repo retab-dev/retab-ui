@@ -349,6 +349,7 @@ afterEach(() => {
   clearViewerResourceRegistryForTests();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  (globalThis as { gc?: () => void }).gc?.();
 });
 
 function pdfUrlSource(url: string, fileName?: string) {

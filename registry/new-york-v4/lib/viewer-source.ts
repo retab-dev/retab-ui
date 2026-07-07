@@ -74,7 +74,6 @@ const EXTENSION_CATEGORY: Record<string, FileCategory> = {
   html: "html",
   htm: "html",
   eml: "email",
-  msg: "email",
   txt: "text",
   text: "text",
   log: "text",
@@ -185,13 +184,7 @@ function categoryFromMime(mimeType: string): FileCategory | null {
   if (mime === "text/csv" || mime === "text/tab-separated-values") return "csv";
   if (mime === "text/markdown") return "markdown";
   if (mime === "text/html") return "html";
-  if (
-    mime === "message/rfc822" ||
-    mime === "message/global" ||
-    mime === "application/vnd.ms-outlook" ||
-    mime === "application/msoutlook" ||
-    mime === "application/x-msg"
-  ) {
+  if (mime === "message/rfc822" || mime === "message/global") {
     return "email";
   }
   if (mime.startsWith("image/")) return "image";

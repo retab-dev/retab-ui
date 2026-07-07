@@ -43,6 +43,9 @@ export function FileViewerTelemetryWidget() {
         return;
       }
       setResult(nextResult);
+    } catch (runError) {
+      setResult(null);
+      setError(`Telemetry run failed: ${errorMessage(runError)}`);
     } finally {
       setIsRunning(false);
     }
@@ -196,4 +199,10 @@ function TelemetryStat({ label, value }: { label: string; value: string }) {
       <div className="mt-0.5 font-medium tabular-nums">{value}</div>
     </div>
   );
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error) return error;
+  return "Unknown error.";
 }

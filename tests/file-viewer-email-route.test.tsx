@@ -49,7 +49,10 @@ describe("FileViewer email routing", () => {
     expect(detectCategory("contract-packet.eml")).toBe("email");
     expect(detectCategory("download", "message/rfc822")).toBe("email");
     expect(detectCategory("download", "message/global")).toBe("email");
-    expect(detectCategory("forwarded.msg")).toBe("email");
+    expect(detectCategory("forwarded.msg")).toBe("unsupported");
+    expect(detectCategory("download", "application/vnd.ms-outlook")).toBe(
+      "unsupported",
+    );
   });
 
   it("selects the email prewarm target for renderable email routes", () => {

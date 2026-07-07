@@ -194,9 +194,10 @@ describe("FileViewer detection helpers", () => {
     expect(detectCategory("release-notes.markdown")).toBe("markdown");
     expect(detectCategory("release-notes.mdx")).toBe("text");
     expect(detectCategory("download", "text/markdown")).toBe("markdown");
-    expect(detectCategory("forwarded.msg")).toBe("email");
+    expect(detectCategory("forwarded.eml")).toBe("email");
+    expect(detectCategory("forwarded.msg")).toBe("unsupported");
     expect(detectCategory("download", "application/vnd.ms-outlook")).toBe(
-      "email",
+      "unsupported",
     );
     expect(detectCategory("config", "application/json")).toBe("text");
     expect(detectCategory("events.log", "text/plain")).toBe("text");
