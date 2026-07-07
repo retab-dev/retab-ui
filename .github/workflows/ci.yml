@@ -43,6 +43,11 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Remove flaky runner apt mirrors
+        run: |
+          sudo find /etc/apt/sources.list.d -type f \
+            \( -name '*azure-cli*' -o -name '*microsoft*' -o -name '*packages-microsoft-prod*' \) \
+            -print -delete
       - run: pnpm exec playwright install --with-deps chromium
       - name: Default gate
         run: pnpm verify:file-viewer-sidebar-motion
