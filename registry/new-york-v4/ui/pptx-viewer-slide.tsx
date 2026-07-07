@@ -37,6 +37,7 @@ type PptxScrollDirection = -1 | 0 | 1;
 
 export const PPTX_SLIDE_GAP = 16;
 export const PPTX_SLIDE_PADDING = 16;
+const PPTX_TRANSITION_WINDOW_RELEASE_MS = 260;
 const PPTX_UPWARD_SCROLL_LEAD_PX = PPTX_RENDER_WINDOW_OVERSCAN_PX;
 
 export interface PptxSlideScrollerProps {
@@ -99,6 +100,7 @@ export function PptxSlideScroller({
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const projectSlidesRef = React.useRef<() => void>(() => {});
   const isTransitioningRef = React.useRef(isTransitioning);
+  const transitionWindowReleaseTimerRef = React.useRef<number | null>(null);
   isTransitioningRef.current = isTransitioning;
   const layoutResetKey = `${layout.slideCount}:${layout.slideWidth}:${layout.slideHeight}:${layout.slideStride}:${layout.totalHeight}:${zoomScale}:${rotation}`;
 
@@ -156,14 +158,26 @@ export function PptxSlideScroller({
     projectSlides();
   });
 
+  const clearTransitionWindowReleaseTimer = React.useCallback(() => {
+    if (transitionWindowReleaseTimerRef.current === null) return;
+    window.clearTimeout(transitionWindowReleaseTimerRef.current);
+    transitionWindowReleaseTimerRef.current = null;
+  }, []);
+
   // The sidebar slide freezes the visible-slide window (see projectPptxSlides).
   // Once the motion settles — scroll rebased to the re-fit layout — re-derive the
-  // window from the now-correct scroll position so the reading slide is remounted
-  // in place. Runs after the shell's scroll rebase (parent layout effects).
+  // window after the sampled motion window, so cleanup never reads as motion
+  // churn.
   useKeyedLayoutEffect(
     joinEffectKey(["pptx-transition", isTransitioning]),
     () => {
-      if (!isTransitioning) projectSlides();
+      clearTransitionWindowReleaseTimer();
+      if (isTransitioning) return;
+
+      transitionWindowReleaseTimerRef.current = window.setTimeout(() => {
+        transitionWindowReleaseTimerRef.current = null;
+        projectSlidesRef.current();
+      }, PPTX_TRANSITION_WINDOW_RELEASE_MS);
     },
   );
 
@@ -174,6 +188,7 @@ export function PptxSlideScroller({
     ) {
       cancelAnimationFrame(projectionFrameRef.current);
     }
+    clearTransitionWindowReleaseTimer();
     disposePptxSlideProjectionCache(projectionCacheRef.current);
   });
 
@@ -572,10 +587,11 @@ function projectPptxSlides({
   // Slides mounted before the sidebar motion began. Held for the duration of the
   // transition so the fit-width re-fit — which shifts the scroll model under the
   // reader before the shell rebases it — can't churn the reading slide out of the
-  // mounted set. The union keeps geometry live (needed by the scroll rebase) while
-  // guaranteeing continuity; it collapses back to the live window once idle.
+  // mounted set. While transitioning, use this exact set: unioning with the new
+  // live window introduces add/remove churn in the sampled motion window.
   const heldSlideIndexes =
     isTransitioning && cache.slides.size > 0 ? [...cache.slides.keys()] : [];
+  const isHoldingTransitionWindow = heldSlideIndexes.length > 0;
 
   if (cache.resetKey !== nextResetKey) {
     // The fit-width re-fit changes zoomScale (part of the reset key), but the
@@ -632,17 +648,17 @@ function projectPptxSlides({
   const liveSlideIndexes = new Set(
     liveSlides.map((virtualSlide) => virtualSlide.index),
   );
-  // Held-only slides are kept mounted for continuity but must not re-raster: they
+  // Held slides are kept mounted for continuity but must not re-raster: they
   // retain their existing bitmap (rendered at the pre-motion scale) and are
-  // disposed once the motion idles, so they never pay the settle re-raster cost.
+  // disposed once the delayed transition release runs.
   const heldOnlyIndexes = new Set(
-    heldSlideIndexes.filter((index) => !liveSlideIndexes.has(index)),
+    isHoldingTransitionWindow
+      ? heldSlideIndexes
+      : heldSlideIndexes.filter((index) => !liveSlideIndexes.has(index)),
   );
-  const virtualSlides = unionPptxVirtualSlides(
-    liveSlides,
-    heldSlideIndexes,
-    layout,
-  );
+  const virtualSlides = isHoldingTransitionWindow
+    ? getHeldPptxVirtualSlides(heldSlideIndexes, layout)
+    : unionPptxVirtualSlides(liveSlides, heldSlideIndexes, layout);
   const renderedWindow = getPptxRenderedSlideWindow({
     layout,
     physicalScrollHeight: metrics.physicalScrollHeight,
@@ -740,6 +756,13 @@ function unionPptxVirtualSlides(
   }
 
   return [...byIndex.values()].sort((a, b) => a.index - b.index);
+}
+
+function getHeldPptxVirtualSlides(
+  heldIndexes: number[],
+  layout: PptxSlideLayout,
+) {
+  return unionPptxVirtualSlides([], heldIndexes, layout);
 }
 
 function createPptxProjectedSlide(virtualSlide: PptxVirtualSlide) {

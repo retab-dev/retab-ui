@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import { isAbortError, isResourceError } from "@/lib/viewer-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -54,6 +55,8 @@ import {
   type ViewerControlsState,
 } from "./viewer-controls";
 import { joinEffectKey } from "@/lib/effect-key";
+
+const DOCX_TRANSITION_WINDOW_RELEASE_MS = 260;
 
 export function DocxViewerContent({
   bare = false,
@@ -123,12 +126,18 @@ export function DocxViewerContent({
     ready,
     scale,
   });
+  const isDocumentTransitioning = rendererFrame.phase !== "idle";
   const scaleRef = React.useRef(scale);
   scaleRef.current = scale;
 
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const renderIndexRef = React.useRef<DocxRenderIndex | null>(null);
   const virtualDocumentRef = React.useRef<DocxRenderedDocument | null>(null);
+  const projectVisiblePagesRef = React.useRef<() => void>(() => {});
+  const measureScrollRef = React.useRef(measureScroll);
+  measureScrollRef.current = measureScroll;
+  const transitionWindowReleaseTimerRef = React.useRef<number | null>(null);
+  const shouldReleaseTransitionProjectionRef = React.useRef(false);
   const projectVisiblePages = React.useCallback(() => {
     const virtualDocument = virtualDocumentRef.current;
     const viewport = scrollViewportRef.current;
@@ -143,6 +152,14 @@ export function DocxViewerContent({
       }),
     );
   }, [scrollViewportRef]);
+  useKeyedLayoutEffect(joinEffectKey([projectVisiblePages]), () => {
+    projectVisiblePagesRef.current = projectVisiblePages;
+  });
+  const clearTransitionWindowReleaseTimer = React.useCallback(() => {
+    if (transitionWindowReleaseTimerRef.current === null) return;
+    window.clearTimeout(transitionWindowReleaseTimerRef.current);
+    transitionWindowReleaseTimerRef.current = null;
+  }, []);
   const projectTargetPage = React.useCallback(
     (pageNumber: number) => {
       const virtualDocument = virtualDocumentRef.current;
@@ -161,9 +178,9 @@ export function DocxViewerContent({
     [scrollViewportRef],
   );
   const handleViewportScroll = React.useCallback(() => {
-    projectVisiblePages();
+    if (!isDocumentTransitioning) projectVisiblePages();
     handleScroll();
-  }, [handleScroll, projectVisiblePages]);
+  }, [handleScroll, isDocumentTransitioning, projectVisiblePages]);
   const measureBeforeLayoutMotionRef = React.useRef(measureScroll);
   measureBeforeLayoutMotionRef.current = measureScroll;
   const handleBeforeLayoutMotion = React.useCallback(() => {
@@ -192,6 +209,27 @@ export function DocxViewerContent({
       );
     },
     [handleBeforeLayoutMotion, registerDocumentSurface],
+  );
+
+  useKeyedLayoutEffect(
+    joinEffectKey(["docx-transition", isDocumentTransitioning, ready]),
+    () => {
+      clearTransitionWindowReleaseTimer();
+      if (!ready) return;
+
+      if (isDocumentTransitioning) {
+        shouldReleaseTransitionProjectionRef.current = true;
+        return;
+      }
+
+      if (!shouldReleaseTransitionProjectionRef.current) return;
+      transitionWindowReleaseTimerRef.current = window.setTimeout(() => {
+        transitionWindowReleaseTimerRef.current = null;
+        shouldReleaseTransitionProjectionRef.current = false;
+        projectVisiblePagesRef.current();
+        measureScrollRef.current();
+      }, DOCX_TRANSITION_WINDOW_RELEASE_MS);
+    },
   );
 
   useKeyedMountEffect(
@@ -260,13 +298,29 @@ export function DocxViewerContent({
   );
 
   useKeyedMountEffect(
-    joinEffectKey(["docx-content-measure", measureScroll, ready, scale]),
+    joinEffectKey([
+      "docx-content-measure",
+      isDocumentTransitioning,
+      measureScroll,
+      ready,
+      scale,
+    ]),
     () => {
       if (!ready) return;
+      if (
+        isDocumentTransitioning ||
+        shouldReleaseTransitionProjectionRef.current
+      ) {
+        return;
+      }
       projectVisiblePages();
       measureScroll();
     },
   );
+
+  useMountEffect(() => () => {
+    clearTransitionWindowReleaseTimer();
+  });
 
   renderIndexRef.current = renderIndex;
 

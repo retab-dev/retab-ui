@@ -235,6 +235,12 @@ function renderedSlideIndexes(source: ReturnType<typeof createFakePptxSource>) {
   ).map(([call]) => call.slideIndex);
 }
 
+function readPptxVirtualSlideNumbers() {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>('[data-slot="pptx-slide-slot"]'),
+  ).map((element) => element.dataset.virtualSlideNumber ?? "");
+}
+
 function createManualPptxActivity(isScrolling = true) {
   const waiters = new Set<() => void>();
   return {
@@ -3366,6 +3372,87 @@ describe("PptxViewer", () => {
         ),
       ).toBeNull();
     });
+  });
+
+  it("freezes the mounted slide set during sidebar transitions", async () => {
+    const source = createFakePptxSource({ slideCount: 20 });
+    const activity = createManualPptxActivity(false).activity;
+    const beforeLayout = createPptxSlideLayout({
+      baseSize: source.baseSize,
+      zoomScale: 1,
+      rotation: 0,
+      slideCount: source.slideCount,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+    const afterLayout = createPptxSlideLayout({
+      baseSize: source.baseSize,
+      zoomScale: 0.75,
+      rotation: 0,
+      slideCount: source.slideCount,
+      slideGap: 16,
+      slidePadding: 16,
+    });
+    let metrics = {
+      physicalScrollHeight: beforeLayout.totalHeight,
+      physicalScrollTop: 0,
+      scrollPageOffset: 0,
+      scrollTop: 0,
+      viewportHeight: 720,
+    };
+
+    const view = render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        layout={beforeLayout}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        getScrollMetrics={() => metrics}
+        onScroll={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="pptx-slide"]')).toBeTruthy();
+    });
+
+    const beforeSlots = readPptxVirtualSlideNumbers();
+    expect(beforeSlots).toContain("1");
+    expect(beforeSlots).not.toContain("10");
+
+    metrics = {
+      physicalScrollHeight: afterLayout.totalHeight,
+      physicalScrollTop: 16 + 9 * afterLayout.slideStride,
+      scrollPageOffset: 0,
+      scrollTop: 16 + 9 * afterLayout.slideStride,
+      viewportHeight: 720,
+    };
+    view.rerender(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={0.75}
+        rotation={0}
+        layout={afterLayout}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        viewportRef={vi.fn()}
+        getScrollMetrics={() => metrics}
+        isTransitioning
+        onScroll={vi.fn()}
+      />,
+    );
+
+    expect(readPptxVirtualSlideNumbers()).toEqual(beforeSlots);
+    expect(
+      document.querySelector(
+        '[data-slot="pptx-slide"][data-slide-number="10"]',
+      ),
+    ).toBeNull();
   });
 
   it("does not rewrite unchanged projection styles or reorder stable shells on scroll", async () => {
