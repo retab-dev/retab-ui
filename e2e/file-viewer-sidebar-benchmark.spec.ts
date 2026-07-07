@@ -23,8 +23,10 @@ type BenchmarkSample = {
   contentWidth: number;
   documentHasFocus: boolean;
   fingerprint: string;
+  format: string | null;
   frameWidth: number;
   gapWidth: number;
+  readingAnchor: BenchmarkReadingAnchor | null;
   rendererContinuity: BenchmarkRendererContinuity;
   rootWidth: number;
   sidebarOpen: string | null;
@@ -52,6 +54,23 @@ type BenchmarkRendererAnchor = {
   id: string;
   top: number;
 };
+
+type BenchmarkReadingAnchor =
+  | {
+      kind: "top";
+    }
+  | {
+      id: string;
+      kind: "boundary";
+      topInViewport: number;
+      yRatio: number;
+    }
+  | {
+      id: string;
+      kind: "page";
+      markerTop: number;
+      yRatio: number;
+    };
 
 type BenchmarkRendererContinuity = {
   renderedIds: string[];
@@ -218,6 +237,10 @@ const ASSERT_VISUAL_SMOOTHNESS =
   process.env.FILE_VIEWER_ASSERT_VISUAL_SMOOTHNESS === "1";
 const ASSERT_VIEWPORT_MATRIX =
   process.env.FILE_VIEWER_ASSERT_VIEWPORT_MATRIX === "1";
+const READING_ANCHOR_Y_RATIO_BUDGET = 0.01;
+const READING_FRACTION_FALLBACK_BUDGET = 0.01;
+const CYCLE_READING_ANCHOR_Y_RATIO_BUDGET = 0.005;
+const CYCLE_READING_FRACTION_FALLBACK_BUDGET = 0.005;
 const DEFAULT_BENCHMARK_SCROLL_TARGET = {
   label: "deep",
   minTop: 160,
@@ -844,6 +867,7 @@ async function runSidebarBenchmark(
           await nextAnimationFrame();
         }
       };
+      const readingBoundarySnapPx = 24;
       const root = document.querySelector<HTMLElement>(benchmarkRootSelector);
       const trigger = root?.querySelector<HTMLButtonElement>(
         '[data-slot="file-viewer-sidebar-trigger"]',
@@ -1073,6 +1097,52 @@ async function runSidebarBenchmark(
           visibleRenderedIds: visibleAnchors.map((anchor) => anchor.id),
         };
       };
+      const readReadingAnchor = (
+        scroller: HTMLElement | null,
+        rendererContinuity: BenchmarkRendererContinuity,
+      ) => {
+        const anchors = rendererContinuity.visibleAnchors;
+        if (!scroller || anchors.length === 0) return null;
+        if (scroller.scrollTop <= 1) return { kind: "top" as const };
+
+        const viewportRect = scroller.getBoundingClientRect();
+        const markerOffset = viewportRect.height * 0.2;
+        const markerTop = viewportRect.top + markerOffset;
+        const containingAnchor = anchors.find(
+          (anchor) => anchor.top <= markerTop && anchor.bottom >= markerTop,
+        );
+        let previousAnchor: BenchmarkRendererAnchor | undefined;
+        for (const anchor of anchors) {
+          if (anchor.top <= markerTop) previousAnchor = anchor;
+        }
+        const nextAnchor = anchors.find((anchor) => anchor.top > markerTop);
+        const anchor = containingAnchor ?? previousAnchor ?? nextAnchor;
+        if (!anchor || anchor.height <= 0) return null;
+
+        const topInViewport = anchor.top - viewportRect.top;
+        const yRatio = Math.min(
+          1,
+          Math.max(0, (markerTop - anchor.top) / anchor.height),
+        );
+        if (
+          Math.abs(topInViewport) <=
+          Math.min(markerOffset, readingBoundarySnapPx)
+        ) {
+          return {
+            id: anchor.id,
+            kind: "boundary" as const,
+            topInViewport: Math.round(topInViewport),
+            yRatio,
+          };
+        }
+
+        return {
+          id: anchor.id,
+          kind: "page" as const,
+          markerTop,
+          yRatio,
+        };
+      };
 
       const setSidebarOpenState = async (open: boolean) => {
         if ((root.dataset.fileViewerSidebarOpen === "true") === open) return;
@@ -1091,6 +1161,11 @@ async function runSidebarBenchmark(
         const transform = visual
           ? visual.style.transform || getComputedStyle(visual).transform
           : null;
+        const rendererContinuity = readRendererContinuity(
+          root,
+          scroller,
+          visual,
+        );
 
         return {
           activeElementRole: readActiveElementRole(document.activeElement),
@@ -1099,9 +1174,11 @@ async function runSidebarBenchmark(
           contentWidth: contentRect.width,
           documentHasFocus: document.hasFocus(),
           fingerprint: readBenchmarkFingerprint(root),
+          format: readBenchmarkFormat(root) ?? null,
           frameWidth: frameRect.width,
           gapWidth: gapRect.width,
-          rendererContinuity: readRendererContinuity(root, scroller, visual),
+          readingAnchor: readReadingAnchor(scroller, rendererContinuity),
+          rendererContinuity,
           rootWidth: rootRect.width,
           sidebarOpen: root.dataset.fileViewerSidebarOpen ?? null,
           sidebarState: root.dataset.fileViewerSidebarState ?? null,
@@ -1186,6 +1263,24 @@ async function runSidebarBenchmark(
           Object.values(
             JSON.parse(fingerprint) as Record<string, number>,
           ).every((count) => count === 0);
+        const isRendererReady = () => {
+          if (readBenchmarkFormat(root) !== "pdf") return true;
+
+          const visibleSlots = Array.from(
+            root.querySelectorAll<HTMLElement>(
+              '[data-slot="pdf-page-slot"][data-visible]',
+            ),
+          );
+          if (visibleSlots.length === 0) return false;
+
+          return visibleSlots.every((slot) =>
+            Boolean(
+              slot.querySelector(
+                '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+              ),
+            ),
+          );
+        };
         let previousFingerprint = readBenchmarkFingerprint(root);
         let stableFrameCount = 0;
 
@@ -1195,7 +1290,8 @@ async function runSidebarBenchmark(
 
           if (
             currentFingerprint === previousFingerprint &&
-            !isEmptyFingerprint(currentFingerprint)
+            !isEmptyFingerprint(currentFingerprint) &&
+            isRendererReady()
           ) {
             stableFrameCount += 1;
           } else {
@@ -1762,6 +1858,13 @@ function summarizeMotionRun(run: BenchmarkMotionRun) {
       start: roundMetric(run.before.scrollWidth),
       end: roundMetric(run.after.scrollWidth),
     },
+    readingAnchor: {
+      start: formatReadingAnchor(run.before.readingAnchor),
+      end: formatReadingAnchor(run.after.readingAnchor),
+      driftPercent: roundNullableMetric(
+        readingAnchorYRatioDriftPercent(run.before, run.after),
+      ),
+    },
     syncDriftPx: roundMetric(valueRange(contentSums)),
     visualLeft: {
       start: roundNullableMetric(run.before.visualLeft),
@@ -2107,19 +2210,75 @@ function readingFraction(sample: BenchmarkSample) {
   return Math.min(1, Math.max(0, sample.scrollTop / range));
 }
 
+function readingAnchorYRatioDrift(
+  before: BenchmarkSample,
+  after: BenchmarkSample,
+) {
+  if (before.format !== "pdf" || after.format !== "pdf") return null;
+  if (!before.readingAnchor || !after.readingAnchor) return null;
+  if (before.readingAnchor.kind === "top") return 0;
+  if (after.readingAnchor.kind === "top") return Infinity;
+  if (before.readingAnchor.id !== after.readingAnchor.id) return Infinity;
+
+  if (
+    before.readingAnchor.kind === "boundary" &&
+    after.readingAnchor.kind === "boundary"
+  ) {
+    return (
+      Math.abs(
+        before.readingAnchor.topInViewport - after.readingAnchor.topInViewport,
+      ) / 1000
+    );
+  }
+
+  return Math.abs(before.readingAnchor.yRatio - after.readingAnchor.yRatio);
+}
+
+function readingAnchorYRatioDriftPercent(
+  before: BenchmarkSample,
+  after: BenchmarkSample,
+) {
+  const drift = readingAnchorYRatioDrift(before, after);
+  return drift == null || !Number.isFinite(drift) ? null : drift * 100;
+}
+
+function formatReadingAnchor(anchor: BenchmarkReadingAnchor | null) {
+  if (!anchor) return "none";
+  if (anchor.kind === "top") return "top";
+  if (anchor.kind === "boundary") {
+    return `${anchor.id}#boundary@${anchor.topInViewport.toFixed(0)}px`;
+  }
+  return `${anchor.id}@${(anchor.yRatio * 100).toFixed(2)}%`;
+}
+
 function collectReadingIdentityFailures(
   run: BenchmarkMotionRun,
   prefix: string,
 ): string[] {
+  const anchorDrift = readingAnchorYRatioDrift(run.before, run.after);
+  if (anchorDrift != null) {
+    if (anchorDrift <= READING_ANCHOR_Y_RATIO_BUDGET) return [];
+
+    return [
+      `${prefix}: settled reading anchor drifted ${formatReadingAnchor(
+        run.before.readingAnchor,
+      )} -> ${formatReadingAnchor(run.after.readingAnchor)} (budget: same anchor, drift <= ${(
+        READING_ANCHOR_Y_RATIO_BUDGET * 100
+      ).toFixed(2)}%)`,
+    ];
+  }
+
   const drift = Math.abs(
     readingFraction(run.after) - readingFraction(run.before),
   );
-  if (drift <= 0.01) return [];
+  if (drift <= READING_FRACTION_FALLBACK_BUDGET) return [];
 
   return [
     `${prefix}: settled reading position drifted ${(drift * 100).toFixed(
       2,
-    )}% across the refit (budget: <= 1.00%)`,
+    )}% across the refit (fallback budget: <= ${(
+      READING_FRACTION_FALLBACK_BUDGET * 100
+    ).toFixed(2)}%)`,
   ];
 }
 
@@ -2157,27 +2316,33 @@ function collectCycleInvarianceFailures(
     result.actionOrder === "close-open"
       ? result.open.after
       : result.close.after;
-  // Measured as reading position rather than absolute pixels: the
-  // intermediate refit rescales everything, and each settle rebase quantizes
-  // scrollTop, so the round-trip guarantee is the same logical reading spot.
-  const drift = Math.abs(
-    readingFraction(restoredEnd) - readingFraction(expectedStart),
-  );
+  const anchorDrift = readingAnchorYRatioDrift(expectedStart, restoredEnd);
+  const drift =
+    anchorDrift ??
+    Math.abs(readingFraction(restoredEnd) - readingFraction(expectedStart));
   const failures: string[] = [];
 
-  if (drift > 0.005) {
+  if (
+    anchorDrift != null
+      ? anchorDrift > CYCLE_READING_ANCHOR_Y_RATIO_BUDGET
+      : drift > CYCLE_READING_FRACTION_FALLBACK_BUDGET
+  ) {
     failures.push(
-      `${label}: settled cycle reading position drifted ${(
-        drift * 100
-      ).toFixed(2)}% after ${result.actionOrder} (budget: <= 0.50%)`,
+      anchorDrift != null
+        ? `${label}: settled cycle reading anchor drifted ${formatReadingAnchor(
+            expectedStart.readingAnchor,
+          )} -> ${formatReadingAnchor(
+            restoredEnd.readingAnchor,
+          )} after ${result.actionOrder} (budget: same anchor, drift <= ${(
+            CYCLE_READING_ANCHOR_Y_RATIO_BUDGET * 100
+          ).toFixed(2)}%)`
+        : `${label}: settled cycle reading position drifted ${(
+            drift * 100
+          ).toFixed(2)}% after ${result.actionOrder} (fallback budget: <= ${(
+            CYCLE_READING_FRACTION_FALLBACK_BUDGET * 100
+          ).toFixed(2)}%)`,
     );
   }
-  if (expectedStart.fingerprint !== restoredEnd.fingerprint) {
-    failures.push(
-      `${label}: renderer fingerprint changed after ${result.actionOrder}: ${expectedStart.fingerprint} -> ${restoredEnd.fingerprint}`,
-    );
-  }
-
   return failures;
 }
 

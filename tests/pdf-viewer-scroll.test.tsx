@@ -198,8 +198,7 @@ describe("usePdfScroll", () => {
     } as HTMLDivElement;
     const expectedScrollTop =
       nextPage.offsetTop +
-      nextPage.height *
-        ((50 + readingMarkerOffset) / initialPage.height) -
+      nextPage.height * ((50 + readingMarkerOffset) / initialPage.height) -
       readingMarkerOffset;
 
     function Harness({ layout }: { layout: typeof initialLayout }) {
@@ -224,6 +223,64 @@ describe("usePdfScroll", () => {
     view.rerender(<Harness layout={nextLayout} />);
 
     await waitFor(() => expect(viewport.scrollTop).toBe(expectedScrollTop));
+  });
+
+  it("does not downgrade an interior page anchor to a boundary anchor", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 598 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 598 },
+      pageSizeByNumber: new Map(),
+      scale: 2,
+      rotation: 0,
+    });
+    const initialPage = getPdfPageLayout(initialLayout, 4)!;
+    const nextPage = getPdfPageLayout(nextLayout, 4)!;
+    const viewportHeight = 640;
+    const readingMarkerOffset = viewportHeight * 0.2;
+    const pageTopInViewport = -59;
+    const viewport = {
+      scrollTop: initialPage.offsetTop - pageTopInViewport,
+      clientHeight: viewportHeight,
+      scrollHeight: 10_000,
+      getBoundingClientRect: () =>
+        ({ top: 0, height: viewportHeight }) as DOMRect,
+    } as HTMLDivElement;
+    const yPercent =
+      (readingMarkerOffset - pageTopInViewport) / initialPage.height;
+    const semanticScrollTop =
+      nextPage.offsetTop + nextPage.height * yPercent - readingMarkerOffset;
+    const boundaryScrollTop = nextPage.offsetTop - pageTopInViewport;
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      });
+
+      useMountEffect(() => {
+        result.setViewportElement(viewport);
+        return () => result.setViewportElement(null);
+      });
+
+      return <output data-testid="page">{result.currentPage}</output>;
+    }
+
+    const view = render(<Harness layout={initialLayout} />);
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy());
+
+    view.rerender(<Harness layout={nextLayout} />);
+
+    await waitFor(() => expect(viewport.scrollTop).toBe(semanticScrollTop));
+    expect(viewport.scrollTop).not.toBe(boundaryScrollTop);
   });
 
   it("keeps the viewport at the document top across layout changes", async () => {

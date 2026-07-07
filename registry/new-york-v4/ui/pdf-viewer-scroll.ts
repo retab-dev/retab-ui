@@ -26,6 +26,7 @@ import { joinEffectKey } from "@/lib/effect-key";
 const PDF_SCROLL_TARGET_HEADROOM = 48;
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32;
 export const PDF_READING_MARKER_RATIO = 0.2;
+const PDF_READING_BOUNDARY_SNAP_PX = 24;
 const PDF_SCROLL_IDLE_MS = 120;
 
 type PdfReadingAnchor =
@@ -575,7 +576,8 @@ function capturePdfReadingAnchor(
 
   const markerOffset = getPdfReadingAnchorOffset(viewportBlockSize);
   const pageTopInViewport = pageLayout.offsetTop - scrollTop;
-  if (Math.abs(pageTopInViewport) <= markerOffset) {
+  const boundarySnap = Math.min(markerOffset, PDF_READING_BOUNDARY_SNAP_PX);
+  if (Math.abs(pageTopInViewport) <= boundarySnap) {
     return {
       kind: "page-boundary",
       pageNumber,

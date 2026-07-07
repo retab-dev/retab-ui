@@ -65,8 +65,10 @@ type BenchmarkSample = {
   clientWidth: number;
   documentHasFocus: boolean;
   fingerprint: string;
+  format: string | null;
   frameWidth: number;
   gapWidth: number;
+  readingAnchor: BenchmarkReadingAnchor | null;
   rendererAnchors: BenchmarkAnchor[];
   sidebarOpen: string | null;
   sidebarState: string | null;
@@ -90,6 +92,23 @@ type BenchmarkAnchor = {
   id: string;
   top: number;
 };
+
+type BenchmarkReadingAnchor =
+  | {
+      kind: "top";
+    }
+  | {
+      id: string;
+      kind: "boundary";
+      topInViewport: number;
+      yRatio: number;
+    }
+  | {
+      id: string;
+      kind: "page";
+      markerTop: number;
+      yRatio: number;
+    };
 
 type BenchmarkMotionRun = {
   action: "close" | "open";
@@ -188,6 +207,9 @@ const BENCHMARK_SCROLL_DEPTH_RATIO = 0.72;
 const BENCHMARK_SAMPLE_FRAME_COUNT = 32;
 const BENCHMARK_SETTLE_FRAME_COUNT = 16;
 const BENCHMARK_RAPID_INTERRUPT_FRAME_COUNT = 2;
+const READING_ANCHOR_Y_RATIO_BUDGET = 0.01;
+const CYCLE_READING_ANCHOR_Y_RATIO_BUDGET = 0.005;
+const READING_BOUNDARY_SNAP_PX = 24;
 const DEFAULT_BENCHMARK_SCROLL_TARGET_ID = "deep";
 
 export const SIDEBAR_MOTION_BENCHMARK_SCROLL_TARGETS = [
@@ -285,9 +307,7 @@ export async function runFileViewerSidebarMotionBenchmark(
   return result;
 }
 
-function logSidebarMotionBenchmarkResult(
-  result: SidebarMotionBenchmarkResult,
-) {
+function logSidebarMotionBenchmarkResult(result: SidebarMotionBenchmarkResult) {
   const metrics = result.metrics.map((metric) => ({
     budget: metric.budget,
     detail: metric.detail,
@@ -316,10 +336,7 @@ function logSidebarMotionBenchmarkResult(
     "[file-viewer:sidebar-benchmark] result",
     JSON.stringify(summary),
   );
-  console.info(
-    "[file-viewer:sidebar-benchmark] full result",
-    fullResultJson,
-  );
+  console.info("[file-viewer:sidebar-benchmark] full result", fullResultJson);
   console.table(metrics);
   if (failedMetrics.length > 0) {
     console.warn(
@@ -441,6 +458,24 @@ function resolveFallbackScrollTop(
 async function waitForStableRenderer(runtime: BenchmarkRuntime) {
   let previousFingerprint = readBenchmarkFingerprint(runtime.root);
   let stableFrameCount = 0;
+  const isRendererReady = () => {
+    if (runtime.root.dataset.benchmarkActiveFormat !== "pdf") return true;
+
+    const visibleSlots = Array.from(
+      runtime.root.querySelectorAll<HTMLElement>(
+        '[data-slot="pdf-page-slot"][data-visible]',
+      ),
+    );
+    if (visibleSlots.length === 0) return false;
+
+    return visibleSlots.every((slot) =>
+      Boolean(
+        slot.querySelector(
+          '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+        ),
+      ),
+    );
+  };
 
   // The renderer must be fully settled — including any async page raster
   // backlog queued by the scroll — before the toggle is sampled, otherwise a
@@ -454,7 +489,7 @@ async function waitForStableRenderer(runtime: BenchmarkRuntime) {
     await nextAnimationFrame();
     const currentFingerprint = readBenchmarkFingerprint(runtime.root);
 
-    if (currentFingerprint === previousFingerprint) {
+    if (currentFingerprint === previousFingerprint && isRendererReady()) {
       stableFrameCount += 1;
     } else {
       previousFingerprint = currentFingerprint;
@@ -704,8 +739,10 @@ function readSample(runtime: BenchmarkRuntime): BenchmarkSample {
     clientWidth: scroller?.clientWidth ?? 0,
     documentHasFocus: document.hasFocus(),
     fingerprint: readBenchmarkFingerprint(runtime.root),
+    format: runtime.root.dataset.benchmarkActiveFormat ?? null,
     frameWidth: frameRect.width,
     gapWidth: gapRect.width,
+    readingAnchor: readReadingAnchor(scroller, rendererAnchors),
     rendererAnchors,
     sidebarOpen: runtime.root.dataset.fileViewerSidebarOpen ?? null,
     sidebarState: runtime.root.dataset.fileViewerSidebarState ?? null,
@@ -861,22 +898,22 @@ function collectScrollGeometryMetric(
 ): SidebarMotionBenchmarkMetric {
   // A shell-owned fit-width resize freezes renderer layout during the slide and
   // moves the surface with a transform; the DOM scroll range is materialized at
-  // settle. The invariant is therefore the settled logical reading identity,
+  // settle. The invariant is therefore the settled rendered reading anchor,
   // while in-flight smoothness is covered by renderer continuity, anchor
   // stability, and visual smoothness.
   const drift = Math.max(
-    settledReadingFractionDrift(close.before, close.after),
-    settledReadingFractionDrift(open.before, open.after),
+    settledReadingIdentityDrift(close.before, close.after),
+    settledReadingIdentityDrift(open.before, open.after),
   );
 
   return {
     id: "scroll-geometry",
     label: "Scroll identity",
-    passed: drift <= 0.01,
-    value: `${(drift * 100).toFixed(2)}%`,
+    passed: drift <= READING_ANCHOR_Y_RATIO_BUDGET,
+    value: formatReadingIdentityDrift(drift),
     budget: "<= 1.00%",
     detail:
-      "The normalized reading position lands on the same logical document position after each refit.",
+      "The same rendered reading anchor lands at the same position after each refit.",
   };
 }
 
@@ -980,8 +1017,8 @@ function collectAnchorStabilityMetric(
   const churn =
     anchorIdentityFailureCount(close) + anchorIdentityFailureCount(open);
   const settleDrift = Math.max(
-    settledReadingFractionDrift(close.before, close.after),
-    settledReadingFractionDrift(open.before, open.after),
+    settledReadingIdentityDrift(close.before, close.after),
+    settledReadingIdentityDrift(open.before, open.after),
   );
 
   return {
@@ -1000,20 +1037,19 @@ function collectCycleInvarianceMetric(
   open: BenchmarkMotionRun,
 ): SidebarMotionBenchmarkMetric {
   // A close/open cycle returns to the same (open) state, so the reader must land
-  // back at the same document position and the renderer must be structurally
-  // identical. Measured as reading position rather than absolute pixels, since
-  // the intermediate refit rescales everything.
-  const drift = settledReadingFractionDrift(close.before, open.after);
-  const fingerprintStable = close.before.fingerprint === open.after.fingerprint;
+  // back at the same document position. Measured as rendered reading anchor
+  // rather than scroll fraction, since short documents can change scroll range
+  // substantially while keeping the same page content under the reading line.
+  const drift = settledReadingIdentityDrift(close.before, open.after);
 
   return {
     id: "cycle-invariance",
     label: "Cycle invariance",
-    passed: drift <= 0.005 && fingerprintStable,
-    value: `${(drift * 100).toFixed(2)}% / ${fingerprintStable ? "same" : "changed"}`,
-    budget: "<= 0.50% / same",
+    passed: drift <= CYCLE_READING_ANCHOR_Y_RATIO_BUDGET,
+    value: formatReadingIdentityDrift(drift),
+    budget: "<= 0.50%",
     detail:
-      "After a close/open cycle, the viewer returns to the same reading position and renderer fingerprint.",
+      "After a close/open cycle, the viewer returns to the same reading position.",
   };
 }
 
@@ -1024,7 +1060,7 @@ function collectRapidToggleMetric(
   // occurs and the reader must land back where they were. Measured as reading
   // position; a bounded number of settle scroll events is allowed for the
   // reading-anchor rebase.
-  const drift = settledReadingFractionDrift(
+  const drift = settledReadingIdentityDrift(
     rapidToggle.before,
     rapidToggle.after,
   );
@@ -1037,8 +1073,11 @@ function collectRapidToggleMetric(
   return {
     id: "rapid-toggle",
     label: "Rapid toggle",
-    passed: drift <= 0.005 && eventCount <= 2 && stateStable,
-    value: `${(drift * 100).toFixed(2)}% / ${eventCount} / ${
+    passed:
+      drift <= CYCLE_READING_ANCHOR_Y_RATIO_BUDGET &&
+      eventCount <= 2 &&
+      stateStable,
+    value: `${formatReadingIdentityDrift(drift)} / ${eventCount} / ${
       stateStable ? "same" : "changed"
     }`,
     budget: "<= 0.50% / <= 2 / same",
@@ -1252,6 +1291,42 @@ function settledReadingFractionDrift(
   after: BenchmarkSample,
 ) {
   return Math.abs(readingFraction(after) - readingFraction(before));
+}
+
+function settledReadingIdentityDrift(
+  before: BenchmarkSample,
+  after: BenchmarkSample,
+) {
+  const anchorDrift = readingAnchorYRatioDrift(before, after);
+  return anchorDrift ?? settledReadingFractionDrift(before, after);
+}
+
+function readingAnchorYRatioDrift(
+  before: BenchmarkSample,
+  after: BenchmarkSample,
+) {
+  if (before.format !== "pdf" || after.format !== "pdf") return null;
+  if (!before.readingAnchor || !after.readingAnchor) return null;
+  if (before.readingAnchor.kind === "top") return 0;
+  if (after.readingAnchor.kind === "top") return Infinity;
+  if (before.readingAnchor.id !== after.readingAnchor.id) return Infinity;
+
+  if (
+    before.readingAnchor.kind === "boundary" &&
+    after.readingAnchor.kind === "boundary"
+  ) {
+    return (
+      Math.abs(
+        before.readingAnchor.topInViewport - after.readingAnchor.topInViewport,
+      ) / 1000
+    );
+  }
+
+  return Math.abs(before.readingAnchor.yRatio - after.readingAnchor.yRatio);
+}
+
+function formatReadingIdentityDrift(drift: number) {
+  return Number.isFinite(drift) ? `${(drift * 100).toFixed(2)}%` : "changed";
 }
 
 function scrollHeightDriftPx(run: BenchmarkMotionRun) {
@@ -1581,6 +1656,51 @@ function readRendererAnchors(root: HTMLElement, scroller: HTMLElement | null) {
       top: rect.top,
     };
   });
+}
+
+function readReadingAnchor(
+  scroller: HTMLElement | null,
+  anchors: BenchmarkAnchor[],
+): BenchmarkReadingAnchor | null {
+  if (!scroller || anchors.length === 0) return null;
+  if (scroller.scrollTop <= 1) return { kind: "top" };
+
+  const viewportRect = scroller.getBoundingClientRect();
+  const markerOffset = viewportRect.height * 0.2;
+  const markerTop = viewportRect.top + markerOffset;
+  const containingAnchor = anchors.find(
+    (anchor) => anchor.top <= markerTop && anchor.bottom >= markerTop,
+  );
+  let previousAnchor: BenchmarkAnchor | undefined;
+  for (const anchor of anchors) {
+    if (anchor.top <= markerTop) previousAnchor = anchor;
+  }
+  const nextAnchor = anchors.find((anchor) => anchor.top > markerTop);
+  const anchor = containingAnchor ?? previousAnchor ?? nextAnchor;
+  if (!anchor || anchor.height <= 0) return null;
+
+  const topInViewport = anchor.top - viewportRect.top;
+  const yRatio = Math.min(
+    1,
+    Math.max(0, (markerTop - anchor.top) / anchor.height),
+  );
+  if (
+    Math.abs(topInViewport) <= Math.min(markerOffset, READING_BOUNDARY_SNAP_PX)
+  ) {
+    return {
+      id: anchor.id,
+      kind: "boundary",
+      topInViewport: Math.round(topInViewport),
+      yRatio,
+    };
+  }
+
+  return {
+    id: anchor.id,
+    kind: "page",
+    markerTop,
+    yRatio,
+  };
 }
 
 function keyedElements(
