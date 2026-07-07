@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import type { ViewerResource } from "@/lib/viewer-resource";
-import { renderCachedDocxPreview } from "@/components/ui/docx-viewer-render";
+import { renderCachedDocxPreview } from "@/registry/new-york-v4/ui/docx-viewer-render";
 import {
   Surface,
   useElementWidth,

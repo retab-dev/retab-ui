@@ -1,0 +1,117 @@
+Return-Path: <mina@samples.retab.dev>
+Delivered-To: avery@samples.retab.dev
+Date: Fri, 13 Jun 2026 09:42:00 -0400
+From: Mina Patel <mina@samples.retab.dev>
+To: Avery Lee <avery@samples.retab.dev>,
+ Ops Review <ops@samples.retab.dev>
+Cc: =?utf-8?Q?Ren=C3=A9e_Dubois?= <renee@samples.retab.dev>
+Subject: =?utf-8?Q?Northstar_Foods_contract_packet_=E2=80=94_signature_needed?=
+Message-ID: <20260613134200.5f2a1c@samples.retab.dev>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b1_mixed_2f5c1a"
+
+This is a multi-part message in MIME format.
+
+--b1_mixed_2f5c1a
+Content-Type: multipart/alternative; boundary="b2_alt_9d4e77"
+
+--b2_alt_9d4e77
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Contract packet ready for review
+
+Hi Avery,
+
+The vendor packet for Northstar Foods is attached =E2=80=94 the signature=
+ page is in the PDF and the regional totals are in the CSV.
+
+Attachments:
+- northstar-signature-page.pdf
+- regional-sales.csv
+
+Thanks,
+Mina
+
+--b2_alt_9d4e77
+Content-Type: multipart/related; boundary="b3_rel_51b0c3"; type="text/html"
+
+--b3_rel_51b0c3
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PCFkb2N0eXBlIGh0bWw+CjxodG1sPgogIDxoZWFkPjxtZXRhIGNoYXJzZXQ9InV0Zi04IiAvPjwv
+aGVhZD4KICA8Ym9keSBzdHlsZT0ibWFyZ2luOjA7cGFkZGluZzoyOHB4O2ZvbnQtZmFtaWx5OkFy
+aWFsLEhlbHZldGljYSxzYW5zLXNlcmlmO2NvbG9yOiMxMTE4Mjc7bGluZS1oZWlnaHQ6MS41OyI+
+CiAgICA8bWFpbiBzdHlsZT0ibWF4LXdpZHRoOjY4MHB4O21hcmdpbjowIGF1dG87Ij4KICAgICAg
+PGltZyBzcmM9ImNpZDpub3J0aHN0YXItbG9nb0BzYW1wbGVzLnJldGFiLmRldiIgYWx0PSJOb3J0
+aHN0YXIgRm9vZHMiIHdpZHRoPSIyMjAiIHN0eWxlPSJkaXNwbGF5OmJsb2NrO21hcmdpbi1ib3R0
+b206MjRweDsiIC8+CiAgICAgIDxoMSBzdHlsZT0ibWFyZ2luOjAgMCAxMnB4O2ZvbnQtc2l6ZToy
+MnB4OyI+Q29udHJhY3QgcGFja2V0IHJlYWR5IGZvciByZXZpZXc8L2gxPgogICAgICA8cD5IaSBB
+dmVyeSw8L3A+CiAgICAgIDxwPlRoZSB2ZW5kb3IgcGFja2V0IGZvciA8c3Ryb25nPk5vcnRoc3Rh
+ciBGb29kczwvc3Ryb25nPiBpcyBhdHRhY2hlZC4gVGhlIHNpZ25hdHVyZSBwYWdlIGlzIGluIHRo
+ZSBQREYgYW5kIHRoZSByZWdpb25hbCB0b3RhbHMgYXJlIGluIHRoZSBDU1YgJm1kYXNoOyBwbGVh
+c2UgY29tcGFyZSBib3RoIGJlZm9yZSBGcmlkYXkuPC9wPgogICAgICA8dGFibGUgc3R5bGU9Indp
+ZHRoOjEwMCU7bWFyZ2luLXRvcDoxNnB4O2JvcmRlci1jb2xsYXBzZTpjb2xsYXBzZTtmb250LXNp
+emU6MTRweDsiPgogICAgICAgIDx0aGVhZD4KICAgICAgICAgIDx0cj4KICAgICAgICAgICAgPHRo
+IHN0eWxlPSJ0ZXh0LWFsaWduOmxlZnQ7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgI2U1ZTdlYjtw
+YWRkaW5nOjhweDsiPkZpbGU8L3RoPgogICAgICAgICAgICA8dGggc3R5bGU9InRleHQtYWxpZ246
+bGVmdDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjZTVlN2ViO3BhZGRpbmc6OHB4OyI+UHVycG9z
+ZTwvdGg+CiAgICAgICAgICA8L3RyPgogICAgICAgIDwvdGhlYWQ+CiAgICAgICAgPHRib2R5Pgog
+ICAgICAgICAgPHRyPjx0ZCBzdHlsZT0icGFkZGluZzo4cHg7Ym9yZGVyLWJvdHRvbToxcHggc29s
+aWQgI2YxZjVmOTsiPm5vcnRoc3Rhci1zaWduYXR1cmUtcGFnZS5wZGY8L3RkPjx0ZCBzdHlsZT0i
+cGFkZGluZzo4cHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgI2YxZjVmOTsiPk5lZWRzIHNpZ25h
+dHVyZTwvdGQ+PC90cj4KICAgICAgICAgIDx0cj48dGQgc3R5bGU9InBhZGRpbmc6OHB4OyI+cmVn
+aW9uYWwtc2FsZXMuY3N2PC90ZD48dGQgc3R5bGU9InBhZGRpbmc6OHB4OyI+VG90YWxzIHRvIHZl
+cmlmeTwvdGQ+PC90cj4KICAgICAgICA8L3Rib2R5PgogICAgICA8L3RhYmxlPgogICAgICA8cCBz
+dHlsZT0ibWFyZ2luLXRvcDoxNnB4OyI+VGhhbmtzLDxiciAvPk1pbmE8L3A+CiAgICA8L21haW4+
+CiAgPC9ib2R5Pgo8L2h0bWw+Cg==
+
+--b3_rel_51b0c3
+Content-Type: image/svg+xml
+Content-Transfer-Encoding: base64
+Content-ID: <northstar-logo@samples.retab.dev>
+Content-Disposition: inline; filename="northstar-logo.svg"
+
+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdo
+dD0iOTYiIHZpZXdCb3g9IjAgMCAzMjAgOTYiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iTm9ydGhz
+dGFyIEZvb2RzIj4KICA8cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9Ijk2IiByeD0iMTYiIGZpbGw9
+IiMwZjE3MmEiLz4KICA8Y2lyY2xlIGN4PSI0OCIgY3k9IjQ4IiByPSIyMiIgZmlsbD0iI2Y1OWUw
+YiIvPgogIDxwYXRoIGQ9Ik00OCAzMGw1IDEyIDEzIDEtMTAgOSAzIDEzLTExLTctMTEgNyAzLTEz
+LTEwLTkgMTMtMXoiIGZpbGw9IiNmZmYiLz4KICA8dGV4dCB4PSI4OCIgeT0iNTYiIGZpbGw9IiNm
+ZmYiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNiIgZm9udC13
+ZWlnaHQ9IjcwMCI+Tm9ydGhzdGFyIEZvb2RzPC90ZXh0PgogIDx0ZXh0IHg9Ijg4IiB5PSI3NiIg
+ZmlsbD0iI2NiZDVlMSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9
+IjEyIj52ZW5kb3IgcGFja2V0PC90ZXh0Pgo8L3N2Zz4K
+
+--b3_rel_51b0c3--
+
+--b2_alt_9d4e77--
+
+--b1_mixed_2f5c1a
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="northstar-signature-page.pdf"
+
+JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2Jq
+CjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2Jq
+CjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIg
+NzkyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA0IDAgUiA+PiA+PiAvQ29udGVudHMgNSAw
+IFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNl
+Rm9udCAvSGVsdmV0aWNhID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggNjMgPj4Kc3RyZWFt
+CkJUIC9GMSAxOCBUZiA3MiA3MjAgVGQgKE5vcnRoc3RhciBGb29kcyAtIHNpZ25hdHVyZSBwYWdl
+KSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAw
+MDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAK
+MDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzExIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUg
+NiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNDI0CiUlRU9GCg==
+
+--b1_mixed_2f5c1a
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="regional-sales.csv"
+
+cmVnaW9uLHF1YXJ0ZXIscmV2ZW51ZSxvcmRlcnMKRU1FQSxRMSwxODIwMDAsNDEwCkVNRUEsUTIs
+MjA1NTAwLDQ2OApBTUVSLFExLDMwMTIwMCw2NTUKQU1FUixRMiwzMzg5MDAsNzAxCkFQQUMsUTEs
+MTIwNDAwLDI4OQpBUEFDLFEyLDE0MTcwMCwzMzIK
+
+--b1_mixed_2f5c1a--

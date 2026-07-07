@@ -65,6 +65,11 @@ const CodeTextViewer = React.lazy(() =>
     default: m.CodeResourceContent,
   })),
 );
+const EmailResourceContent = React.lazy(() =>
+  import("@/components/ui/email-viewer").then((m) => ({
+    default: m.EmailResourceContent,
+  })),
+);
 
 export type FileViewerRouteProps = {
   className?: string;
@@ -95,6 +100,7 @@ const TEXT_SOURCE_CATEGORIES = new Set<FileCategory>([
   "csv",
   "markdown",
   "html",
+  "email",
   "text",
 ]);
 
@@ -164,6 +170,16 @@ const RENDERERS: Partial<
       className={className}
       bare={bare}
       controls={controls}
+      descriptorSignal={descriptorSignal}
+    />
+  ),
+  email: ({ resource, className, bare, controls, descriptorSignal }) => (
+    <EmailResourceContent
+      resource={resource}
+      className={className}
+      bare={bare}
+      controls={controls}
+      download
       descriptorSignal={descriptorSignal}
     />
   ),

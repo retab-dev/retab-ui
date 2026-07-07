@@ -1430,44 +1430,21 @@ describe("JsonForm arrays", () => {
     fireEvent.focus(trigger);
     fireEvent.keyDown(trigger, { key: "ArrowDown" });
     const scoreContent = await screen.findByRole("listbox");
-    const scoreOption = await within(scoreContent).findByText("3");
-    const scoreOptionItem = scoreOption.closest<HTMLElement>(
-      '[data-slot="select-item"]',
-    );
-    expect(scoreOptionItem).toBeTruthy();
-    fireEvent.pointerEnter(scoreOptionItem!, { pointerType: "mouse" });
-    fireEvent.mouseMove(scoreOptionItem!);
-    fireEvent.pointerDown(scoreOptionItem!, {
-      button: 0,
-      ctrlKey: false,
+    const scoreOptionItem = await within(scoreContent).findByRole("option", {
+      name: "3",
     });
-    fireEvent.pointerUp(scoreOptionItem!, {
-      button: 0,
-      ctrlKey: false,
-    });
-    fireEvent.click(scoreOptionItem!);
+    fireEvent.click(scoreOptionItem);
 
     fireEvent.click(screen.getByRole("button", { name: "Accepted true" }));
     trigger = screen.getByRole("combobox");
     fireEvent.focus(trigger);
     fireEvent.keyDown(trigger, { key: "ArrowDown" });
     const acceptedContent = await screen.findByRole("listbox");
-    const acceptedOption = await within(acceptedContent).findByText("false");
-    const acceptedOptionItem = acceptedOption.closest<HTMLElement>(
-      '[data-slot="select-item"]',
+    const acceptedOptionItem = await within(acceptedContent).findByRole(
+      "option",
+      { name: "false" },
     );
-    expect(acceptedOptionItem).toBeTruthy();
-    fireEvent.pointerEnter(acceptedOptionItem!, { pointerType: "mouse" });
-    fireEvent.mouseMove(acceptedOptionItem!);
-    fireEvent.pointerDown(acceptedOptionItem!, {
-      button: 0,
-      ctrlKey: false,
-    });
-    fireEvent.pointerUp(acceptedOptionItem!, {
-      button: 0,
-      ctrlKey: false,
-    });
-    fireEvent.click(acceptedOptionItem!);
+    fireEvent.click(acceptedOptionItem);
 
     await expect(submit()).resolves.toEqual({
       rows: [{ score: 3, accepted: false }],

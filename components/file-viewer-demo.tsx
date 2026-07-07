@@ -59,6 +59,7 @@ const FILES = [
   { label: "CSV", file: "sales.csv" },
   { label: "Markdown", file: "release-notes.md" },
   { label: "HTML", file: "welcome.html" },
+  { label: "Email", file: "sample-email.eml" },
   { label: "JSON", file: "app-config.json" },
   { label: "Code", file: "use-debounced-value.ts" },
   { label: "Text", file: "review-notes.txt", source: "inline-text" },

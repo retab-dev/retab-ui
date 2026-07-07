@@ -270,6 +270,7 @@ export function useFixedRowVirtualization({
   jumpRowOverscan = rowOverscan,
   initialViewportHeight = 0,
   scrollRef,
+  scrollElement,
 }: {
   rowCount: number;
   rowSize: number;
@@ -277,8 +278,12 @@ export function useFixedRowVirtualization({
   jumpRowOverscan?: number;
   initialViewportHeight?: number;
   scrollRef: React.RefObject<HTMLElement | null>;
+  scrollElement?: HTMLElement | null;
 }) {
-  const resolvedScrollElement = useResolvedScrollElement({ scrollRef });
+  const resolvedScrollElement = useResolvedScrollElement({
+    scrollRef,
+    scrollElement,
+  });
   const [range, setRange] = React.useState(() =>
     initialViewportHeight > 0
       ? fixedRowRange({

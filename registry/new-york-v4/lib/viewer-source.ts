@@ -73,6 +73,7 @@ const EXTENSION_CATEGORY: Record<string, FileCategory> = {
   mdx: "text",
   html: "html",
   htm: "html",
+  eml: "email",
   msg: "email",
   txt: "text",
   text: "text",
@@ -185,6 +186,8 @@ function categoryFromMime(mimeType: string): FileCategory | null {
   if (mime === "text/markdown") return "markdown";
   if (mime === "text/html") return "html";
   if (
+    mime === "message/rfc822" ||
+    mime === "message/global" ||
     mime === "application/vnd.ms-outlook" ||
     mime === "application/msoutlook" ||
     mime === "application/x-msg"

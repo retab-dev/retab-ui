@@ -7,6 +7,10 @@ import { join, posix as pathPosix } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
+// The single source of truth for the install-safe import rewrite applied to
+// built registry payloads.
+import { rewriteContentImports } from "../scripts/rewrite-registry-imports.mjs";
+
 type RegistryFile = {
   content?: string;
   path: string;
@@ -679,8 +683,11 @@ describe("Markdown architecture", () => {
       expect(file.target, `${file.path} registry target`).toBe(
         expectedFile?.target,
       );
+      // Payloads ship install-safe import specifiers (scripts/
+      // rewrite-registry-imports.mjs), so the synchronized-artifact contract
+      // is: payload content === source content after the same rewrite.
       expect(file.content, `${file.path} registry content`).toBe(
-        read(file.path),
+        rewriteContentImports(read(file.path)),
       );
     }
   });

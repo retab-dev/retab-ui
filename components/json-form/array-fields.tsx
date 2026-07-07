@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Plus, X } from "lucide-react";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,11 +52,20 @@ export function JsonFormArray({
 }) {
   const { control, getValues, setValue, unregister } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
+  const arrayValue = useWatch({ control, name });
   const renderedFields = React.useMemo(() => {
-    return fields.map((field, index) => ({
-      id: field.id ?? `${name}.${index}`,
+    // react-hook-form's useFieldArray compacts falsy primitive items (false,
+    // 0, "") out of `fields`, so derive the rendered item count from the
+    // watched array value instead of the compacted field list.
+    if (!Array.isArray(arrayValue)) {
+      return fields.map((field, index) => ({
+        id: field.id ?? `${name}.${index}`,
+      }));
+    }
+    return arrayValue.map((_, index) => ({
+      id: fields[index]?.id ?? `${name}.${index}`,
     }));
-  }, [fields, name]);
+  }, [arrayValue, fields, name]);
   const itemSchema = React.useMemo(
     () => arrayItemSchemaAt(schema, 0),
     [schema],

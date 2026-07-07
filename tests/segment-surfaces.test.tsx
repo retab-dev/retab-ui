@@ -9,7 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
@@ -2011,7 +2011,27 @@ describe("split segment composition", () => {
     ]);
   });
 
-  it("gives the rendered document pane the full flex width", () => {
+  it("gives the rendered document pane the full flex width", async () => {
+    const originalGetBoundingClientRect =
+      HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: 1024,
+        toJSON: () => ({}),
+        top: 0,
+        width: 1024,
+        x: 0,
+        y: 0,
+      };
+    };
+    onTestFinished(() => {
+      HTMLElement.prototype.getBoundingClientRect =
+        originalGetBoundingClientRect;
+    });
+
     render(
       <SplitViewer
         source={viewerSource}
@@ -2025,11 +2045,11 @@ describe("split segment composition", () => {
 
     expect(wrapperClassName).toContain("min-w-0");
     expect(wrapperClassName).toContain("flex-1");
-    expect(document.querySelectorAll('[data-slot="viewer-root"]')).toHaveLength(
-      1,
-    );
+    expect(
+      document.querySelectorAll('[data-slot="file-viewer-root"]'),
+    ).toHaveLength(1);
     const root = document.querySelector<HTMLElement>(
-      '[data-slot="viewer-root"]',
+      '[data-slot="file-viewer-root"]',
     );
     expect(root?.children[0]?.getAttribute("data-slot")).toBe(
       "file-viewer-header",
@@ -2041,13 +2061,17 @@ describe("split segment composition", () => {
       ':scope > [data-slot="file-viewer-content"]',
     );
     expect(
-      body?.querySelector(':scope > [data-slot="viewer-sidebar"]'),
+      body?.querySelector(':scope > [data-slot="file-viewer-sidebar-gap"]'),
     ).toBeTruthy();
     const sidebar = body?.querySelector<HTMLElement>(
-      ':scope > [data-slot="viewer-sidebar"]',
+      ':scope > [data-slot="file-viewer-sidebar-gap"]',
     );
 
-    expect(sidebar?.getAttribute("data-viewer-sidebar-mode")).toBe("inline");
+    await waitFor(() => {
+      expect(sidebar?.getAttribute("data-file-viewer-sidebar-mode")).toBe(
+        "inline",
+      );
+    });
     expect(sidebar?.className).not.toContain("bg-background");
     expect(sidebar?.className).not.toContain("absolute");
     const surface = body?.querySelector<HTMLElement>(
@@ -2055,7 +2079,9 @@ describe("split segment composition", () => {
     );
     expect(surface).toBeTruthy();
     expect(
-      surface?.querySelector(':scope > [data-slot="segment-legend"]'),
+      surface?.querySelector(
+        '[data-slot="file-viewer-legend"] [data-slot="segment-legend"]',
+      ),
     ).toBeTruthy();
   });
 

@@ -155,7 +155,10 @@ describe("json table enum cell", () => {
       '[data-slot="data-cell"]',
     );
     if (!trigger) throw new Error("Missing enum trigger");
-    fireEvent.blur(trigger);
+    // A null relatedTarget while the popup is open is treated as a
+    // possibly-into-popup focus move and must not dismiss; blur only ends
+    // editing when focus provably lands outside the popup.
+    fireEvent.blur(trigger, { relatedTarget: document.body });
 
     expect(onEditingEnd).toHaveBeenCalledTimes(1);
     expect(onOpenChange.mock.calls).toEqual([[true], [false]]);

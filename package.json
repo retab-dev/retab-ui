@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,mdx}\" --cache",
-    "registry:build": "node scripts/expand-registry-closures.mjs && node scripts/verify-registry-file-paths.mjs && shadcn build --output public/r && node scripts/sync-registry-index.mjs",
+    "registry:build": "node scripts/expand-registry-closures.mjs && node scripts/verify-registry-file-paths.mjs && shadcn build --output public/r && node scripts/rewrite-registry-imports.mjs public/r && node scripts/sync-registry-index.mjs",
     "registry:build:items": "node scripts/expand-registry-closures.mjs && node scripts/verify-registry-file-paths.mjs && node scripts/build-registry-items.mjs",
     "registry:check": "node scripts/expand-registry-closures.mjs --check",
     "registry:validate": "shadcn registry validate",

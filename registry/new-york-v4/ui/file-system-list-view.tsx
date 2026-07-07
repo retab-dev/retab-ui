@@ -66,6 +66,16 @@ export function FileSystemListView({
     browser.selectedPath,
   );
   const parentRef = React.useRef<HTMLDivElement | null>(null);
+  // Track the scroll element in state (not just the ref) so virtualization
+  // re-measures when the tree remounts, e.g. after navigating through a
+  // transient empty/loading state. A plain ref mutation never re-renders, so
+  // a ref-only wiring leaves the row window stuck at zero rendered rows.
+  const [parentElement, setParentElement] =
+    React.useState<HTMLDivElement | null>(null);
+  const setParentRef = React.useCallback((node: HTMLDivElement | null) => {
+    parentRef.current = node;
+    setParentElement((current) => (current === node ? current : node));
+  }, []);
   const rows = React.useMemo(
     () =>
       createFileSystemListRows({
@@ -91,6 +101,7 @@ export function FileSystemListView({
     rowOverscan: 12,
     initialViewportHeight: 560,
     scrollRef: parentRef,
+    scrollElement: parentElement,
   });
   const entryRows = React.useMemo(
     () =>
@@ -226,7 +237,7 @@ export function FileSystemListView({
         <div>Modified</div>
       </div>
       <div
-        ref={parentRef}
+        ref={setParentRef}
         role="tree"
         aria-label="Files"
         tabIndex={0}

@@ -34,16 +34,16 @@ import type {
 } from "@/registry/new-york-v4/ui/email-viewer";
 
 vi.mock("@/registry/new-york-v4/ui/file-viewer", () => ({
-  FileViewer: ({
+  FileViewerPreview: ({
     source,
-    as,
+    category,
     className,
   }: {
     source: { kind: string; text?: string; fileName?: string };
-    as?: string;
+    category?: string;
     className?: string;
   }) => (
-    <div data-testid="file-viewer" data-as={as} className={className}>
+    <div data-testid="file-viewer" data-as={category} className={className}>
       {source.kind === "text" ? (
         <iframe title={source.fileName} srcDoc={source.text} />
       ) : (
@@ -831,7 +831,12 @@ describe("EmailViewer", () => {
       name: "Email parts",
     });
     const emailParts = within(emailPartsSidebar);
-    expect(emailPartsSidebar.getAttribute("data-slot")).toBe("viewer-sidebar");
+    expect(emailPartsSidebar.getAttribute("data-slot")).toBe(
+      "viewer-sidebar-container",
+    );
+    expect(
+      emailPartsSidebar.closest('[data-slot="viewer-sidebar"]'),
+    ).toBeTruthy();
     expect(
       emailPartsSidebar.querySelector('[data-slot="mime-part-sidebar"]'),
     ).toBeTruthy();

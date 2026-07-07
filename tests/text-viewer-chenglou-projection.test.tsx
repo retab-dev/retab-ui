@@ -108,7 +108,9 @@ describe("Chenglou text viewer nested projection", () => {
       20,
     );
 
-    await scrollNestedWindow(container, 600);
+    // Scroll far enough that line 0 leaves the 800px overscan window while
+    // line 20 stays inside it.
+    await scrollNestedWindow(container, 1100);
 
     await waitFor(() => {
       expect(container.querySelector("pre")).toBe(pre);
@@ -155,7 +157,7 @@ describe("Chenglou text viewer nested projection", () => {
       20,
     );
 
-    await scrollNestedWindow(container, 700);
+    await scrollNestedWindow(container, 1150);
 
     await waitFor(() => {
       expect(container.querySelector('[data-slot="text-inline-lines"]')).toBe(
@@ -205,7 +207,7 @@ describe("Chenglou text viewer nested projection", () => {
       20,
     );
 
-    await scrollNestedWindow(container, 900);
+    await scrollNestedWindow(container, 1200);
 
     await waitFor(() => {
       expect(container.querySelector("table")).toBe(table);

@@ -62,7 +62,7 @@ describe("pretext markdown greenfield performance boundaries", () => {
     expect(mountedChunks.length).toBeLessThanOrEqual(8);
   });
 
-  it("renders Markdown chunks inside a buffered inverse-sticky window", () => {
+  it("renders Markdown chunks inside a buffered inverse-sticky window", async () => {
     const markdown = Array.from({ length: 180 }, (_, index) =>
       [`## Section ${index + 1}`, "", `Paragraph ${index + 1}.`].join("\n"),
     ).join("\n\n");
@@ -100,10 +100,25 @@ describe("pretext markdown greenfield performance boundaries", () => {
     expect(stickyWindow?.style.height).toBe(stickyContent?.style.height);
     expect(afterBuffer?.style.contain).toBe("layout size");
 
+    const canvasHeight = inlinePx(canvas!.style.height);
+
+    // At the document top the window covers chunk 0, so the before buffer is
+    // legitimately empty. Scroll into the middle of the document so both
+    // buffers must absorb the unmounted chunks around the sticky window.
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    expect(viewport).toBeTruthy();
+    viewport!.scrollTop = Math.floor(canvasHeight / 2);
+    fireEvent.scroll(viewport!);
+
+    await waitFor(() => {
+      expect(inlinePx(beforeBuffer!.style.height)).toBeGreaterThan(0);
+    });
+
     const beforeHeight = inlinePx(beforeBuffer!.style.height);
     const stickyHeight = inlinePx(stickyWindow!.style.height);
     const afterHeight = inlinePx(afterBuffer!.style.height);
-    const canvasHeight = inlinePx(canvas!.style.height);
     const stickyOffset = inlinePx(stickyWindow!.style.top);
 
     expect(beforeHeight).toBeGreaterThan(0);

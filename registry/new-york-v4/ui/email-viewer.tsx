@@ -76,6 +76,13 @@ export type {
 } from "./email-viewer-types";
 
 export {
+  EmailResourceContent,
+  type EmailResourceContentProps,
+} from "./email-viewer-content";
+
+export { parseEmlMessage, type ParseEmlOptions } from "./email-viewer-eml";
+
+export {
   buildMimeTree,
   categoryForMimeNode,
   createMimeMessageScope,

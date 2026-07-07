@@ -19,6 +19,13 @@ const DynamicFileThumbnailFormatsGrid = dynamic(
     ),
   { loading: ShowcasePreviewFallback, ssr: false },
 );
+const DynamicFileViewerTelemetryWidget = dynamic(
+  () =>
+    import("@/components/file-viewer-telemetry-widget").then(
+      (module) => module.FileViewerTelemetryWidget,
+    ),
+  { ssr: false },
+);
 const DynamicFileViewerShowcase = dynamic(
   () =>
     import("@/components/file-viewer-demo").then(
@@ -209,8 +216,9 @@ function HomeShowcaseTabs({
 
 function SourcesViewerShowcasePanel() {
   return (
-    <div className="h-[680px] overflow-hidden rounded-xl border shadow-sm [&_[data-slot=file-viewer-legend]]:hidden">
+    <div className="relative h-[680px] overflow-hidden rounded-xl border shadow-sm [&_[data-slot=file-viewer-legend]]:hidden">
       <DynamicJsonFormSourcesBlock />
+      <DynamicFileViewerTelemetryWidget />
     </div>
   );
 }

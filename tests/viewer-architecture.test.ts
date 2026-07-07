@@ -3,6 +3,10 @@ import { dirname, join, relative } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+// The single source of truth for the install-safe import rewrite applied to
+// built registry payloads.
+import { rewriteContentImports } from "../scripts/rewrite-registry-imports.mjs";
+
 type RegistryFile = {
   path: string;
   content?: string;
@@ -5024,10 +5028,13 @@ describe("viewer architecture", () => {
       );
 
       for (const publicFile of publicItemPayload.files) {
+        // Payloads ship install-safe import specifiers (scripts/
+        // rewrite-registry-imports.mjs), so alignment means: payload content
+        // === source content after the same rewrite.
         expect(
           publicFile.content,
           `${item.name}: ${publicFile.path} content differs in public/r`,
-        ).toBe(fileContent(publicFile.path));
+        ).toBe(rewriteContentImports(fileContent(publicFile.path)));
       }
     }
 

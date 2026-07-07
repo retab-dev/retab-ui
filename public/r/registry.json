@@ -2235,7 +2235,8 @@
         "@retab/viewer-controls",
         "@retab/skeleton",
         "separator",
-        "@retab/spinner"
+        "@retab/spinner",
+        "@retab/email-viewer"
       ],
       "files": [
         {
@@ -3576,7 +3577,8 @@
         "@retab/utils",
         "@retab/file-size-format",
         "@retab/file-thumbnail",
-        "@retab/file-viewer"
+        "@retab/file-viewer",
+        "@retab/viewer-controls"
       ],
       "files": [
         {
@@ -3603,6 +3605,16 @@
           "path": "registry/new-york-v4/ui/email-viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/email-viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/email-viewer-content.tsx",
+          "type": "registry:ui",
+          "target": "@ui/email-viewer-content.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/ui/email-viewer-eml.ts",
+          "type": "registry:ui",
+          "target": "@ui/email-viewer-eml.ts"
         }
       ]
     },

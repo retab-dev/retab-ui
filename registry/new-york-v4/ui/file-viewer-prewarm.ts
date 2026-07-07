@@ -11,6 +11,7 @@ export type FileViewerPrewarmTarget =
   | "pptx"
   | "xlsx"
   | "markdown"
+  | "email"
   | "text"
   | "code";
 
@@ -43,6 +44,7 @@ const CATEGORY_PREWARM_TARGETS: Partial<
   pptx: "pptx",
   xlsx: "xlsx",
   markdown: "markdown",
+  email: "email",
 };
 
 const PREWARM_LOADERS: Record<FileViewerPrewarmTarget, () => Promise<void>> = {
@@ -58,6 +60,7 @@ const PREWARM_LOADERS: Record<FileViewerPrewarmTarget, () => Promise<void>> = {
   xlsx: () => import("@/components/ui/xlsx-viewer").then(() => undefined),
   markdown: () =>
     import("@/components/ui/markdown-viewer").then(() => undefined),
+  email: () => import("@/components/ui/email-viewer").then(() => undefined),
   text: () =>
     import("@/components/ui/text-viewer-chenglou").then(() => undefined),
   code: () => import("@/components/ui/code-viewer").then(() => undefined),

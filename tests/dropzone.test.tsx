@@ -1845,6 +1845,7 @@ describe("Dropzone registry split", () => {
       "registry/new-york-v4/blocks/dropzone-intake-router.tsx",
       "registry/new-york-v4/blocks/dropzone-pinboard-drop-surface.tsx",
       "registry/new-york-v4/blocks/dropzone-required-packet-slots.tsx",
+      "registry/new-york-v4/blocks/dropzone-upload-progress-queue.tsx",
     ]);
   });
 });

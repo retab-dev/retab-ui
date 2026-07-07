@@ -115,17 +115,30 @@ vi.mock("@/components/ui/pdf-viewer", () => ({
 }));
 
 vi.mock("@/components/ui/file-viewer", () => ({
-  FileViewer: (props: {
+  FileViewerProvider: (props: {
     source: { kind: "url"; url: string; fileName?: string };
     children?: React.ReactNode;
   }) => {
     viewerMocks.currentFileViewerSource = props.source;
     return (
       <div data-testid="file-viewer" data-src={props.source.url}>
-        {props.children ?? props.source.fileName}
+        {props.children}
       </div>
     );
   },
+  FileViewer: (props: { children?: React.ReactNode }) => <>{props.children}</>,
+  FileViewerContent: (props: { children?: React.ReactNode }) => (
+    <>{props.children}</>
+  ),
+  FileViewerInset: (props: { children?: React.ReactNode }) => (
+    <>{props.children}</>
+  ),
+  FileViewerViewport: (props: { children?: React.ReactNode }) => (
+    <>{props.children}</>
+  ),
+  FileViewerDocument: () => (
+    <>{viewerMocks.currentFileViewerSource?.fileName}</>
+  ),
 }));
 
 afterEach(() => {

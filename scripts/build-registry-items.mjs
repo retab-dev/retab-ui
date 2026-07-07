@@ -9,6 +9,8 @@ import {
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
+import { rewriteRegistryPayloadFile } from "./rewrite-registry-imports.mjs"
+
 const itemNames = process.argv.slice(2)
 
 if (itemNames.length === 0) {
@@ -50,10 +52,9 @@ try {
   ])
 
   for (const name of itemNames) {
-    await copyFile(
-      join(tempOutputDir, `${name}.json`),
-      join("public/r", `${name}.json`)
-    )
+    const builtPath = join(tempOutputDir, `${name}.json`)
+    await rewriteRegistryPayloadFile(builtPath)
+    await copyFile(builtPath, join("public/r", `${name}.json`))
   }
 } finally {
   await rm(tempDir, { recursive: true, force: true })
