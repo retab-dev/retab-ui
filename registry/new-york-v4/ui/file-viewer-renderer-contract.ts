@@ -15,6 +15,7 @@ export type FileViewerDocumentAlign = "start" | "center" | "end";
 // fields. `isTransitioning` is shorthand for `phase === "sliding"`.
 export type FileViewerRendererFrame = {
   align: FileViewerDocumentAlign;
+  canToggleSidebar: boolean;
   documentTransition: ViewerDocumentTransition;
   element: HTMLDivElement | null;
   fromInlineSize: number | null;
@@ -24,6 +25,7 @@ export type FileViewerRendererFrame = {
   phase: FileViewerMotionPhase;
   rasterInlineSize: number | null;
   settledInlineSize: number | null;
+  shellInlineSize: number | null;
   toInlineSize: number | null;
   usesShellGeometry: boolean;
 };
@@ -49,6 +51,7 @@ export function resolveFileViewerRendererLayoutInlineSize({
 
 export function createFileViewerRendererFrame({
   align,
+  canToggleSidebar,
   element,
   fallbackInlineSize,
   motionFrame,
@@ -56,6 +59,7 @@ export function createFileViewerRendererFrame({
   usesShellGeometry,
 }: {
   align: FileViewerDocumentAlign;
+  canToggleSidebar: boolean;
   element: HTMLDivElement | null;
   fallbackInlineSize: number | null;
   motionFrame: FileViewerMotionFrame;
@@ -63,6 +67,9 @@ export function createFileViewerRendererFrame({
   usesShellGeometry: boolean;
 }): FileViewerRendererFrame {
   const measuredInlineSize = resolveMeasuredInlineSize(fallbackInlineSize);
+  const shellInlineSize = usesShellGeometry
+    ? motionFrame.shellInlineSize
+    : null;
   const layoutInlineSize = usesShellGeometry
     ? motionFrame.layoutInlineSize
     : measuredInlineSize;
@@ -87,6 +94,7 @@ export function createFileViewerRendererFrame({
 
   return {
     align,
+    canToggleSidebar,
     documentTransition,
     element,
     fromInlineSize,
@@ -96,6 +104,7 @@ export function createFileViewerRendererFrame({
     phase,
     rasterInlineSize,
     settledInlineSize: settledInlineSize ?? layoutInlineSize,
+    shellInlineSize,
     toInlineSize: toInlineSize ?? layoutInlineSize,
     usesShellGeometry,
   };

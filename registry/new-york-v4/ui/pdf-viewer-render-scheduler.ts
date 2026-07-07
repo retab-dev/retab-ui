@@ -142,7 +142,7 @@ export function usePdfPageRenderScheduler({
     });
   });
 
-  const activePageNumbers = React.useMemo(() => {
+  const renderWindow = React.useMemo(() => {
     const renderedPageNumbers: number[] = [];
     const stalePageNumbers: number[] = [];
     const pendingPageNumbers: number[] = [];
@@ -216,11 +216,18 @@ export function usePdfPageRenderScheduler({
             ),
           ];
 
-    return mergePdfPageNumbers([
-      ...activePrimaryPageNumbers,
-      ...activeWarmPageNumbers,
-      ...activeLowPriorityPageNumbers,
-    ]);
+    return {
+      activePageNumbers: mergePdfPageNumbers([
+        ...activePrimaryPageNumbers,
+        ...activeWarmPageNumbers,
+        ...activeLowPriorityPageNumbers,
+      ]),
+      pendingPageNumbers: mergePdfPageNumbers([
+        ...pendingPageNumbers,
+        ...warmPendingPageNumbers,
+        ...lowPriorityPendingPageNumbers,
+      ]),
+    };
   }, [
     lowPriorityRequestedRenders,
     maxLowPriorityRunning,
@@ -269,7 +276,12 @@ export function usePdfPageRenderScheduler({
     [],
   );
 
-  return { activePageNumbers, onPageRenderTiming };
+  return {
+    activePageNumbers: renderWindow.activePageNumbers,
+    isRenderQueueIdle: renderWindow.pendingPageNumbers.length === 0,
+    onPageRenderTiming,
+    pendingPageNumbers: renderWindow.pendingPageNumbers,
+  };
 }
 
 function mergePdfPageNumbers(pageNumbers: readonly number[]) {

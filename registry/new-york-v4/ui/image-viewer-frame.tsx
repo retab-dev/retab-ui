@@ -65,6 +65,7 @@ export interface ImageFrameScrollerProps {
   layout: ImageFrameLayoutModel;
   scale: number;
   rotation: QuarterTurn;
+  documentSurfaceRef?: React.Ref<HTMLDivElement>;
   frameListRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
   freezeVisibleFrameWindow?: boolean;
@@ -251,6 +252,7 @@ export function ImageFrameScroller({
   layout,
   scale,
   rotation,
+  documentSurfaceRef,
   frameListRef,
   getScrollMetrics,
   freezeVisibleFrameWindow = false,
@@ -302,6 +304,7 @@ export function ImageFrameScroller({
     totalHeight: layout.totalHeight,
     viewportHeight,
   });
+  const documentInlineSize = layout.maxFrameWidth + layout.padding * 2;
   const renderedWindow = React.useMemo(
     () =>
       getImageRenderedFrameWindow({
@@ -369,7 +372,6 @@ export function ImageFrameScroller({
     activeFrameNumbers,
     handleFrameRenderTiming,
     layout,
-    layoutResetKey,
     preloadFrameNumbers,
     projectionResetKey,
     renderFrameOverlay,
@@ -381,15 +383,21 @@ export function ImageFrameScroller({
     sourceKey,
     visibleFrameNumbers,
   ]);
+  const projectFramesRef = React.useRef(projectFrames);
+  useKeyedLayoutEffect(joinEffectKey([projectFrames]), () => {
+    projectFramesRef.current = projectFrames;
+  });
 
   const scheduleProjectFrames = React.useCallback(() => {
     if (projectionFrameRef.current !== null) return;
     if (typeof requestAnimationFrame !== "function") {
-      projectFrames();
+      projectFramesRef.current();
       return;
     }
-    projectionFrameRef.current = requestAnimationFrame(projectFrames);
-  }, [projectFrames]);
+    projectionFrameRef.current = requestAnimationFrame(() => {
+      projectFramesRef.current();
+    });
+  }, []);
 
   useKeyedMountEffect(joinEffectKey(["image-project", projectFrames]), () => {
     projectFrames();
@@ -453,12 +461,14 @@ export function ImageFrameScroller({
         data-slot="image-viewer-fit-width-measure"
       >
         <div
+          ref={documentSurfaceRef}
           className="relative mx-auto"
           data-slot="image-viewer-document"
           style={{
             contain: "layout style",
             height: physicalScrollHeight,
-            minWidth: layout.maxFrameWidth + layout.padding * 2,
+            minWidth: documentInlineSize,
+            width: documentInlineSize,
           }}
         >
           {renderedWindow ? (
@@ -489,7 +499,8 @@ export function ImageFrameScroller({
                   style={{
                     contain: "layout style",
                     height: renderedWindow.height,
-                    minWidth: layout.maxFrameWidth + layout.padding * 2,
+                    minWidth: documentInlineSize,
+                    width: documentInlineSize,
                   }}
                 />
               </div>

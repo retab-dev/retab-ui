@@ -23,6 +23,7 @@ import {
   getPptxRenderSlides,
   getPptxSlideTop,
   readPptxScrollMetrics,
+  PPTX_READING_MARKER_RATIO,
   PPTX_RENDER_WINDOW_OVERSCAN_PX,
   type PptxSlideLayout,
   type PptxScrollMetrics,
@@ -36,7 +37,6 @@ type PptxScrollDirection = -1 | 0 | 1;
 
 export const PPTX_SLIDE_GAP = 16;
 export const PPTX_SLIDE_PADDING = 16;
-const PPTX_READING_MARKER_RATIO = 0.2;
 const PPTX_UPWARD_SCROLL_LEAD_PX = PPTX_RENDER_WINDOW_OVERSCAN_PX;
 
 export interface PptxSlideScrollerProps {
@@ -49,6 +49,7 @@ export interface PptxSlideScrollerProps {
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode;
   onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void;
   containerRef: React.Ref<HTMLDivElement>;
+  documentSurfaceRef?: React.Ref<HTMLDivElement>;
   viewportRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => PptxScrollMetrics;
   isTransitioning?: boolean;
@@ -65,6 +66,7 @@ export function PptxSlideScroller({
   renderSlideOverlay,
   onSlideRenderTiming,
   containerRef,
+  documentSurfaceRef,
   viewportRef,
   getScrollMetrics,
   isTransitioning = false,
@@ -158,9 +160,12 @@ export function PptxSlideScroller({
   // Once the motion settles — scroll rebased to the re-fit layout — re-derive the
   // window from the now-correct scroll position so the reading slide is remounted
   // in place. Runs after the shell's scroll rebase (parent layout effects).
-  useKeyedLayoutEffect(joinEffectKey(["pptx-transition", isTransitioning]), () => {
-    if (!isTransitioning) projectSlides();
-  });
+  useKeyedLayoutEffect(
+    joinEffectKey(["pptx-transition", isTransitioning]),
+    () => {
+      if (!isTransitioning) projectSlides();
+    },
+  );
 
   useMountEffect(() => () => {
     if (
@@ -200,10 +205,21 @@ export function PptxSlideScroller({
         style={{ overflowAnchor: "none" }}
       >
         <div
-          ref={setCanvasRef}
+          ref={documentSurfaceRef}
           className="relative mx-auto min-w-0"
-          data-slot="pptx-slide-virtual-canvas"
-        />
+          data-slot="pptx-viewer-document-surface"
+          style={{
+            contain: "layout style",
+            minWidth: layout.slideWidth,
+            width: layout.slideWidth,
+          }}
+        >
+          <div
+            ref={setCanvasRef}
+            className="relative h-full w-full"
+            data-slot="pptx-slide-virtual-canvas"
+          />
+        </div>
       </div>
     </div>
   );
@@ -559,9 +575,7 @@ function projectPptxSlides({
   // mounted set. The union keeps geometry live (needed by the scroll rebase) while
   // guaranteeing continuity; it collapses back to the live window once idle.
   const heldSlideIndexes =
-    isTransitioning && cache.slides.size > 0
-      ? [...cache.slides.keys()]
-      : [];
+    isTransitioning && cache.slides.size > 0 ? [...cache.slides.keys()] : [];
 
   if (cache.resetKey !== nextResetKey) {
     // The fit-width re-fit changes zoomScale (part of the reset key), but the
@@ -607,6 +621,7 @@ function projectPptxSlides({
   setPptxStyle(canvas, "contain", "layout style");
   setPptxPixelStyle(canvas, "height", metrics.physicalScrollHeight);
   setPptxPixelStyle(canvas, "min-width", layout.slideWidth);
+  setPptxPixelStyle(canvas, "width", layout.slideWidth);
 
   const liveSlides = getPptxRenderSlides({
     fitPerfectly,

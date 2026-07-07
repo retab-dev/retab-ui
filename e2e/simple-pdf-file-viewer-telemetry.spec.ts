@@ -444,7 +444,25 @@ async function runSimplePdfVisualBlinkBenchmark(
       meanDiffBudget,
       meanPulseStep,
     }) => {
-      const samples = [];
+      type VisualBenchmarkSample = {
+        changedRatio: number;
+        edgeEnergy: number;
+        elapsedMs: number;
+        geometryDeltaMs: number;
+        inkRatio: number;
+        luminance: Uint8Array;
+        meanAbsDiff: number;
+        meanLuminance: number;
+        pageHeight: number;
+        pageLeft: number;
+        pageTop: number;
+        pageWidth: number;
+        renderRefreshing: boolean;
+        renderStatus: string | null;
+        scrollTop: number;
+        sidebarWidth: number;
+      };
+      const samples: VisualBenchmarkSample[] = [];
 
       const sortedGeometrySamples = [...geometrySamples].sort(
         (left, right) => left.elapsedMs - right.elapsedMs,
@@ -660,7 +678,7 @@ async function runSimplePdfVisualBlinkBenchmark(
           sidebarWidth: sample.sidebarWidth,
         };
       });
-      const pulses = [];
+      const pulses: Array<(typeof steps)[number]> = [];
       const lastSample = samples.at(-1);
       const settledIndex = lastSample
         ? samples.findIndex((sample, index) => {

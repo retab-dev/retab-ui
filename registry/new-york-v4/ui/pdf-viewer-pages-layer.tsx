@@ -7,7 +7,10 @@ import { joinEffectKey } from "@/lib/effect-key";
 import { cn } from "@/lib/utils";
 
 import type { FileViewerDocumentAlign } from "./file-viewer-renderer-contract";
-import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
+import type {
+  FileViewerDocumentSurfaceMotionResolver,
+  FileViewerDocumentSurfaceSettleSnapshotReader,
+} from "./file-viewer-motion-kernel";
 import { useOptionalFileViewerRendererEnvironment } from "./file-viewer-renderer-frame";
 import {
   PDF_PAGE_GAP,
@@ -42,6 +45,7 @@ export type PdfDocumentPagesLayerProps = {
   physicalScrollHeight: number;
   renderCache?: PdfRenderedPageCache;
   renderPageNumbers: readonly number[];
+  readSettleSnapshot: FileViewerDocumentSurfaceSettleSnapshotReader;
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode;
   renderScale: number;
   resolveSurfaceMotionStyle: FileViewerDocumentSurfaceMotionResolver;
@@ -68,6 +72,7 @@ export function PdfDocumentPagesLayer({
   physicalScrollHeight,
   renderCache,
   renderPageNumbers,
+  readSettleSnapshot,
   renderPageOverlay,
   renderScale,
   resolveSurfaceMotionStyle,
@@ -100,6 +105,7 @@ export function PdfDocumentPagesLayer({
   const documentSurfaceKey = visualStageElement
     ? joinEffectKey([
         registerDocumentSurface,
+        readSettleSnapshot,
         resolveSurfaceMotionStyle,
         visualStageElement,
       ])
@@ -108,6 +114,7 @@ export function PdfDocumentPagesLayer({
     if (!visualStageElement) return;
     return registerDocumentSurface({
       element: visualStageElement,
+      readSettleSnapshot,
       resolveMotionStyle: resolveSurfaceMotionStyle,
     });
   });

@@ -37,6 +37,7 @@ export function usePdfPageVirtualization({
   isLayoutTransitioning = false,
   layout,
   resetKey,
+  shouldHoldPageWindow = false,
   transition,
   viewportElement,
 }: {
@@ -44,6 +45,7 @@ export function usePdfPageVirtualization({
   isLayoutTransitioning?: boolean;
   layout: PdfPageLayoutModel;
   resetKey?: unknown;
+  shouldHoldPageWindow?: boolean;
   transition?: ViewerDocumentTransition;
   viewportElement: HTMLDivElement | null;
 }) {
@@ -63,14 +65,19 @@ export function usePdfPageVirtualization({
     transition.layoutPolicy === "target" &&
     Object.is(releasedRetentionLayoutRef.current, layout);
   const shouldRetainPreviousPageWindow =
-    shouldRetainPdfPageWindow({
-      isLayoutTransitioning,
-      transition,
-    }) && !hasReleasedPageWindowRetention;
+    (shouldHoldPageWindow ||
+      shouldRetainPdfPageWindow({
+        isLayoutTransitioning,
+        transition,
+      })) &&
+    (!hasReleasedPageWindowRetention || shouldHoldPageWindow);
   const renderWindowTransition =
-    transition?.source === "viewer-shell" && !hasReleasedPageWindowRetention
+    transition?.source === "viewer-shell" &&
+    (!hasReleasedPageWindowRetention || shouldHoldPageWindow)
       ? transition
       : undefined;
+  const shouldFreezePreviousPageWindow =
+    shouldHoldPageWindow || renderWindowTransition?.source === "viewer-shell";
   const getCurrentScrollMetrics =
     React.useCallback((): PdfPageVirtualizationScrollMetrics => {
       return Object.is(lastMeasuredResetKeyRef.current, resetKey) &&
@@ -166,6 +173,7 @@ export function usePdfPageVirtualization({
             currentPageWindow: getCurrentVisiblePageNumbers(),
             layout,
             previousPageWindow: state.pageWindow,
+            shouldFreezePreviousPageWindow,
             shouldRetainPreviousPageWindow,
           })
         : getResetPageWindow();
@@ -233,6 +241,17 @@ export function usePdfPageVirtualization({
       viewportHeight: metrics.viewportHeight,
     });
     const currentPageWindow = getPageWindow(metrics, fitPerfectly);
+    const hasScrollMovedSinceLastMeasurement =
+      Math.abs(metrics.scrollTop - lastMeasuredScrollTopRef.current) > 1;
+    const shouldBreakRetentionForScroll =
+      hasScrollMovedSinceLastMeasurement &&
+      shouldHoldPageWindow &&
+      !isLayoutTransitioning &&
+      renderWindowTransition?.source !== "viewer-shell";
+    const shouldRetainMeasuredPageWindow =
+      shouldRetainPreviousPageWindow && !shouldBreakRetentionForScroll;
+    const shouldFreezeMeasuredPageWindow =
+      shouldFreezePreviousPageWindow && !shouldBreakRetentionForScroll;
     lastMeasuredLayoutRef.current = layout;
     lastMeasuredResetKeyRef.current = resetKey;
     lastMeasuredScrollTopRef.current = metrics.scrollTop;
@@ -242,9 +261,10 @@ export function usePdfPageVirtualization({
         currentPageWindow,
         layout,
         previousPageWindow: previousState.pageWindow,
-        shouldRetainPreviousPageWindow,
+        shouldFreezePreviousPageWindow: shouldFreezeMeasuredPageWindow,
+        shouldRetainPreviousPageWindow: shouldRetainMeasuredPageWindow,
       });
-      const isTransitionPageWindow = shouldRetainPreviousPageWindow;
+      const isTransitionPageWindow = shouldRetainMeasuredPageWindow;
 
       return Object.is(previousState.layout, layout) &&
         Object.is(previousState.resetKey, resetKey) &&
@@ -258,7 +278,9 @@ export function usePdfPageVirtualization({
             pageWindow: nextPageWindow,
           };
     });
-    if (
+    if (shouldHoldPageWindow) {
+      cancelPageWindowRetentionRelease();
+    } else if (
       shouldReleasePdfPageWindowRetention(transition) &&
       !hasReleasedPageWindowRetention
     ) {
@@ -279,7 +301,10 @@ export function usePdfPageVirtualization({
     cancelPageWindowRetentionRelease,
     schedulePageWindowRetentionRelease,
     hasReleasedPageWindowRetention,
+    isLayoutTransitioning,
     renderWindowTransition,
+    shouldHoldPageWindow,
+    shouldFreezePreviousPageWindow,
     shouldRetainPreviousPageWindow,
     transition,
   ]);
@@ -299,12 +324,15 @@ export function usePdfPageVirtualization({
     joinEffectKey([
       cancelPageWindowRetentionRelease,
       schedulePageWindowRetentionRelease,
+      shouldHoldPageWindow,
       shouldRetainPreviousPageWindow,
       transition?.layoutPolicy,
       transition?.source,
     ]),
     () => {
-      if (
+      if (shouldHoldPageWindow) {
+        cancelPageWindowRetentionRelease();
+      } else if (
         shouldReleasePdfPageWindowRetention(transition) &&
         !hasReleasedPageWindowRetention
       ) {
@@ -344,14 +372,26 @@ function createTransitionPageWindow({
   currentPageWindow,
   layout,
   previousPageWindow,
+  shouldFreezePreviousPageWindow,
   shouldRetainPreviousPageWindow,
 }: {
   currentPageWindow: PdfPageWindow;
   layout: PdfPageLayoutModel;
   previousPageWindow: PdfPageWindow;
+  shouldFreezePreviousPageWindow: boolean;
   shouldRetainPreviousPageWindow: boolean;
 }): PdfPageWindow {
   if (!shouldRetainPreviousPageWindow) return currentPageWindow;
+
+  if (shouldFreezePreviousPageWindow) {
+    return {
+      scrollPageOffset: currentPageWindow.scrollPageOffset,
+      visiblePageNumbers: previousPageWindow.visiblePageNumbers,
+      renderPageNumbers: previousPageWindow.renderPageNumbers,
+      warmPageNumbers: previousPageWindow.warmPageNumbers,
+      preloadPageNumbers: previousPageWindow.preloadPageNumbers,
+    };
+  }
 
   return {
     scrollPageOffset: currentPageWindow.scrollPageOffset,

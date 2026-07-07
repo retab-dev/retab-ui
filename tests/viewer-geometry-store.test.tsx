@@ -707,6 +707,97 @@ describe("createViewerGeometryStore", () => {
     expect(listener).toHaveBeenCalledTimes(3);
   });
 
+  it("snaps subpixel endpoint frames to settle geometry", () => {
+    const frames = installGeometryFrames();
+    const store = createFileViewerMotionKernel();
+    const documentSurfaceElement = document.createElement("div");
+    const openTarget = {
+      shellInlineSize: 840,
+      durationMs: 150,
+      mode: "inline" as const,
+      open: true,
+      side: "right" as const,
+      sidebarWidth: 420,
+    };
+    const closedTarget = {
+      ...openTarget,
+      open: false,
+    };
+
+    store.setDocumentSurface({ element: documentSurfaceElement });
+    store.syncTarget(openTarget);
+    store.startMotion(closedTarget);
+    frames.advance(149.8);
+
+    expect(store.getSnapshot()).toMatchObject({
+      layoutInlineSize: 840,
+      motionProgress: 1,
+      open: false,
+      phase: "settling",
+      sidebarInlineSize: 0,
+    });
+  });
+
+  it("holds FileViewer settle until renderer geometry is stable", () => {
+    const frames = installGeometryFrames();
+    const store = createFileViewerMotionKernel();
+    const documentSurfaceElement = document.createElement("div");
+    const openTarget = {
+      shellInlineSize: 840,
+      durationMs: 150,
+      mode: "inline" as const,
+      open: true,
+      side: "right" as const,
+      sidebarWidth: 420,
+    };
+    const closedTarget = {
+      ...openTarget,
+      open: false,
+    };
+    let rendererScrollTop = 0;
+
+    store.setDocumentSurface({
+      element: documentSurfaceElement,
+      readSettleSnapshot: () => [rendererScrollTop],
+    });
+    store.syncTarget(openTarget);
+
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    store.startMotion(closedTarget);
+    frames.advance(150);
+
+    expect(store.getSnapshot()).toMatchObject({
+      phase: "settling",
+    });
+
+    rendererScrollTop = 12;
+    frames.advance(16);
+
+    expect(store.getSnapshot()).toMatchObject({
+      phase: "settling",
+    });
+
+    frames.advance(16);
+
+    expect(store.getSnapshot()).toMatchObject({
+      phase: "settling",
+    });
+
+    frames.advance(16);
+
+    expect(store.getSnapshot()).toMatchObject({
+      layoutInlineSize: 840,
+      motionProgress: 1,
+      open: false,
+      phase: "idle",
+      sidebarInlineSize: 0,
+      fallbackSurfaceScale: 1,
+    });
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+
   it("snaps FileViewer motion to the target when reduced motion is preferred", () => {
     mockReducedMotion();
     installGeometryFrames();

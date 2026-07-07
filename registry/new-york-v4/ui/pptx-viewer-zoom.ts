@@ -37,6 +37,7 @@ export function usePptxZoom({
   const zoomScale =
     normalizedControlledScale ??
     (zoomState.mode === "manual" ? zoomState.value : fitScale);
+  const isFitWidth = !isScaleControlled && zoomState.mode === "fit";
   const scaleControlsDisabled = isScaleControlled && !onScaleChange;
 
   const setViewerScale = React.useCallback(
@@ -56,5 +57,5 @@ export function usePptxZoom({
     [isScaleControlled, onScaleChange],
   );
 
-  return { scaleControlsDisabled, setViewerScale, zoomScale };
+  return { isFitWidth, scaleControlsDisabled, setViewerScale, zoomScale };
 }

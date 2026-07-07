@@ -136,6 +136,62 @@ type PdfPageGapBenchmarkResult = {
   open: PdfPageGapRun;
 };
 
+type PdfViewerTelemetryMetric = {
+  budget: string;
+  detail: string;
+  id: string;
+  label: string;
+  passed: boolean;
+  value: string;
+};
+
+type PdfViewerTelemetryResult = {
+  durationMs: number;
+  metrics: PdfViewerTelemetryMetric[];
+  sampledFrameCount: number;
+  status: "failed" | "passed";
+};
+
+type PdfViewerTelemetryRuntime = {
+  runShellMotion: (options?: {
+    sampleFrameCount?: number;
+    settleFrameCount?: number;
+  }) => Promise<PdfViewerTelemetryResult | null>;
+};
+
+type FileViewerSidebarBenchmarkTelemetryMetric = {
+  budget: string;
+  detail: string;
+  id: string;
+  label: string;
+  passed: boolean;
+  value: string;
+};
+
+type FileViewerSidebarBenchmarkTelemetryResult = {
+  actionOrder: BenchmarkActionOrder;
+  durationMs: number;
+  format: string;
+  metrics: FileViewerSidebarBenchmarkTelemetryMetric[];
+  runs?: {
+    close: { samples: unknown[] };
+    open: { samples: unknown[] };
+    rapidToggle: { samples: unknown[] };
+  };
+  sampledFrameCount: number;
+  scrollTarget: string;
+  side: string;
+  status: "failed" | "passed";
+};
+
+type FileViewerSidebarBenchmarkTelemetryRuntime = {
+  getLastResult: () => FileViewerSidebarBenchmarkTelemetryResult | null;
+  run: (options?: {
+    actionOrder?: BenchmarkActionOrder;
+    scrollTargetId?: string;
+  }) => Promise<FileViewerSidebarBenchmarkTelemetryResult | null>;
+};
+
 type LayoutShiftEntry = PerformanceEntry & {
   hadRecentInput?: boolean;
   value?: number;
@@ -281,9 +337,18 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     await page
       .locator('[data-benchmark-scroll-target-option="page-4-gap"]')
       .click();
+    await expect(page.locator("[data-benchmark-telemetry-panel]")).toHaveCount(
+      0,
+    );
     await page.locator("[data-benchmark-run-button]").click();
     const status = page.locator("[data-benchmark-run-status]").first();
     await expect(status).toBeVisible({ timeout: 45_000 });
+    await expect(status).toHaveClass(/absolute right-3 bottom-3/);
+    expect(
+      await status.evaluate((element) =>
+        Boolean(element.closest('[aria-label="Benchmark contracts"]')),
+      ),
+    ).toBe(false);
     await expect(status).toHaveAttribute(
       "data-benchmark-run-action-order",
       "open-close",
@@ -293,6 +358,245 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       "page-4-gap",
     );
     await expect(page.locator("[data-benchmark-metric]")).toHaveCount(18);
+  });
+
+  test("telemetry runtime exposes full active benchmark result", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const telemetryConsoleMessages: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (text.includes("[file-viewer:sidebar-benchmark]")) {
+        telemetryConsoleMessages.push(text);
+      }
+    });
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await selectBenchmarkFormat(page, "tiff");
+    await waitForBenchmarkFormat(page, "tiff");
+    await expect(page.locator("[data-benchmark-telemetry-button]")).toContainText(
+      "Telemetry",
+    );
+
+    const result = (await page.evaluate(async () => {
+      const telemetry = Reflect.get(
+        window,
+        "__fileViewerSidebarBenchmarkTelemetry",
+      ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      return (
+        (await telemetry?.run({
+          actionOrder: "close-open",
+          scrollTargetId: "deep",
+        })) ?? null
+      );
+    })) as FileViewerSidebarBenchmarkTelemetryResult | null;
+
+    expect(result).not.toBeNull();
+    expect(result?.format).toBe("tiff");
+    expect(result?.status).toBe("passed");
+    expect(result?.sampledFrameCount).toBeGreaterThan(80);
+    expect(result?.metrics).toHaveLength(18);
+    expect(result?.runs?.close.samples.length).toBeGreaterThan(20);
+    expect(result?.runs?.open.samples.length).toBeGreaterThan(20);
+    expect(result?.runs?.rapidToggle.samples.length).toBeGreaterThan(20);
+    expect(
+      result?.metrics
+        .filter((metric) => !metric.passed)
+        .map((metric) => metric.id) ?? [],
+    ).toEqual([]);
+
+    const lastResult = (await page.evaluate(() => {
+      const telemetry = Reflect.get(
+        window,
+        "__fileViewerSidebarBenchmarkTelemetry",
+      ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      return telemetry?.getLastResult() ?? null;
+    })) as FileViewerSidebarBenchmarkTelemetryResult | null;
+
+    expect(lastResult?.status).toBe(result?.status);
+    await expect(
+      page.locator(
+        '[data-benchmark-telemetry-panel][data-benchmark-run-status="passed"]',
+      ),
+    ).toBeVisible();
+    expect(
+      telemetryConsoleMessages.some((message) =>
+        message.startsWith("[file-viewer:sidebar-benchmark] result {"),
+      ),
+    ).toBe(true);
+    expect(
+      telemetryConsoleMessages.some((message) =>
+        message.startsWith("[file-viewer:sidebar-benchmark] full result {"),
+      ),
+    ).toBe(true);
+  });
+
+  test("PDF deep telemetry preserves reading identity", async ({ page }) => {
+    test.setTimeout(90_000);
+    const telemetryConsoleMessages: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (text.includes("[file-viewer:sidebar-benchmark]")) {
+        telemetryConsoleMessages.push(text);
+      }
+    });
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await waitForBenchmarkFormat(page, "pdf");
+    await page
+      .locator('[data-benchmark-scroll-target-option="deep"]')
+      .click();
+    await page.waitForFunction(() => {
+      const scroller = document.querySelector<HTMLElement>(
+        '[data-slot="file-viewer-root"][data-benchmark-active-format="pdf"] [data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
+      );
+      return (
+        scroller != null &&
+        scroller.scrollHeight > scroller.clientHeight * 20
+      );
+    });
+
+    const result = (await page.evaluate(async () => {
+      const telemetry = Reflect.get(
+        window,
+        "__fileViewerSidebarBenchmarkTelemetry",
+      ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      return (
+        (await telemetry?.run({
+          actionOrder: "close-open",
+          scrollTargetId: "deep",
+        })) ?? null
+      );
+    })) as FileViewerSidebarBenchmarkTelemetryResult | null;
+
+    expect(result).not.toBeNull();
+    expect(result?.format).toBe("pdf");
+    expect(result?.scrollTarget).toBe("deep");
+    expect(result?.status).toBe("passed");
+    expect(
+      result?.metrics
+        .filter((metric) => !metric.passed)
+        .map((metric) => metric.id) ?? [],
+    ).toEqual([]);
+    expect(
+      telemetryConsoleMessages.some((message) =>
+        message.startsWith("[file-viewer:sidebar-benchmark] failures "),
+      ),
+    ).toBe(false);
+  });
+
+  test("production PDF telemetry reports no sidebar motion regressions", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const telemetryConsoleMessages: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (text.includes("[pdf-viewer:telemetry]")) {
+        telemetryConsoleMessages.push(text);
+      }
+    });
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await waitForBenchmarkFormat(page, "pdf");
+
+    const failures: string[] = [];
+    for (const scenario of [
+      { label: "top", top: 0 },
+      { label: "deep", minTop: 160, ratio: 0.72, viewportMultiplier: 3.6 },
+    ]) {
+      await page.evaluate(async (target) => {
+        const scroller = document.querySelector<HTMLElement>(
+          '[data-slot="file-viewer-root"][data-benchmark-active-format="pdf"] [data-slot="pdf-viewer"] [data-slot="scroll-area-viewport"]',
+        );
+        if (!scroller) throw new Error("PDF telemetry scroller unavailable.");
+
+        const availableScroll = Math.max(
+          0,
+          scroller.scrollHeight - scroller.clientHeight,
+        );
+        const candidates = [target.top ?? target.minTop ?? 0];
+        if (target.viewportMultiplier != null) {
+          candidates.push(scroller.clientHeight * target.viewportMultiplier);
+        }
+        if (target.ratio != null) {
+          candidates.push(availableScroll * target.ratio);
+        }
+        scroller.scrollTop = Math.min(
+          availableScroll,
+          Math.max(0, ...candidates),
+        );
+        scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+        for (let index = 0; index < 20; index += 1) {
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+          );
+        }
+      }, scenario);
+      await expect
+        .poll(
+          async () =>
+            page.evaluate((label) => {
+              const sample = Reflect.get(
+                window,
+                "__pdfViewerTelemetry",
+              )?.readSample?.();
+              if (!sample || sample.hasBlink) return "pending";
+              if (label === "deep" && (sample.primaryPageNumber ?? 0) <= 1) {
+                return "pending";
+              }
+              return "ready";
+            }, scenario.label),
+          { timeout: 45_000 },
+        )
+        .toBe("ready");
+
+      const result = (await page.evaluate(async () => {
+        const telemetry = Reflect.get(window, "__pdfViewerTelemetry") as
+          | PdfViewerTelemetryRuntime
+          | undefined;
+        return (
+          (await telemetry?.runShellMotion({
+            sampleFrameCount: 40,
+            settleFrameCount: 14,
+          })) ?? null
+        );
+      })) as PdfViewerTelemetryResult | null;
+
+      expect(result).not.toBeNull();
+      expect(result?.sampledFrameCount).toBeGreaterThan(40);
+
+      await test.info().attach(`pdf-viewer-telemetry-${scenario.label}.json`, {
+        body: JSON.stringify(result, null, 2),
+        contentType: "application/json",
+      });
+
+      failures.push(
+        ...(result?.metrics
+          .filter((metric) => !metric.passed)
+          .map(
+            (metric) =>
+              `${scenario.label}/${metric.id}: ${metric.value} exceeds ${metric.budget}. ${metric.detail}`,
+          ) ?? []),
+      );
+    }
+
+    expect(
+      telemetryConsoleMessages.some((message) =>
+        message.startsWith("[pdf-viewer:telemetry] result {"),
+      ),
+    ).toBe(true);
+    expect(
+      telemetryConsoleMessages.some((message) =>
+        message.startsWith("[pdf-viewer:telemetry] full result {"),
+      ),
+    ).toBe(true);
+
+    expect(failures, failures.join("\n")).toEqual([]);
   });
 
   test("benchmark page PDF sidebar survives viewport matrix", async ({
@@ -864,14 +1168,24 @@ async function runSidebarBenchmark(
         await sampleAnimationFrames(4);
       };
       const waitForStableBenchmarkRenderer = async () => {
+        // An empty renderer (all counts zero) is trivially stable but means the
+        // virtualization window has not mounted yet — sampling then would race
+        // the first mount and record its layout correction as motion drift.
+        const isEmptyFingerprint = (fingerprint: string) =>
+          Object.values(
+            JSON.parse(fingerprint) as Record<string, number>,
+          ).every((count) => count === 0);
         let previousFingerprint = readBenchmarkFingerprint(root);
         let stableFrameCount = 0;
 
-        for (let index = 0; index < 80; index += 1) {
+        for (let index = 0; index < 300; index += 1) {
           await nextAnimationFrame();
           const currentFingerprint = readBenchmarkFingerprint(root);
 
-          if (currentFingerprint === previousFingerprint) {
+          if (
+            currentFingerprint === previousFingerprint &&
+            !isEmptyFingerprint(currentFingerprint)
+          ) {
             stableFrameCount += 1;
           } else {
             previousFingerprint = currentFingerprint;
@@ -1006,6 +1320,14 @@ async function runSidebarBenchmark(
       await setSidebarOpenState(firstAction === "close");
       await scrollBenchmarkViewport();
       await waitForStableBenchmarkRenderer();
+
+      if (!root.contains(document.activeElement)) {
+        if (!content.hasAttribute("tabindex")) {
+          content.tabIndex = -1;
+        }
+        content.focus({ preventScroll: true });
+        await nextAnimationFrame();
+      }
 
       const first = await sampleTransition(firstAction);
       const second = await sampleTransition(secondAction);
@@ -1509,9 +1831,25 @@ function collectMotionFailures(
   );
   failures.push(...collectMotionSampleFailures(run, prefix));
 
+  // A shell-owned fit-width resize freezes renderer layout during the slide and
+  // materializes the new scroll range at settle, so the vertical scroll geometry
+  // legitimately steps once per toggle. The invariants are: the step never
+  // overshoots or oscillates, the horizontal/outer-window scroll never moves,
+  // and the settled reading position lands on the same logical spot.
   failures.push(
-    ...collectStableValueFailures({
+    ...collectOvershootFailures({
       label: `${prefix} scrollTop`,
+      start: run.before.scrollTop,
+      end: run.after.scrollTop,
+      values: samples.map((sample) => sample.scrollTop),
+      tolerance: 1,
+    }),
+  );
+  failures.push(
+    ...collectMonotonicFailures({
+      label: `${prefix} scrollTop`,
+      start: run.before.scrollTop,
+      end: run.after.scrollTop,
       values: samples.map((sample) => sample.scrollTop),
       tolerance: 1,
     }),
@@ -1531,24 +1869,29 @@ function collectMotionFailures(
     }),
   );
   failures.push(
-    ...collectStableValueFailures({
+    ...collectMonotonicFailures({
       label: `${prefix} scrollHeight`,
+      start: run.before.scrollHeight,
+      end: run.after.scrollHeight,
       values: samples.map((sample) => sample.scrollHeight),
       tolerance: 2,
     }),
   );
   if (ASSERT_VISUAL_SMOOTHNESS) {
     failures.push(
-      ...collectStableValueFailures({
+      ...collectMonotonicFailures({
         label: `${prefix} scrollWidth`,
+        start: run.before.scrollWidth,
+        end: run.after.scrollWidth,
         values: samples.map((sample) => sample.scrollWidth),
         tolerance: 2,
       }),
     );
   }
-  if (run.scrollEventCount > 0) {
+  failures.push(...collectReadingIdentityFailures(run, prefix));
+  if (run.scrollEventCount > 1) {
     failures.push(
-      `${prefix}: scroller emitted ${run.scrollEventCount} scroll events during sidebar motion`,
+      `${prefix}: scroller emitted ${run.scrollEventCount} scroll events during sidebar motion (budget: one settle rebase)`,
     );
   }
   if (run.windowScrollEventCount > 0) {
@@ -1568,6 +1911,8 @@ function collectMotionFailures(
   if (ASSERT_VISUAL_SMOOTHNESS) {
     failures.push(...collectLayoutShiftFailures(run, prefix));
     failures.push(...collectMainThreadFailures(run, prefix));
+  }
+  if (ASSERT_VISUAL_SMOOTHNESS) {
     failures.push(...collectVisualSmoothnessFailures(run, prefix));
   }
 
@@ -1738,6 +2083,27 @@ function collectStateSyncFailures(
   }
 
   return failures;
+}
+
+function readingFraction(sample: BenchmarkSample) {
+  const range = Math.max(1, sample.scrollHeight - sample.clientHeight);
+  return Math.min(1, Math.max(0, sample.scrollTop / range));
+}
+
+function collectReadingIdentityFailures(
+  run: BenchmarkMotionRun,
+  prefix: string,
+): string[] {
+  const drift = Math.abs(
+    readingFraction(run.after) - readingFraction(run.before),
+  );
+  if (drift <= 0.01) return [];
+
+  return [
+    `${prefix}: settled reading position drifted ${(drift * 100).toFixed(
+      2,
+    )}% across the refit (budget: <= 1.00%)`,
+  ];
 }
 
 function collectFocusStabilityFailures(

@@ -14,9 +14,7 @@ import {
 import type { PdfDocumentLayoutState } from "./pdf-viewer-document-layout";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
 import type { PdfDocumentPagesLayerProps } from "./pdf-viewer-pages-layer";
-import {
-  PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY,
-} from "./pdf-viewer-motion-contract";
+import { PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY } from "./pdf-viewer-motion-contract";
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
 import {
@@ -24,8 +22,7 @@ import {
   usePdfPageRenderScheduler,
 } from "./pdf-viewer-render-scheduler";
 import {
-  getPdfSettleRebaseFraction,
-  PDF_READING_MARKER_RATIO,
+  getPdfReadingMarkerBlockOffset,
   usePdfScroll,
 } from "./pdf-viewer-scroll";
 import type {
@@ -34,6 +31,7 @@ import type {
   PdfViewerHandle,
   PdfViewerPerformanceOptions,
 } from "./pdf-viewer-types";
+import { usePdfViewerTelemetry } from "./pdf-viewer-telemetry";
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization";
 
 export type PdfDocumentRuntimeState = {
@@ -109,32 +107,16 @@ export function usePdfDocumentRuntime({
 
     const metrics = getScrollMetrics();
     const anchorGeometry = anchorGeometryRef.current;
-    // Vertical growth compensation lever arm. The reading page grows from the
-    // render window top, so its raw drift scales with `readingBlock − windowTop`
-    // (windowReadingOffset). But the settle scroll rebase only absorbs that
-    // drift to the extent the scroll can actually move: near the document
-    // bottom the rebase CLAMPS (scrollTop is pinned at max), so the surface must
-    // NOT translate — a nonzero translateY there shrinks the scroller's
-    // scrollHeight every frame and, with scrollTop pinned, fires native
-    // scroll-clamp events. Scale the lever arm by the clamped/unclamped rebase
-    // ratio: deep → 1 (full compensation, unchanged), true bottom → 0 (exactly
-    // no translate, no scrollHeight perturbation).
-    const readingBlock =
-      Math.max(0, metrics.scrollTop) +
-      Math.max(0, metrics.viewportHeight) * PDF_READING_MARKER_RATIO;
-    const rawWindowReadingOffset = Math.max(
-      0,
-      readingBlock - anchorGeometry.renderWindowTop,
-    );
-    const rebaseFraction = getPdfSettleRebaseFraction({
+    const anchorBlock = getPdfReadingMarkerBlockOffset({
       scrollTop: metrics.scrollTop,
-      settleScale: anchorGeometry.isSliding
-        ? anchorGeometry.settleScale
-        : null,
+      settleScale: anchorGeometry.isSliding ? anchorGeometry.settleScale : null,
       totalBlockSize: anchorGeometry.totalBlockSize,
       viewportHeight: metrics.viewportHeight,
     });
-    const windowReadingOffset = rawWindowReadingOffset * rebaseFraction;
+    const windowReadingOffset = Math.max(
+      0,
+      anchorBlock - anchorGeometry.renderWindowTop,
+    );
     documentSurfaceElement.style.setProperty(
       PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY,
       `${windowReadingOffset}px`,
@@ -167,6 +149,8 @@ export function usePdfDocumentRuntime({
     },
     [handleBeforeLayoutMotion, writeDocumentAnchorBlockOffset],
   );
+  const [shouldHoldPageWindowForRaster, setShouldHoldPageWindowForRaster] =
+    React.useState(false);
   const {
     scrollPageOffset,
     visiblePageNumbers,
@@ -179,6 +163,7 @@ export function usePdfDocumentRuntime({
     isLayoutTransitioning: layout.rendererFrame.isTransitioning,
     layout: layout.pageLayout,
     resetKey: document,
+    shouldHoldPageWindow: shouldHoldPageWindowForRaster,
     transition: layout.transition,
     viewportElement,
   });
@@ -195,6 +180,7 @@ export function usePdfDocumentRuntime({
     performanceOptions?.renderedPageCache !== false;
   const {
     activePageNumbers: activeRenderPageNumbers,
+    isRenderQueueIdle,
     onPageRenderTiming: handleScheduledPageRenderTiming,
   } = usePdfPageRenderScheduler({
     pageNumbers: visiblePageNumbers,
@@ -214,6 +200,24 @@ export function usePdfDocumentRuntime({
     maxLowPriorityRunning:
       performanceOptions?.directionAwarePreRender === false ? 0 : 1,
   });
+  useKeyedMountEffect(
+    joinEffectKey([
+      isRenderQueueIdle,
+      layout.rendererFrame.phase,
+      layout.transition.source,
+    ]),
+    () => {
+      const isShellMotionActive =
+        layout.rendererFrame.phase !== "idle" ||
+        layout.transition.source === "viewer-shell";
+      const nextShouldHold =
+        isShellMotionActive ||
+        (shouldHoldPageWindowForRaster && !isRenderQueueIdle);
+      setShouldHoldPageWindowForRaster((previous) =>
+        previous === nextShouldHold ? previous : nextShouldHold,
+      );
+    },
+  );
   const handlePageRenderTiming = React.useCallback(
     (timing: PdfPageRenderTiming) => {
       handleScheduledPageRenderTiming(timing);
@@ -221,6 +225,40 @@ export function usePdfDocumentRuntime({
     },
     [handleScheduledPageRenderTiming, onPageRenderTiming],
   );
+  const readSettleSnapshot = React.useCallback(() => {
+    const metrics = getScrollMetrics();
+    const viewportElement = getViewportElement();
+
+    return [
+      metrics.scrollTop,
+      metrics.physicalScrollTop,
+      metrics.scrollPageOffset,
+      metrics.viewportHeight,
+      viewportElement?.scrollHeight ?? 0,
+      viewportElement?.clientHeight ?? 0,
+      layout.pageLayout.totalHeight,
+      layout.pageLayout.maxPageWidth,
+    ];
+  }, [
+    getScrollMetrics,
+    getViewportElement,
+    layout.pageLayout.maxPageWidth,
+    layout.pageLayout.totalHeight,
+  ]);
+  usePdfViewerTelemetry({
+    activeRenderPageNumbers,
+    displayScale: layout.displayScale,
+    documentKey,
+    getDocumentSurfaceElement: () => documentSurfaceElementRef.current,
+    getScrollMetrics,
+    getViewportElement,
+    layout: layout.pageLayout,
+    pageDevicePixelRatio: layout.pageDevicePixelRatio,
+    renderPageNumbers,
+    renderScale: layout.renderScale,
+    rendererFrame: layout.rendererFrame,
+    visiblePageNumbers,
+  });
   const scrollInteractionElementRef = React.useRef<HTMLDivElement | null>(null);
   const setScrollInteractionElement = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -309,6 +347,7 @@ export function usePdfDocumentRuntime({
         totalHeight: layout.pageLayout.totalHeight,
         viewportHeight: viewportElement?.clientHeight ?? 0,
       }),
+      readSettleSnapshot,
       renderCache: shouldUseRenderedPageCache ? renderedPageCache : undefined,
       renderPageNumbers,
       renderPageOverlay,
@@ -339,9 +378,8 @@ function getPdfContiguousRenderWindowTop({
   if (renderPageNumbers.length === 0) return 0;
   const rendered = new Set(renderPageNumbers);
   const anchor =
-    visiblePageNumbers.length > 0
-      ? Math.min(...visiblePageNumbers)
-      : Math.min(...renderPageNumbers);
+    visiblePageNumbers.find((pageNumber) => rendered.has(pageNumber)) ??
+    Math.min(...renderPageNumbers);
   let firstPage = anchor;
   while (rendered.has(firstPage - 1)) firstPage -= 1;
   return getPdfPageLayout(layout, firstPage)?.offsetTop ?? 0;

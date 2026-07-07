@@ -11,7 +11,7 @@ import {
   type PptxSize,
 } from "./pptx-viewer-core";
 
-const PPTX_READING_MARKER_RATIO = 0.2;
+export const PPTX_READING_MARKER_RATIO = 0.2;
 export const PPTX_RENDER_FIT_PERFECTLY_OVERSCAN_PX = 32;
 export const PPTX_RENDER_WINDOW_OVERSCAN_PX = 1000;
 export const PPTX_SCROLL_REBASE_CONTAINER_PX = 12_000_000;

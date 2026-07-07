@@ -517,7 +517,7 @@ describe("usePdfPageVirtualization", () => {
     );
   });
 
-  it("keeps the chrome-resize page window mounted briefly after settle", async () => {
+  it("keeps the chrome-resize page window frozen briefly after settle", async () => {
     const initialLayout = createPdfPageLayout({
       pageCount: 30,
       defaultPageSize: { width: 100, height: 800 },
@@ -592,25 +592,12 @@ describe("usePdfPageVirtualization", () => {
       scrollTop: initialScrollTop,
       viewportHeight,
     });
-    const nextShellTransactionRender = getPdfRenderPageNumbers({
-      layout: nextLayout,
-      overscanPx: Math.max(
-        PDF_RENDER_WINDOW_OVERSCAN_PX,
-        viewportHeight * 2,
-        nextLayout.estimatedHeight * 3,
-      ),
-      scrollTop: nextScrollTop,
-      viewportHeight,
-    });
     const nextSettledRender = getPdfRenderPageNumbers({
       layout: nextLayout,
       scrollTop: nextScrollTop,
       viewportHeight,
     });
-    const retainedRender = mergeExpectedPageNumbers(
-      initialRender,
-      nextShellTransactionRender,
-    );
+    const retainedRender = initialRender;
 
     await waitFor(() =>
       expect(screen.getByTestId("render").textContent).toBe(

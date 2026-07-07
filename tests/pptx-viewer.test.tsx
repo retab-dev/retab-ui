@@ -2985,6 +2985,40 @@ describe("PptxViewer", () => {
     ).toBeTruthy();
   });
 
+  it("exposes a fixed document surface around the virtual canvas", () => {
+    const source = createFakePptxSource();
+    const activity = createManualPptxActivity(false).activity;
+    const documentSurfaceRef = vi.fn();
+
+    render(
+      <PptxSlideScroller
+        source={source}
+        zoomScale={1}
+        rotation={0}
+        eager={false}
+        activity={activity}
+        containerRef={vi.fn()}
+        documentSurfaceRef={documentSurfaceRef}
+        viewportRef={vi.fn()}
+        onScroll={vi.fn()}
+      />,
+    );
+
+    const surface = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-viewer-document-surface"]',
+    );
+    const canvas = document.querySelector<HTMLElement>(
+      '[data-slot="pptx-slide-virtual-canvas"]',
+    );
+
+    expect(surface).toBeTruthy();
+    expect(canvas?.parentElement).toBe(surface);
+    expect(surface?.style.contain).toBe("layout style");
+    expect(surface?.style.minWidth).toBe("960px");
+    expect(surface?.style.width).toBe("960px");
+    expect(documentSurfaceRef).toHaveBeenLastCalledWith(surface);
+  });
+
   it("measures fit-width from the stable scroll viewport instead of the virtual canvas", () => {
     const source = createFakePptxSource();
     const activity = createManualPptxActivity(false).activity;

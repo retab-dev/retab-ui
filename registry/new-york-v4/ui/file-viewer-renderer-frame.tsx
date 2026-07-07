@@ -113,6 +113,7 @@ function useResolvedFileViewerRendererFrame({
     () =>
       createFileViewerRendererFrame({
         align: documentFrame?.align ?? "center",
+        canToggleSidebar: shell?.canToggleSidebar ?? false,
         element: documentFrame?.element ?? null,
         fallbackInlineSize: documentFrame?.inlineSize ?? fallbackSize,
         motionFrame,
@@ -124,6 +125,7 @@ function useResolvedFileViewerRendererFrame({
       documentFrame?.element,
       documentFrame?.inlineSize,
       fallbackSize,
+      shell?.canToggleSidebar,
       motionFrame,
       shell?.motionDurationMs,
       usesShellGeometry,

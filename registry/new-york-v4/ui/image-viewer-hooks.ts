@@ -26,11 +26,12 @@ import type {
   ViewerDocumentScrollTargetResolver,
 } from "./viewer-types";
 import { useViewerDocumentScroll } from "./viewer-document-scroll";
+import { getFileViewerFitWidthScale } from "./file-viewer-fit-width-motion";
 import { joinEffectKey } from "@/lib/effect-key";
 
 const IMAGE_SCROLL_HEADROOM = 48;
-const IMAGE_READING_MARKER_RATIO = 0.2;
-const IMAGE_VIEWER_HORIZONTAL_PADDING = 32;
+export const IMAGE_READING_MARKER_RATIO = 0.2;
+export const IMAGE_VIEWER_HORIZONTAL_PADDING = 32;
 
 /** Bounds for the viewer's zoom range, shared by fit-width and the controls. */
 export const MIN_VIEWER_SCALE = 0.25;
@@ -100,7 +101,11 @@ export function useImageViewerScale(
     ),
   );
   const fitWidthScale = frameListWidth
-    ? (frameListWidth - IMAGE_VIEWER_HORIZONTAL_PADDING) / widestFrameWidth
+    ? getFileViewerFitWidthScale({
+        availableInlineSize: frameListWidth,
+        contentInlineSize: widestFrameWidth,
+        stageInlinePadding: IMAGE_VIEWER_HORIZONTAL_PADDING,
+      })
     : 1;
   const scale =
     controlledScale !== undefined
@@ -108,6 +113,8 @@ export function useImageViewerScale(
       : uncontrolledScale !== null
         ? normalizeViewerScale(uncontrolledScale)
         : Math.min(MAX_VIEWER_SCALE, Math.max(MIN_VIEWER_SCALE, fitWidthScale));
+  const isFitWidth =
+    controlledScale === undefined && uncontrolledScale === null;
 
   const scaleControlsDisabled = isScaleControlled && !onScaleChange;
   const setViewerScale = React.useCallback(
@@ -127,11 +134,13 @@ export function useImageViewerScale(
   }, []);
 
   return {
+    isFitWidth,
     rotateClockwise,
     rotation,
     scale,
     scaleControlsDisabled,
     setViewerScale,
+    widestFrameWidth,
   };
 }
 

@@ -33,8 +33,14 @@ export type FileViewerMotionKernel = {
 
 export type FileViewerDocumentSurface = {
   element: HTMLElement;
+  readSettleSnapshot?: FileViewerDocumentSurfaceSettleSnapshotReader | null;
   resolveMotionStyle?: FileViewerDocumentSurfaceMotionResolver | null;
 };
+
+export type FileViewerDocumentSurfaceSettleSnapshotReader = () =>
+  | readonly number[]
+  | null
+  | undefined;
 
 export type FileViewerDocumentSurfaceMotionStyle = {
   customProperties?: Readonly<Record<string, string | null>>;
@@ -54,6 +60,19 @@ type FileViewerActiveMotion = {
   startedAt: number;
   to: FileViewerMotionRestFrame;
 };
+
+type FileViewerSettleRelease = {
+  idleFrame: FileViewerMotionFrame;
+  lastSnapshot: readonly number[];
+  remainingFrameCount: number;
+  settlingFrame: FileViewerMotionFrame;
+  stableFrameCount: number;
+};
+
+const FILE_VIEWER_SETTLE_SCROLL_EPSILON_PX = 0.25;
+const FILE_VIEWER_SETTLE_STABLE_FRAME_COUNT = 2;
+const FILE_VIEWER_SETTLE_MAX_HOLD_FRAMES = 6;
+const FILE_VIEWER_SUBPIXEL_ENDPOINT_EPSILON_PX = 1;
 
 export const DEFAULT_FILE_VIEWER_MOTION_FRAME: FileViewerMotionFrame = {
   shellInlineSize: 0,
@@ -88,6 +107,7 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
   let documentSurfaceCustomProperties = new Set<string>();
   let sidebarGapElement: HTMLElement | null = null;
   let activeMotion: FileViewerActiveMotion | null = null;
+  let settleRelease: FileViewerSettleRelease | null = null;
   let rafHandle = 0;
   let settleReleaseHandle = 0;
   let motionSequence = 0;
@@ -137,6 +157,7 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
   };
 
   const cancelSettleRelease = () => {
+    settleRelease = null;
     if (settleReleaseHandle === 0) return;
     getCancelAnimationFrame()(settleReleaseHandle);
     settleReleaseHandle = 0;
@@ -146,15 +167,23 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
     motion: FileViewerActiveMotion,
     now = readNow(),
   ): FileViewerMotionFrame => {
-    const motionProgress =
+    const rawMotionProgress =
       motion.durationMs <= 0
         ? 1
         : clamp((now - motion.startedAt) / motion.durationMs, 0, 1);
-    const sidebarInlineSize = lerp(
+    const rawSidebarInlineSize = lerp(
       motion.from.sidebarInlineSize,
       motion.to.sidebarInlineSize,
-      motionProgress,
+      rawMotionProgress,
     );
+    const isSubpixelEndpoint =
+      rawMotionProgress > 0.98 &&
+      Math.abs(rawSidebarInlineSize - motion.to.sidebarInlineSize) <=
+        FILE_VIEWER_SUBPIXEL_ENDPOINT_EPSILON_PX;
+    const motionProgress = isSubpixelEndpoint ? 1 : rawMotionProgress;
+    const sidebarInlineSize = isSubpixelEndpoint
+      ? motion.to.sidebarInlineSize
+      : rawSidebarInlineSize;
     const layoutInlineSize = Math.max(
       0,
       motion.to.shellInlineSize - sidebarInlineSize,
@@ -199,7 +228,7 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
     // geometry.
     commit(settlingFrame, { publish: false });
     publishContractFrame(settlingFrame, { flushSubscribers: true });
-    scheduleSettleRelease(idleFrame);
+    scheduleSettleRelease(settlingFrame, idleFrame);
   };
 
   const tick = () => {
@@ -219,19 +248,58 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
     rafHandle = getRequestAnimationFrame()(tick);
   };
 
-  const scheduleSettleRelease = (idleFrame: FileViewerMotionFrame) => {
+  const scheduleSettleRelease = (
+    settlingFrame: FileViewerMotionFrame,
+    idleFrame: FileViewerMotionFrame,
+  ) => {
     cancelSettleRelease();
-    // Two frames: the first lets the rebased layout paint while renderers
-    // still hold the oversized raster; the second releases the contract to
-    // idle so they can drop it.
-    settleReleaseHandle = getRequestAnimationFrame()(() => {
-      settleReleaseHandle = 0;
-      commit(idleFrame, { publish: false });
-      settleReleaseHandle = getRequestAnimationFrame()(() => {
-        settleReleaseHandle = 0;
-        commit(idleFrame);
-      });
-    });
+    settleRelease = {
+      idleFrame,
+      lastSnapshot: readSettleSnapshot(),
+      remainingFrameCount: FILE_VIEWER_SETTLE_MAX_HOLD_FRAMES,
+      settlingFrame,
+      stableFrameCount: 0,
+    };
+    scheduleSettleReleaseFrame();
+  };
+
+  const scheduleSettleReleaseFrame = () => {
+    if (settleReleaseHandle !== 0) return;
+    settleReleaseHandle = getRequestAnimationFrame()(holdSettleRelease);
+  };
+
+  const holdSettleRelease = () => {
+    settleReleaseHandle = 0;
+    if (!settleRelease) return;
+
+    commit(settleRelease.settlingFrame, { publish: false });
+
+    const snapshot = readSettleSnapshot();
+    const stableFrameCount = areSettleSnapshotsEqual(
+      settleRelease.lastSnapshot,
+      snapshot,
+    )
+      ? settleRelease.stableFrameCount + 1
+      : 0;
+    const remainingFrameCount = settleRelease.remainingFrameCount - 1;
+
+    if (
+      stableFrameCount >= FILE_VIEWER_SETTLE_STABLE_FRAME_COUNT ||
+      remainingFrameCount <= 0
+    ) {
+      const idleFrame = settleRelease.idleFrame;
+      settleRelease = null;
+      commit(idleFrame);
+      return;
+    }
+
+    settleRelease = {
+      ...settleRelease,
+      lastSnapshot: snapshot,
+      remainingFrameCount,
+      stableFrameCount,
+    };
+    scheduleSettleReleaseFrame();
   };
 
   const dispatchBeforeLayoutMotion = () => {
@@ -357,7 +425,7 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
 
     // Default (no motion resolver): identity. A surface that has no resolver is
     // one whose layout already tracks the live animating frame width (docx,
-    // pptx, markdown, image) — it re-fits smoothly on its own, so applying the
+    // pptx, markdown) — it re-fits smoothly on its own, so applying the
     // `fallbackSurfaceScale` FLIP on top would double-count and overshoot the
     // target, then snap back at settle. Renderers whose content is a FIXED
     // raster that cannot re-fit live (PDF) register their own FLIP resolver.
@@ -401,6 +469,54 @@ export function createFileViewerMotionKernel(): FileViewerMotionKernel {
     }
     documentSurfaceCustomProperties = new Set();
   }
+
+  function readSettleSnapshot(): readonly number[] {
+    const values: number[] = [];
+
+    appendElementRectSnapshot(values, sidebarGapElement);
+    appendElementRectSnapshot(values, documentSurface?.element ?? null);
+
+    try {
+      const surfaceSnapshot = documentSurface?.readSettleSnapshot?.();
+      if (surfaceSnapshot) {
+        values.push(...surfaceSnapshot.map(toSettleSnapshotNumber));
+      }
+    } catch {
+      // A renderer snapshot is diagnostic, not correctness-critical. If a
+      // renderer unmounts while settling, fall back to shell geometry.
+    }
+
+    return values.length > 0 ? values : [0];
+  }
+}
+
+function appendElementRectSnapshot(
+  values: number[],
+  element: HTMLElement | null,
+) {
+  if (!element) return;
+  const rect = element.getBoundingClientRect();
+  values.push(
+    toSettleSnapshotNumber(rect.left),
+    toSettleSnapshotNumber(rect.top),
+    toSettleSnapshotNumber(rect.width),
+    toSettleSnapshotNumber(rect.height),
+  );
+}
+
+function areSettleSnapshotsEqual(
+  previous: readonly number[],
+  next: readonly number[],
+) {
+  if (previous.length !== next.length) return false;
+  return previous.every(
+    (value, index) =>
+      Math.abs(value - next[index]) <= FILE_VIEWER_SETTLE_SCROLL_EPSILON_PX,
+  );
+}
+
+function toSettleSnapshotNumber(value: number) {
+  return Number.isFinite(value) ? value : 0;
 }
 
 function shouldDispatchBeforeLayoutMotion({

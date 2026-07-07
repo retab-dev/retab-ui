@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { type FrameSource } from "@/lib/image-frame-source";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@/lib/viewer-resource";
 import { ImageFrameScroller } from "@/components/ui/image-viewer-frame";
 import {
+  IMAGE_READING_MARKER_RATIO,
   MAX_VIEWER_SCALE,
   MIN_VIEWER_SCALE,
   useFrameListWidth,
@@ -33,6 +35,12 @@ import {
   type ViewerControlsState,
 } from "@/components/ui/viewer-controls";
 
+import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import {
+  createFileViewerFitWidthSurfaceMotionResolver,
+  FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+} from "./file-viewer-fit-width-motion";
+import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
 import { resolveFileViewerRendererLayoutInlineSize } from "./file-viewer-renderer-contract";
 import {
   useOptionalFileViewerRendererEnvironment,
@@ -81,11 +89,13 @@ export function ImageViewerContent({
   // re-derive the window normally only once the transition is idle again.
   const freezeVisibleFrameWindow = rendererFrame.phase !== "idle";
   const {
+    isFitWidth,
     rotateClockwise,
     rotation,
     scale,
     scaleControlsDisabled,
     setViewerScale,
+    widestFrameWidth,
   } = useImageViewerScale(
     frameSource,
     controlledScale,
@@ -125,6 +135,86 @@ export function ImageViewerContent({
     scrollerRef,
     layoutKey: scale,
     enabled: rendererEnvironment.usesShellGeometry,
+  });
+  const imageDocumentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
+  const [imageDocumentSurfaceElement, setImageDocumentSurfaceElement] =
+    React.useState<HTMLDivElement | null>(null);
+  const resolveSurfaceMotionStyle =
+    React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
+      () =>
+        createFileViewerFitWidthSurfaceMotionResolver({
+          align: rendererFrame.align,
+          fitContentInlineSize: widestFrameWidth,
+          frozenStageInlineSize:
+            frameLayout.maxFrameWidth + frameLayout.padding * 2,
+          isFitWidth,
+          mode: "uniform-scale",
+          stageInlinePadding: frameLayout.padding * 2,
+        }),
+      [
+        frameLayout.maxFrameWidth,
+        frameLayout.padding,
+        isFitWidth,
+        rendererFrame.align,
+        widestFrameWidth,
+      ],
+    );
+  const writeImageDocumentAnchorBlockOffset = React.useCallback(() => {
+    const element = imageDocumentSurfaceRef.current;
+    if (!element) return;
+
+    const metrics = getScrollMetrics();
+    const readingBlock =
+      Math.max(0, metrics.scrollTop) +
+      Math.max(0, metrics.viewportHeight) * IMAGE_READING_MARKER_RATIO;
+    element.style.setProperty(
+      FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+      `${readingBlock}px`,
+    );
+  }, [getScrollMetrics]);
+  const measureBeforeLayoutMotionRef = React.useRef(
+    writeImageDocumentAnchorBlockOffset,
+  );
+  measureBeforeLayoutMotionRef.current = writeImageDocumentAnchorBlockOffset;
+  const handleBeforeLayoutMotion = React.useCallback(() => {
+    captureReadingFraction();
+    measureBeforeLayoutMotionRef.current();
+  }, [captureReadingFraction]);
+  const setImageDocumentSurfaceRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      const previousElement = imageDocumentSurfaceRef.current;
+      if (previousElement === element) return;
+      previousElement?.removeEventListener(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        handleBeforeLayoutMotion,
+      );
+      imageDocumentSurfaceRef.current = element;
+      setImageDocumentSurfaceElement((previous) =>
+        previous === element ? previous : element,
+      );
+      if (!element) return;
+      element.addEventListener(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        handleBeforeLayoutMotion,
+      );
+      writeImageDocumentAnchorBlockOffset();
+    },
+    [handleBeforeLayoutMotion, writeImageDocumentAnchorBlockOffset],
+  );
+  const documentSurfaceKey = imageDocumentSurfaceElement
+    ? joinEffectKey([
+        "image-document-surface",
+        imageDocumentSurfaceElement,
+        rendererEnvironment.registerDocumentSurface,
+        resolveSurfaceMotionStyle,
+      ])
+    : null;
+  useKeyedLayoutEffect(documentSurfaceKey, () => {
+    if (!imageDocumentSurfaceElement) return;
+    return rendererEnvironment.registerDocumentSurface({
+      element: imageDocumentSurfaceElement,
+      resolveMotionStyle: resolveSurfaceMotionStyle,
+    });
   });
   const setScrollViewportRefWithRebase = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -202,6 +292,7 @@ export function ImageViewerContent({
               layout={frameLayout}
               scale={scale}
               rotation={rotation}
+              documentSurfaceRef={setImageDocumentSurfaceRef}
               frameListRef={frameListRef}
               getScrollMetrics={getScrollMetrics}
               freezeVisibleFrameWindow={freezeVisibleFrameWindow}

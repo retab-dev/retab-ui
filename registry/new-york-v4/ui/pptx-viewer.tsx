@@ -3,6 +3,8 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { joinEffectKey } from "@/lib/effect-key";
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   createViewerResource,
@@ -12,9 +14,11 @@ import {
 import { getPptxFitScale, getPptxResetKey } from "./pptx-viewer-core";
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import {
-  resolveFileViewerRendererLayoutInlineSize,
-  type FileViewerDocumentAlign,
-} from "./file-viewer-renderer-contract";
+  createFileViewerFitWidthSurfaceMotionResolver,
+  FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+} from "./file-viewer-fit-width-motion";
+import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
+import { resolveFileViewerRendererLayoutInlineSize } from "./file-viewer-renderer-contract";
 import {
   useOptionalFileViewerRendererEnvironment,
   useOptionalFileViewerRendererFrame,
@@ -34,6 +38,7 @@ import type { PptxViewerProps } from "./pptx-viewer-types";
 import { usePptxViewportWidth } from "./pptx-viewer-viewport";
 import {
   createPptxSlideLayout,
+  PPTX_READING_MARKER_RATIO,
   usePptxVisibleSlide,
 } from "./pptx-viewer-visible-slide";
 import { usePptxZoom } from "./pptx-viewer-zoom";
@@ -149,12 +154,13 @@ function PptxViewerContent({
     rendererFrame,
   });
   const fitScale = getPptxFitScale(layoutInlineSize, source.baseSize.width);
-  const { scaleControlsDisabled, setViewerScale, zoomScale } = usePptxZoom({
-    controlledScale,
-    defaultScale,
-    fitScale,
-    onScaleChange,
-  });
+  const { isFitWidth, scaleControlsDisabled, setViewerScale, zoomScale } =
+    usePptxZoom({
+      controlledScale,
+      defaultScale,
+      fitScale,
+      onScaleChange,
+    });
   const slideLayout = React.useMemo(
     () =>
       createPptxSlideLayout({
@@ -183,6 +189,38 @@ function PptxViewerContent({
   const scrollInteractionRestoreRef = React.useRef<number | null>(null);
   const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
   const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
+  const [documentSurfaceElement, setDocumentSurfaceElementState] =
+    React.useState<HTMLDivElement | null>(null);
+  const resolveSurfaceMotionStyle =
+    React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
+      () =>
+        createFileViewerFitWidthSurfaceMotionResolver({
+          align: rendererFrame.align,
+          fitContentInlineSize: source.baseSize.width,
+          frozenStageInlineSize: slideLayout.slideWidth,
+          isFitWidth,
+          mode: "uniform-scale",
+        }),
+      [
+        isFitWidth,
+        rendererFrame.align,
+        slideLayout.slideWidth,
+        source.baseSize.width,
+      ],
+    );
+  const writePptxDocumentAnchorBlockOffset = React.useCallback(() => {
+    const element = documentSurfaceRef.current;
+    if (!element) return;
+
+    const metrics = getScrollMetrics();
+    const readingBlock =
+      Math.max(0, metrics.scrollTop) +
+      Math.max(0, metrics.viewportHeight) * PPTX_READING_MARKER_RATIO;
+    element.style.setProperty(
+      FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+      `${readingBlock}px`,
+    );
+  }, [getScrollMetrics]);
 
   const suspendScrollInteractions = React.useCallback(() => {
     const scrollElement = scrollViewportRef.current?.querySelector<HTMLElement>(
@@ -230,12 +268,15 @@ function PptxViewerContent({
   // window is briefly derived from a not-yet-rebased scroll position. The union
   // in the scroller keeps the pre-motion slides mounted until the motion idles.
   const isDocumentTransitioning = rendererFrame.phase !== "idle";
-  const measureBeforeLayoutMotionRef = React.useRef(handleScroll);
-  measureBeforeLayoutMotionRef.current = handleScroll;
+  const measureBeforeLayoutMotionRef = React.useRef(() => {});
+  measureBeforeLayoutMotionRef.current = () => {
+    writePptxDocumentAnchorBlockOffset();
+    handleScroll();
+  };
   const handleBeforeLayoutMotion = React.useCallback(() => {
+    captureReadingFraction();
     measureBeforeLayoutMotionRef.current();
-  }, []);
-  const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
+  }, [captureReadingFraction]);
   const setDocumentSurfaceElement = React.useCallback(
     (element: HTMLDivElement | null) => {
       const previousElement = documentSurfaceRef.current;
@@ -244,20 +285,34 @@ function PptxViewerContent({
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
-      surfaceCleanupRef.current?.();
-      surfaceCleanupRef.current = null;
       documentSurfaceRef.current = element;
+      setDocumentSurfaceElementState((previous) =>
+        previous === element ? previous : element,
+      );
       if (!element) return;
-      surfaceCleanupRef.current = registerDocumentSurface({
-        element,
-      });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
+      writePptxDocumentAnchorBlockOffset();
     },
-    [handleBeforeLayoutMotion, registerDocumentSurface],
+    [handleBeforeLayoutMotion, writePptxDocumentAnchorBlockOffset],
   );
+  const documentSurfaceKey = documentSurfaceElement
+    ? joinEffectKey([
+        "pptx-document-surface",
+        documentSurfaceElement,
+        registerDocumentSurface,
+        resolveSurfaceMotionStyle,
+      ])
+    : null;
+  useKeyedLayoutEffect(documentSurfaceKey, () => {
+    if (!documentSurfaceElement) return;
+    return registerDocumentSurface({
+      element: documentSurfaceElement,
+      resolveMotionStyle: resolveSurfaceMotionStyle,
+    });
+  });
 
   return (
     <div
@@ -290,16 +345,7 @@ function PptxViewerContent({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        <div
-          ref={setDocumentSurfaceElement}
-          className="relative flex min-h-0 min-w-0 flex-1 flex-col"
-          data-slot="pptx-viewer-document-surface"
-          style={{
-            transformOrigin: getPptxDocumentTransformOrigin(
-              rendererFrame.align,
-            ),
-          }}
-        >
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="relative flex min-h-0 flex-1 flex-col">
             <PptxSlideScroller
               source={source}
@@ -311,6 +357,7 @@ function PptxViewerContent({
               renderSlideOverlay={renderSlideOverlay}
               onSlideRenderTiming={onSlideRenderTiming}
               containerRef={containerRef}
+              documentSurfaceRef={setDocumentSurfaceElement}
               viewportRef={scrollViewportRef}
               getScrollMetrics={getScrollMetrics}
               isTransitioning={isDocumentTransitioning}
@@ -327,17 +374,6 @@ function restorePptxScrollInteractions(element: HTMLElement | null) {
   if (!element) return;
   element.style.removeProperty("pointer-events");
   element.style.removeProperty("overflow-x");
-}
-
-function getPptxDocumentTransformOrigin(align: FileViewerDocumentAlign) {
-  switch (align) {
-    case "center":
-      return "center top";
-    case "end":
-      return "right top";
-    case "start":
-      return "left top";
-  }
 }
 
 function isMobileSafari() {

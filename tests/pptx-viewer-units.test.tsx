@@ -781,15 +781,17 @@ function ZoomHarness({
   fitScale: number;
   onScaleChange?: (scale: number | null) => void;
 }) {
-  const { scaleControlsDisabled, setViewerScale, zoomScale } = usePptxZoom({
-    controlledScale,
-    defaultScale,
-    fitScale,
-    onScaleChange,
-  });
+  const { isFitWidth, scaleControlsDisabled, setViewerScale, zoomScale } =
+    usePptxZoom({
+      controlledScale,
+      defaultScale,
+      fitScale,
+      onScaleChange,
+    });
   return (
     <div>
       <span data-testid="zoom">{zoomScale}</span>
+      <span data-testid="fit-width">{String(isFitWidth)}</span>
       <span data-testid="disabled">{String(scaleControlsDisabled)}</span>
       <button type="button" onClick={() => setViewerScale(zoomScale * 1.2)}>
         zoom-in
@@ -808,24 +810,28 @@ describe("usePptxZoom", () => {
   it("uses fit scale in uncontrolled fit mode", () => {
     render(<ZoomHarness fitScale={0.5} />);
     expect(screen.getByTestId("zoom").textContent).toBe("0.5");
+    expect(screen.getByTestId("fit-width").textContent).toBe("true");
     expect(screen.getByTestId("disabled").textContent).toBe("false");
   });
 
   it("starts from a normalized uncontrolled default scale", () => {
     render(<ZoomHarness fitScale={0.5} defaultScale={999} />);
     expect(screen.getByTestId("zoom").textContent).toBe("5");
+    expect(screen.getByTestId("fit-width").textContent).toBe("false");
   });
 
   it("switches to manual mode and clamps on uncontrolled zoom", () => {
     render(<ZoomHarness fitScale={0.5} />);
     fireEvent.click(screen.getByRole("button", { name: "zoom-in" }));
     expect(screen.getByTestId("zoom").textContent).toBe("0.6");
+    expect(screen.getByTestId("fit-width").textContent).toBe("false");
 
     fireEvent.click(screen.getByRole("button", { name: "over" }));
     expect(screen.getByTestId("zoom").textContent).toBe("5");
 
     fireEvent.click(screen.getByRole("button", { name: "fit" }));
     expect(screen.getByTestId("zoom").textContent).toBe("0.5");
+    expect(screen.getByTestId("fit-width").textContent).toBe("true");
   });
 
   it("normalizes the controlled scale and does not mutate internal state", () => {
@@ -838,6 +844,7 @@ describe("usePptxZoom", () => {
       />,
     );
     expect(screen.getByTestId("zoom").textContent).toBe("5");
+    expect(screen.getByTestId("fit-width").textContent).toBe("false");
 
     fireEvent.click(screen.getByRole("button", { name: "zoom-in" }));
     // Controlled: reports the requested (clamped) value but the displayed scale is still driven by the prop.

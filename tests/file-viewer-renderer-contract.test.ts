@@ -9,6 +9,7 @@ import { DEFAULT_FILE_VIEWER_MOTION_FRAME } from "@/registry/new-york-v4/ui/file
 
 const STABLE_FRAME: FileViewerRendererFrame = {
   align: "start",
+  canToggleSidebar: false,
   documentTransition: {
     layoutPolicy: "live",
     scrollPolicy: "preserve",
@@ -24,6 +25,7 @@ const STABLE_FRAME: FileViewerRendererFrame = {
   phase: "idle",
   rasterInlineSize: 640,
   settledInlineSize: 640,
+  shellInlineSize: null,
   toInlineSize: 640,
   usesShellGeometry: false,
 };
@@ -51,6 +53,7 @@ describe("file viewer renderer contract", () => {
     expect(
       createFileViewerRendererFrame({
         align: "center",
+        canToggleSidebar: false,
         element: null,
         fallbackInlineSize: 0,
         motionFrame: DEFAULT_FILE_VIEWER_MOTION_FRAME,
@@ -107,6 +110,7 @@ describe("file viewer renderer contract", () => {
   it("derives the raster width from the widest frame the motion touches", () => {
     const rendererFrame = createFileViewerRendererFrame({
       align: "center",
+      canToggleSidebar: true,
       element: null,
       fallbackInlineSize: null,
       motionFrame: {
@@ -125,6 +129,7 @@ describe("file viewer renderer contract", () => {
     });
 
     expect(rendererFrame.rasterInlineSize).toBe(840);
+    expect(rendererFrame.shellInlineSize).toBe(840);
     expect(rendererFrame.settledInlineSize).toBe(840);
     expect(rendererFrame.documentTransition.layoutPolicy).toBe("frozen");
     expect(rendererFrame.isTransitioning).toBe(true);

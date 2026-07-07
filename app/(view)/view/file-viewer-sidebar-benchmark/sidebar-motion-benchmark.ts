@@ -47,6 +47,11 @@ export type SidebarMotionBenchmarkResult = {
   durationMs: number;
   format: string;
   metrics: SidebarMotionBenchmarkMetric[];
+  runs?: {
+    close: BenchmarkMotionRun;
+    open: BenchmarkMotionRun;
+    rapidToggle: BenchmarkRapidToggleRun;
+  };
   sampledFrameCount: number;
   scrollTarget: SidebarMotionBenchmarkScrollTargetId;
   side: string;
@@ -232,6 +237,7 @@ export async function runFileViewerSidebarMotionBenchmark(
   await setSidebarOpenState(runtime, firstAction === "close");
   await scrollBenchmarkViewport(runtime, scrollTarget);
   await waitForStableRenderer(runtime);
+  await focusBenchmarkSurface(runtime);
 
   const first = await sampleTransition(runtime, firstAction);
   const second = await sampleTransition(runtime, secondAction);
@@ -258,18 +264,69 @@ export async function runFileViewerSidebarMotionBenchmark(
     collectMainThreadMetric(close, open),
     collectVisualSmoothnessMetric(close, open),
   ];
-
-  return {
+  const result = {
     actionOrder,
     durationMs: performance.now() - startedAt,
     format,
     metrics,
+    runs: {
+      close,
+      open,
+      rapidToggle,
+    },
     sampledFrameCount:
       close.samples.length + open.samples.length + rapidToggle.samples.length,
     scrollTarget: scrollTarget.id,
     side,
     status: metrics.every((metric) => metric.passed) ? "passed" : "failed",
+  } satisfies SidebarMotionBenchmarkResult;
+
+  logSidebarMotionBenchmarkResult(result);
+  return result;
+}
+
+function logSidebarMotionBenchmarkResult(
+  result: SidebarMotionBenchmarkResult,
+) {
+  const metrics = result.metrics.map((metric) => ({
+    budget: metric.budget,
+    detail: metric.detail,
+    id: metric.id,
+    label: metric.label,
+    passed: metric.passed,
+    value: metric.value,
+  }));
+  const failedMetrics = metrics.filter((metric) => !metric.passed);
+  const summary = {
+    actionOrder: result.actionOrder,
+    durationMs: Number(result.durationMs.toFixed(1)),
+    failedMetricIds: failedMetrics.map((metric) => metric.id),
+    format: result.format,
+    metrics,
+    passedMetricCount: metrics.filter((metric) => metric.passed).length,
+    sampledFrameCount: result.sampledFrameCount,
+    scrollTarget: result.scrollTarget,
+    side: result.side,
+    status: result.status,
+    totalMetricCount: metrics.length,
   };
+  const fullResultJson = JSON.stringify(result);
+
+  console.info(
+    "[file-viewer:sidebar-benchmark] result",
+    JSON.stringify(summary),
+  );
+  console.info(
+    "[file-viewer:sidebar-benchmark] full result",
+    fullResultJson,
+  );
+  console.table(metrics);
+  if (failedMetrics.length > 0) {
+    console.warn(
+      "[file-viewer:sidebar-benchmark] failures",
+      JSON.stringify(failedMetrics),
+    );
+  }
 }
 
 function getBenchmarkRuntime(): BenchmarkRuntime {
@@ -406,6 +463,16 @@ async function waitForStableRenderer(runtime: BenchmarkRuntime) {
 
     if (stableFrameCount >= 48 && index >= 180) return;
   }
+}
+
+async function focusBenchmarkSurface(runtime: BenchmarkRuntime) {
+  if (runtime.root.contains(document.activeElement)) return;
+
+  if (!runtime.content.hasAttribute("tabindex")) {
+    runtime.content.tabIndex = -1;
+  }
+  runtime.content.focus({ preventScroll: true });
+  await nextAnimationFrame();
 }
 
 async function sampleTransition(
@@ -792,13 +859,15 @@ function collectScrollGeometryMetric(
   close: BenchmarkMotionRun,
   open: BenchmarkMotionRun,
 ): SidebarMotionBenchmarkMetric {
-  // A fit-width resize deliberately changes the document's absolute scroll size
-  // (a wider page is a taller document), so absolute scrollHeight/width can no
-  // longer be the invariant. What must stay fixed is the READING POSITION — the
-  // normalized fraction of the document at the viewport — across every sampled
-  // frame of the toggle. That is the true "the reader does not lose their place"
-  // guarantee, and it holds regardless of how the document rescales.
-  const drift = Math.max(readingFractionDrift(close), readingFractionDrift(open));
+  // A shell-owned fit-width resize freezes renderer layout during the slide and
+  // moves the surface with a transform; the DOM scroll range is materialized at
+  // settle. The invariant is therefore the settled logical reading identity,
+  // while in-flight smoothness is covered by renderer continuity, anchor
+  // stability, and visual smoothness.
+  const drift = Math.max(
+    settledReadingFractionDrift(close.before, close.after),
+    settledReadingFractionDrift(open.before, open.after),
+  );
 
   return {
     id: "scroll-geometry",
@@ -807,7 +876,7 @@ function collectScrollGeometryMetric(
     value: `${(drift * 100).toFixed(2)}%`,
     budget: "<= 1.00%",
     detail:
-      "The normalized reading position holds steady while the document refits to the new width.",
+      "The normalized reading position lands on the same logical document position after each refit.",
   };
 }
 

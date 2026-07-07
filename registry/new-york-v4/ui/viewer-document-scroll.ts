@@ -568,7 +568,9 @@ export function useViewerDocumentScroll<Anchor, Target>({
         });
         if (targetTop != null) {
           scrollViewportToLogicalTop(viewportElement, targetTop, undefined, {
-            preservePhysicalScrollTop: transition?.source === "viewer-shell",
+            preservePhysicalScrollTop:
+              transition?.source === "viewer-shell" &&
+              transition.scrollPolicy !== "rebase",
           });
         } else {
           cacheAnchor({
