@@ -22,6 +22,10 @@ import {
   createViewerResource,
 } from "@/registry/new-york-v4/lib/viewer-resource";
 import {
+  FileViewerInset,
+  FileViewerViewport,
+} from "@/registry/new-york-v4/ui/file-viewer";
+import {
   FileViewerControls,
   FileViewerHarness as FileViewer,
   FileViewerTitle,
@@ -36,6 +40,7 @@ import {
 } from "@/registry/new-york-v4/ui/pdf-thumbnail-layout";
 import {
   PdfHighlight,
+  PdfResourceContent,
   PdfViewer,
   PdfViewerPages,
   PdfViewerProvider,
@@ -377,7 +382,7 @@ class TestMetricErrorBoundary extends React.Component<
 
 
 describe("PdfViewer thumbnails", () => {
-  it("shares one document resource between the viewer load and thumbnail sidebar", async () => {
+  it("shares one document resource between the viewer and thumbnail sidebar", async () => {
     const resource = pdfUrlResource("/shared-sidebar.pdf", "named-shared.pdf");
     pdfjsMock.docs.set(
       "/shared-sidebar.pdf",
@@ -387,20 +392,22 @@ describe("PdfViewer thumbnails", () => {
       ]),
     );
 
-    const viewerDocument = await getPdfDocumentResource(resource.content);
-
     render(
       <ViewerRoot className="h-[420px]">
         <ViewerBody>
           <ViewerSidebar width="9rem">
             <PdfThumbnailRail resource={resource} />
           </ViewerSidebar>
+          <FileViewerInset>
+            <FileViewerViewport>
+              <PdfResourceContent resource={resource} />
+            </FileViewerViewport>
+          </FileViewerInset>
         </ViewerBody>
       </ViewerRoot>,
     );
 
-    expect(viewerDocument.numPages).toBe(2);
-    await screen.findByText("1");
+    await findByTextContent("Page 1 of 2");
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="pdf-viewer-thumbnails"]'),

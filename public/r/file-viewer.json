@@ -350,7 +350,7 @@
     },
     {
       "path": "registry/new-york-v4/ui/use-is-client.ts",
-      "content": "\"use client\";\n\nimport * as React from \"react\";\nimport { useMountEffect } from \"@/hooks/use-mount-effect\";\n\nexport function useIsClient(): boolean {\n  const [isClient, setIsClient] = React.useState(false);\n\n  useMountEffect(() => {\n    setIsClient(true);\n  });\n\n  return isClient;\n}\n",
+      "content": "\"use client\";\n\nimport * as React from \"react\";\n\nconst emptySubscribe = () => () => {};\nconst getClientSnapshot = () => true;\nconst getServerSnapshot = () => false;\n\n/**\n * SSR gate: `false` on the server (and during hydration's first pass),\n * `true` on the client.\n *\n * This must stay a synchronous external-store read, NOT the\n * `useState(false)` + mount-effect flip. The flip pattern makes every\n * viewer mount its Suspense boundary in a later update; when two such\n * boundaries suspend on pending resources in the same flush as other\n * commit-phase updates (viewer sidebar/geometry registration), React 19's\n * retry lanes desynchronize and re-attempt each other's boundary on every\n * commit — an unbounded synchronous suspend/retry loop that starves the\n * event loop (jsdom tests OOM; browsers busy-spin until the resource\n * resolves). With the store read, client renders suspend on mount, which\n * never enters that loop. Regression-guarded in\n * tests/pdf-viewer-thumbnails.test.tsx (\"shares one document resource…\").\n */\nexport function useIsClient(): boolean {\n  return React.useSyncExternalStore(\n    emptySubscribe,\n    getClientSnapshot,\n    getServerSnapshot,\n  );\n}\n",
       "type": "registry:ui",
       "target": "@ui/use-is-client.ts"
     },
