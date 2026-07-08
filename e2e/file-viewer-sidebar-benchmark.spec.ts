@@ -142,14 +142,11 @@ type PdfPageGapRun = {
 };
 
 type PdfPageGapPair = {
-  // Uniform-scale invariant: gaps interpolate from the first in-flight value
-  // (gap × first-frame scale) to the settled 16px — monotonically, inside the
-  // envelope spanned by the first observation, the first in-flight value, and
-  // the settled endpoint.
-  envelopeExcess: number;
+  // Exact-camera invariant: gap / pageHeight is constant across the motion
+  // (both scale by the same in-flight visual scale), so ratioRange ≈ 0.
   gapValues: number[];
   pair: string;
-  postStepReversals: number;
+  ratioRange: number;
   settleSnap: number;
 };
 
@@ -1587,7 +1584,7 @@ async function runPdfPageGapBenchmark(
             };
           })
           .sort((a, b) => a.top - b.top);
-        const gaps: { pair: string; value: number }[] = [];
+        const gaps: { pair: string; value: number; pageHeight: number }[] = [];
 
         for (let index = 0; index < pageRects.length - 1; index += 1) {
           const current = pageRects[index];
@@ -1600,6 +1597,10 @@ async function runPdfPageGapBenchmark(
             gaps.push({
               pair: `${current.page}->${next.page}`,
               value: next.top - current.bottom,
+              // The page above the gap, for the exact-camera ratio invariant:
+              // gap and page height both scale by the same in-flight visual
+              // scale, so gap / pageHeight is constant across the motion.
+              pageHeight: current.bottom - current.top,
             });
           }
         }
@@ -1643,11 +1644,15 @@ async function runPdfPageGapBenchmark(
         return {
           action: run.action,
           pairs: pairs.map((pair) => {
-            const values = all
-              .map(
-                (sample) => sample.gaps.find((gap) => gap.pair === pair)?.value,
-              )
-              .filter((value): value is number => Number.isFinite(value));
+            const samplesForPair = all
+              .map((sample) => sample.gaps.find((gap) => gap.pair === pair))
+              .filter(
+                (gap): gap is NonNullable<typeof gap> =>
+                  gap != null &&
+                  Number.isFinite(gap.value) &&
+                  Number.isFinite(gap.pageHeight),
+              );
+            const values = samplesForPair.map((gap) => gap.value);
             const movingValues = run.samples
               .filter((sample) =>
                 isBenchmarkMovingSample(sample, run.before, run.after),
@@ -1663,44 +1668,25 @@ async function runPdfPageGapBenchmark(
                       movingValues[movingValues.length - 1],
                   )
                 : 0;
-            // Uniform scale interpolates the on-screen gap from
-            // gap × first-frame-scale back to the settled value. The envelope
-            // spans the first observation (which for a page pair revealed by
-            // the motion is already in-flight), the first in-flight value,
-            // and the settled endpoint; within it the gap must progress
-            // monotonically (no wobble). Run-level cycle invariance and the
-            // settle-snap check own return-to-baseline.
-            const firstObserved = values[0] ?? 0;
-            const inFlightStart = values[1] ?? firstObserved;
-            const settled = values[values.length - 1] ?? firstObserved;
-            const envelopeMin = Math.min(
-              firstObserved,
-              inFlightStart,
-              settled,
-            );
-            const envelopeMax = Math.max(
-              firstObserved,
-              inFlightStart,
-              settled,
-            );
-            const envelopeExcess = values.reduce(
-              (excess, value) =>
-                Math.max(
-                  excess,
-                  envelopeMin - value,
-                  value - envelopeMax,
-                ),
-              0,
-            );
+            // Exact-camera invariant: with proportional gaps the layout is a
+            // single linear function of scale, so during the motion the gap
+            // and the page above it are scaled by the SAME in-flight visual
+            // scale every frame. Their ratio is therefore constant across the
+            // whole motion (the layout is fixed; only the uniform transform
+            // varies). Any drift in gap/pageHeight is a real non-uniformity —
+            // a gap breathing independently of its pages.
+            const ratios = samplesForPair
+              .filter((gap) => gap.pageHeight > 1)
+              .map((gap) => gap.value / gap.pageHeight);
+            const ratioRange =
+              ratios.length > 1
+                ? Math.max(...ratios) - Math.min(...ratios)
+                : 0;
 
             return {
-              envelopeExcess: roundMetric(Math.max(0, envelopeExcess)),
               gapValues: values.map(roundMetric),
               pair,
-              postStepReversals: countDirectionalReversals(
-                values.slice(1),
-                0.25,
-              ),
+              ratioRange: roundMetric(ratioRange),
               settleSnap: roundMetric(settleSnap),
             };
           }),
@@ -1733,20 +1719,6 @@ async function runPdfPageGapBenchmark(
 
       function roundMetric(value: number) {
         return Math.round(value * 1000) / 1000;
-      }
-
-      function countDirectionalReversals(values: number[], tolerance: number) {
-        let reversals = 0;
-        let lastSign = 0;
-
-        for (let index = 1; index < values.length; index += 1) {
-          const delta = values[index] - values[index - 1];
-          const sign = Math.abs(delta) <= tolerance ? 0 : Math.sign(delta);
-          if (sign !== 0 && lastSign !== 0 && sign !== lastSign) reversals += 1;
-          if (sign !== 0) lastSign = sign;
-        }
-
-        return reversals;
       }
     },
     {
@@ -1782,11 +1754,13 @@ function collectPdfPageGapRunFailures(run: PdfPageGapRun, label: string) {
   const prefix = `${label} ${run.action}`;
 
   for (const pair of run.pairs) {
-    if (pair.envelopeExcess > 1) {
+    // The gap must track its pages as one rigid unit: gap / pageHeight fixed
+    // across the whole motion (allow a small sub-pixel measurement band).
+    if (pair.ratioRange > 0.03) {
       failures.push(
-        `${prefix} ${pair.pair} page gap left its interpolation envelope by ${pair.envelopeExcess.toFixed(
-          2,
-        )}px: ${formatValues(pair.gapValues)}`,
+        `${prefix} ${pair.pair} page gap breathed independently of its pages (gap/height range ${pair.ratioRange.toFixed(
+          3,
+        )}): ${formatValues(pair.gapValues)}`,
       );
     }
     if (pair.settleSnap > 1) {
@@ -1794,13 +1768,6 @@ function collectPdfPageGapRunFailures(run: PdfPageGapRun, label: string) {
         `${prefix} ${pair.pair} page gap snapped ${pair.settleSnap.toFixed(
           2,
         )}px after sidebar movement: ${formatValues(pair.gapValues)}`,
-      );
-    }
-    if (pair.postStepReversals > 0) {
-      failures.push(
-        `${prefix} ${pair.pair} page gap reversed ${pair.postStepReversals} times mid-interpolation: ${formatValues(
-          pair.gapValues,
-        )}`,
       );
     }
   }

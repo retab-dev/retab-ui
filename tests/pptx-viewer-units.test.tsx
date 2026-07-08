@@ -156,12 +156,13 @@ describe("pptx slide scroll layout", () => {
       }),
     ).toEqual({
       slideCount: 3,
-      slideGap: 16,
+      // Gap and padding scale with zoom (round(16 × 2) = 32).
+      slideGap: 32,
       slideHeight: 1920,
       slideWidth: 1440,
-      slideStride: 1936,
-      slideTopPadding: 16,
-      totalHeight: 5824,
+      slideStride: 1952,
+      slideTopPadding: 32,
+      totalHeight: 5888,
     });
   });
 
@@ -701,7 +702,9 @@ describe("usePptxVisibleSlide", () => {
       />,
     );
 
-    expect(viewport.scrollTop).toBe(3288);
+    // Zoom 2 scales gap+padding (16→32 each), so preserving slide 3's anchor
+    // rebases to a proportionally larger offset.
+    expect(viewport.scrollTop).toBe(3336);
     expect(screen.getByTestId("current-slide").textContent).toBe("3");
   });
 

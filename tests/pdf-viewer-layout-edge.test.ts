@@ -32,7 +32,7 @@ function assertBottomInvariant(layout: PdfPageLayoutModel) {
     return;
   }
   const last = getPdfPageLayout(layout, layout.pageCount)!;
-  expect(last.offsetTop + last.height + PDF_PAGE_PADDING).toBe(
+  expect(last.offsetTop + last.height + layout.padding).toBe(
     layout.totalHeight,
   );
 }
@@ -143,8 +143,10 @@ describe("pdf layout — degenerate scales", () => {
     expect(page.width).toBe(0);
     expect(page.height).toBe(0);
     expect(Number.isFinite(page.offsetTop)).toBe(true);
-    // Only padding + the two gaps remain.
-    expect(layout.totalHeight).toBe(PDF_PAGE_PADDING * 2 + 2 * PDF_PAGE_GAP);
+    // Padding and gap scale with the (zero) scale too, so nothing remains.
+    expect(layout.gap).toBe(0);
+    expect(layout.padding).toBe(0);
+    expect(layout.totalHeight).toBe(0);
   });
 });
 

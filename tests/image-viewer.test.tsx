@@ -2670,7 +2670,7 @@ describe("ImageViewer scale semantics", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy();
     expect(await screen.findByText("Page 3 of 5")).toBeTruthy();
-    expect(viewport.scrollTop).toBe(2064);
+    expect(viewport.scrollTop).toBe(2073);
   });
 
   it("normalizes invalid controlled scale values before rendering frame geometry", async () => {
@@ -3148,13 +3148,15 @@ describe("ImageViewer interactions", () => {
       configurable: true,
       value: undefined,
     });
-    viewport.scrollTop = 320;
+    // Scaled vertical gap/padding widen the frame spacing, so land the 20%
+    // reading marker (scrollTop + 200·0.2) comfortably inside frame 2.
+    viewport.scrollTop = 400;
 
     await act(async () => {
       fireEvent.scroll(viewport);
     });
 
-    expect(onScrollProgressChange).toHaveBeenCalledWith(0.4);
+    expect(onScrollProgressChange).toHaveBeenCalledWith(0.5);
     expect(onVisibleFrameChange).toHaveBeenCalledWith(2);
     await waitFor(() => expect(screen.getByText("Page 2 of 3")).toBeTruthy());
   });

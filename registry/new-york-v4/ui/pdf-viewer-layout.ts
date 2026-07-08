@@ -1,5 +1,11 @@
 import type { PdfPageSize } from "./pdf-viewer-types";
 
+// Base gap/padding at scale 1. The layout scales these with `displayScale`
+// (see createPdfPageLayout) so the whole document is a single linear function
+// of scale — page heights AND the space between them grow/shrink together.
+// That linearity is what makes the fit-width sidebar transform reproduce the
+// pre-toggle frame exactly (gaps included), and it makes zoom feel like a
+// camera rather than pages drifting apart on a fixed grid.
 export const PDF_PAGE_GAP = 16;
 export const PDF_PAGE_PADDING = 16;
 export const PDF_RENDER_FIT_PERFECTLY_OVERSCAN_PX =
@@ -57,6 +63,10 @@ export type PdfPageLayoutModel = {
   maxPageWidth: number;
   estimatedWidth: number;
   estimatedHeight: number;
+  // Resolved (scaled) vertical spacing, so offset math reads the model rather
+  // than re-deriving the scale.
+  gap: number;
+  padding: number;
   measuredPages: readonly PdfMeasuredPageLayout[];
   measuredPageByNumber: ReadonlyMap<number, PdfMeasuredPageLayout>;
   prefixHeightDeltas: readonly number[];
@@ -75,6 +85,12 @@ export function createPdfPageLayout({
   scale: number;
   rotation: number;
 }): PdfPageLayoutModel {
+  // Rounded to whole pixels like the page dimensions, so offsets stay
+  // integer. The sub-pixel rounding residual is absorbed by the model-based
+  // reading anchor (which pins the transform to the visible page's actual
+  // offset), exactly as page-height rounding already is.
+  const gap = Math.round(PDF_PAGE_GAP * scale);
+  const padding = Math.round(PDF_PAGE_PADDING * scale);
   const estimatedSize = getRenderedPageSize(defaultPageSize, scale, rotation);
   const measuredPages = Array.from(pageSizeByNumber.entries())
     .filter(([pageNumber]) => pageNumber >= 1 && pageNumber <= pageCount)
@@ -112,13 +128,15 @@ export function createPdfPageLayout({
     totalHeight:
       pageCount === 0
         ? 0
-        : PDF_PAGE_PADDING * 2 +
+        : padding * 2 +
           pageCount * estimatedSize.height +
-          (pageCount - 1) * PDF_PAGE_GAP +
+          (pageCount - 1) * gap +
           totalHeightDelta,
     maxPageWidth,
     estimatedWidth: estimatedSize.width,
     estimatedHeight: estimatedSize.height,
+    gap,
+    padding,
     measuredPages,
     measuredPageByNumber,
     prefixHeightDeltas,
@@ -643,8 +661,8 @@ function clamp(value: number, min: number, max: number) {
 
 function getPdfPageOffsetTop(layout: PdfPageLayoutModel, pageNumber: number) {
   return (
-    PDF_PAGE_PADDING +
-    (pageNumber - 1) * (layout.estimatedHeight + PDF_PAGE_GAP) +
+    layout.padding +
+    (pageNumber - 1) * (layout.estimatedHeight + layout.gap) +
     getHeightDeltaBeforePage(layout, pageNumber)
   );
 }

@@ -809,7 +809,7 @@ describe("PdfViewer document lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump" }));
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 1234,
+      top: 1362,
       behavior: "auto",
     });
   });
@@ -869,7 +869,7 @@ describe("PdfViewer document lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump past page" }));
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 1984,
+      top: 2112,
       behavior: "auto",
     });
   });
@@ -932,7 +932,7 @@ describe("PdfViewer document lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump before page" }));
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 984,
+      top: 1112,
       behavior: "auto",
     });
   });
@@ -978,8 +978,8 @@ describe("PdfViewer document lifecycle", () => {
   });
 
   it.each([
-    ["NaN", Number.NaN, 984],
-    ["Infinity", Number.POSITIVE_INFINITY, 1984],
+    ["NaN", Number.NaN, 1112],
+    ["Infinity", Number.POSITIVE_INFINITY, 2112],
   ])(
     "normalizes %s imperative target offsets before scrolling",
     async (label, targetTop, expectedTop) => {
@@ -1177,9 +1177,11 @@ describe("PdfViewer document lifecycle", () => {
     );
     expect(viewport).toBeTruthy();
 
+    // Scaled gap/padding widen the inter-page spacing, so land the 20%
+    // reading marker (scrollTop + 500·0.2) comfortably inside page 2.
     Object.defineProperty(viewport, "scrollTop", {
       configurable: true,
-      value: 950,
+      value: 1500,
       writable: true,
     });
     viewport!.getBoundingClientRect = () =>

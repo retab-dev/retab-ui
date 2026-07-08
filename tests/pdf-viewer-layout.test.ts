@@ -40,14 +40,21 @@ describe("pdf viewer layout", () => {
   });
 
   it("creates scaled page offsets and document dimensions", () => {
+    const scale = 2;
+    // Gap and padding scale with the document, so the layout is a single
+    // linear function of scale.
+    const gap = PDF_PAGE_GAP * scale;
+    const padding = PDF_PAGE_PADDING * scale;
     const layout = createPdfPageLayout({
       pageCount: 3,
       defaultPageSize: pageSize,
       pageSizeByNumber: new Map([[2, { width: 120, height: 300 }]]),
-      scale: 2,
+      scale,
       rotation: 0,
     });
 
+    expect(layout.gap).toBe(gap);
+    expect(layout.padding).toBe(padding);
     expect(layout.measuredPages).toEqual([
       {
         pageNumber: 2,
@@ -60,23 +67,23 @@ describe("pdf viewer layout", () => {
       pageNumber: 1,
       width: 200,
       height: 400,
-      offsetTop: PDF_PAGE_PADDING,
+      offsetTop: padding,
     });
     expect(getPdfPageLayout(layout, 2)).toEqual({
       pageNumber: 2,
       width: 240,
       height: 600,
-      offsetTop: PDF_PAGE_PADDING + 400 + PDF_PAGE_GAP,
+      offsetTop: padding + 400 + gap,
     });
     expect(getPdfPageLayout(layout, 3)).toEqual({
       pageNumber: 3,
       width: 200,
       height: 400,
-      offsetTop: PDF_PAGE_PADDING + 400 + PDF_PAGE_GAP + 600 + PDF_PAGE_GAP,
+      offsetTop: padding + 400 + gap + 600 + gap,
     });
     expect(layout.maxPageWidth).toBe(240);
     expect(layout.totalHeight).toBe(
-      PDF_PAGE_PADDING * 2 + 400 + PDF_PAGE_GAP + 600 + PDF_PAGE_GAP + 400,
+      padding * 2 + 400 + gap + 600 + gap + 400,
     );
   });
 
@@ -120,7 +127,7 @@ describe("pdf viewer layout", () => {
     expect(getPdfPageLayout(layout, 1)).toMatchObject({
       width: 300,
       height: 150,
-      offsetTop: PDF_PAGE_PADDING,
+      offsetTop: PDF_PAGE_PADDING * 1.5,
     });
     expect(layout.maxPageWidth).toBe(300);
   });

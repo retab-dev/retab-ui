@@ -106,10 +106,21 @@ export function createPptxSlideLayout({
   const normalizedSlideCount = Number.isFinite(slideCount)
     ? Math.max(0, Math.floor(slideCount))
     : 0;
+  // Gap and top/bottom padding scale with the slide, so the slide stack is a
+  // single linear function of zoom — the space between slides grows and shrinks
+  // with the slides themselves, and the fit-width shell transform reproduces
+  // the pre-toggle frame exactly. Not rounded: slide heights are themselves
+  // fractional, so a rounded gap would desync the capture (old zoom) from the
+  // solve (new zoom) at a retarget hand-off; exact scaling keeps gap / slide
+  // height perfectly constant.
+  const safeZoomScale =
+    Number.isFinite(zoomScale) && zoomScale > 0 ? zoomScale : 1;
   const normalizedSlideGap =
-    Number.isFinite(slideGap) && slideGap > 0 ? slideGap : 0;
+    Number.isFinite(slideGap) && slideGap > 0 ? slideGap * safeZoomScale : 0;
   const normalizedSlidePadding =
-    Number.isFinite(slidePadding) && slidePadding > 0 ? slidePadding : 0;
+    Number.isFinite(slidePadding) && slidePadding > 0
+      ? slidePadding * safeZoomScale
+      : 0;
   const gapCount = Math.max(0, normalizedSlideCount - 1);
 
   return {

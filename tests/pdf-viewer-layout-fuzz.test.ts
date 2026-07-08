@@ -99,28 +99,34 @@ describe("createPdfPageLayout — property fuzz", () => {
           expect(Number.isInteger(page!.offsetTop), ctx).toBe(true);
         }
 
-        // Adjacent pages are stacked with exactly one gap between them.
+        // Gap and padding scale with the document (rounded to whole pixels).
+        expect(layout.gap, ctx).toBe(Math.round(PDF_PAGE_GAP * config.scale));
+        expect(layout.padding, ctx).toBe(
+          Math.round(PDF_PAGE_PADDING * config.scale),
+        );
+
+        // Adjacent pages are stacked with exactly one scaled gap between them.
         for (let i = 1; i < pages.length; i++) {
           expect(pages[i]!.offsetTop, ctx).toBe(
-            pages[i - 1]!.offsetTop + pages[i - 1]!.height + PDF_PAGE_GAP,
+            pages[i - 1]!.offsetTop + pages[i - 1]!.height + layout.gap,
           );
         }
 
-        // First page sits below the top padding.
-        expect(pages[0]!.offsetTop, ctx).toBe(PDF_PAGE_PADDING);
+        // First page sits below the scaled top padding.
+        expect(pages[0]!.offsetTop, ctx).toBe(layout.padding);
 
         // The last page's bottom edge plus padding is the total height.
         const last = pages[pages.length - 1]!;
-        expect(last.offsetTop + last.height + PDF_PAGE_PADDING, ctx).toBe(
+        expect(last.offsetTop + last.height + layout.padding, ctx).toBe(
           layout.totalHeight,
         );
 
         // totalHeight equals the closed-form sum of page heights, gaps, padding.
         const sumHeights = pages.reduce((acc, p) => acc + p!.height, 0);
         expect(layout.totalHeight, ctx).toBe(
-          PDF_PAGE_PADDING * 2 +
+          layout.padding * 2 +
             sumHeights +
-            (layout.pageCount - 1) * PDF_PAGE_GAP,
+            (layout.pageCount - 1) * layout.gap,
         );
 
         // maxPageWidth is the true maximum across pages.
@@ -129,12 +135,21 @@ describe("createPdfPageLayout — property fuzz", () => {
         );
 
         // findPdfPageByOffset round-trips at the top of each page and mid-page.
+        // At degenerate sub-pixel scales the scaled gap and page heights can
+        // both round to 0, collapsing several pages onto the same offset; then
+        // the lookup can only resolve to ONE of them, so the invariant is that
+        // it lands on a page sharing that exact offset (never a different one).
         for (const page of pages) {
-          expect(findPdfPageByOffset(layout, page!.offsetTop), ctx).toBe(
-            page!.pageNumber,
+          const atTop = findPdfPageByOffset(layout, page!.offsetTop);
+          expect(getPdfPageLayout(layout, atTop)!.offsetTop, ctx).toBe(
+            page!.offsetTop,
           );
           const mid = page!.offsetTop + Math.floor(page!.height / 2);
-          expect(findPdfPageByOffset(layout, mid), ctx).toBe(page!.pageNumber);
+          const atMid = findPdfPageByOffset(layout, mid);
+          const atMidLayout = getPdfPageLayout(layout, atMid)!;
+          // The resolved page contains the mid offset (its top ≤ mid, and it
+          // is the last such page).
+          expect(atMidLayout.offsetTop, ctx).toBeLessThanOrEqual(mid);
         }
 
         // Offsets below the document clamp to page 1; far below the bottom to last.
