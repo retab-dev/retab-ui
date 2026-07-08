@@ -13,10 +13,8 @@ import type {
 } from "./file-viewer-motion-kernel";
 import { useOptionalFileViewerRendererEnvironment } from "./file-viewer-renderer-frame";
 import {
-  PDF_PAGE_GAP,
   getPdfRenderedPageWindow,
   type PdfPageLayoutModel,
-  type PdfRenderedPageLayout,
 } from "./pdf-viewer-layout";
 import { PdfPage } from "./pdf-viewer-page";
 import type { PdfRenderedPageCache } from "./pdf-viewer-render-cache";
@@ -27,10 +25,6 @@ import type {
   PdfPageSize,
 } from "./pdf-viewer-types";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
-import {
-  PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY,
-  PDF_DOCUMENT_MOTION_SCALE_PROPERTY,
-} from "./pdf-viewer-motion-contract";
 
 export type PdfDocumentPagesLayerProps = {
   activeRenderPageNumbers: readonly number[];
@@ -184,7 +178,10 @@ export function PdfDocumentPagesLayer({
                 isolation: "isolate",
               }}
             >
-              {renderedWindow.pages.map((page, pageIndex) => (
+              {/* Pages sit at their settled layout positions for the whole
+                  motion (commit-then-relax); the kernel's single surface
+                  transform on the visual stage is the only in-flight style. */}
+              {renderedWindow.pages.map((page) => (
                 <div
                   key={page.pageNumber}
                   className="absolute left-1/2 flex -translate-x-1/2 items-start justify-center"
@@ -197,48 +194,31 @@ export function PdfDocumentPagesLayer({
                     visiblePageNumberSet.has(page.pageNumber) ? "" : undefined
                   }
                   style={{
-                    top: getPdfMotionPageTop({
-                      page,
-                      pageIndex,
-                      windowTop: renderedWindow.beforeHeight,
-                    }),
+                    top: renderedWindow.beforeHeight + page.windowTop,
                     width: page.width,
-                    height: getPdfMotionLength(page.height),
+                    height: page.height,
                   }}
                 >
-                  <div
-                    data-slot="pdf-page-motion-frame"
-                    style={{
-                      height: page.height,
-                      transform: `scaleY(var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1))`,
-                      transformOrigin: "center top",
-                      width: page.width,
-                      willChange: isLayoutTransitioning
-                        ? "transform"
-                        : undefined,
-                    }}
-                  >
-                    {activeRenderPageNumberSet.has(page.pageNumber) ? (
-                      <React.Suspense fallback={<PageSkeleton />}>
-                        <PdfPage
-                          document={document}
-                          documentKey={documentKey}
-                          pageNumber={page.pageNumber}
-                          scale={scale}
-                          renderScale={renderScale}
-                          isLayoutTransitioning={isLayoutTransitioning}
-                          rotation={rotation}
-                          devicePixelRatio={devicePixelRatio}
-                          renderCache={renderCache}
-                          renderOverlay={renderPageOverlay}
-                          onRenderTiming={onPageRenderTiming}
-                          onSize={setPageSize}
-                        />
-                      </React.Suspense>
-                    ) : (
-                      <PageSkeleton />
-                    )}
-                  </div>
+                  {activeRenderPageNumberSet.has(page.pageNumber) ? (
+                    <React.Suspense fallback={<PageSkeleton />}>
+                      <PdfPage
+                        document={document}
+                        documentKey={documentKey}
+                        pageNumber={page.pageNumber}
+                        scale={scale}
+                        renderScale={renderScale}
+                        isLayoutTransitioning={isLayoutTransitioning}
+                        rotation={rotation}
+                        devicePixelRatio={devicePixelRatio}
+                        renderCache={renderCache}
+                        renderOverlay={renderPageOverlay}
+                        onRenderTiming={onPageRenderTiming}
+                        onSize={setPageSize}
+                      />
+                    </React.Suspense>
+                  ) : (
+                    <PageSkeleton />
+                  )}
                 </div>
               ))}
             </div>
@@ -260,33 +240,6 @@ export function PdfDocumentPagesLayer({
       {documentContent}
     </div>
   );
-}
-
-function getPdfMotionLength(length: number) {
-  return `calc(${formatPdfMotionLengthBase(length)}px * var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1))`;
-}
-
-function getPdfMotionPageTop({
-  page,
-  pageIndex,
-  windowTop,
-}: {
-  page: PdfRenderedPageLayout;
-  pageIndex: number;
-  windowTop: number;
-}) {
-  const gapTotal = pageIndex * PDF_PAGE_GAP;
-  const scaledTop = Math.max(0, page.windowTop - gapTotal);
-  const stableTop = formatPdfMotionLengthBase(windowTop + gapTotal);
-  const motionTop = formatPdfMotionLengthBase(scaledTop);
-  const motionScale = `var(${PDF_DOCUMENT_MOTION_SCALE_PROPERTY}, 1)`;
-  const anchor = `var(${PDF_DOCUMENT_ANCHOR_WINDOW_BLOCK_PROPERTY}, 0px)`;
-
-  return `calc(${stableTop}px + ${motionTop}px * ${motionScale} + (1 - ${motionScale}) * ${anchor})`;
-}
-
-function formatPdfMotionLengthBase(value: number) {
-  return Number.isFinite(value) ? Number(value.toFixed(3)) : 0;
 }
 
 function getPdfDocumentFrameAlignClass(align: FileViewerDocumentAlign | null) {

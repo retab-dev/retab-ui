@@ -196,31 +196,59 @@ function PptxViewerContent({
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
-          fitContentInlineSize: source.baseSize.width,
-          frozenStageInlineSize: slideLayout.slideWidth,
           isFitWidth,
-          mode: "uniform-scale",
+          stageInlineSize: slideLayout.slideWidth,
         }),
-      [
-        isFitWidth,
-        rendererFrame.align,
-        slideLayout.slideWidth,
-        source.baseSize.width,
-      ],
+      [isFitWidth, rendererFrame.align, slideLayout.slideWidth],
     );
+  const preMotionScrollTopRef = React.useRef<number | null>(null);
+  const writePptxAnchorBlockOffsetPx = React.useCallback(
+    (anchorBlock: number) => {
+      const element = documentSurfaceRef.current;
+      if (!element) return;
+      element.style.setProperty(
+        FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+        `${Number.isFinite(anchorBlock) ? anchorBlock : 0}px`,
+      );
+    },
+    [],
+  );
   const writePptxDocumentAnchorBlockOffset = React.useCallback(() => {
-    const element = documentSurfaceRef.current;
-    if (!element) return;
-
     const metrics = getScrollMetrics();
-    const readingBlock =
+    writePptxAnchorBlockOffsetPx(
       Math.max(0, metrics.scrollTop) +
-      Math.max(0, metrics.viewportHeight) * PPTX_READING_MARKER_RATIO;
-    element.style.setProperty(
-      FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
-      `${readingBlock}px`,
+        Math.max(0, metrics.viewportHeight) * PPTX_READING_MARKER_RATIO,
     );
-  }, [getScrollMetrics]);
+  }, [getScrollMetrics, writePptxAnchorBlockOffsetPx]);
+  // The transform must pin the exact screen line the reading-fraction rebase
+  // preserved. The slide layout scales linearly with the fit width, so the
+  // fixed point of the (scrollTop_old → scrollTop_new, ×r) map in settled
+  // stage coordinates is A = (T_new − T_old) / (1 − s₀) with s₀ = from/to.
+  const writePptxMotionAnchorBlockOffset = React.useCallback(() => {
+    const metrics = getScrollMetrics();
+    const fromInlineSize = rendererFrame.fromInlineSize;
+    const toInlineSize = rendererFrame.toInlineSize;
+    const preMotionScrollTop = preMotionScrollTopRef.current;
+    const startScale =
+      fromInlineSize != null && toInlineSize != null && toInlineSize > 0
+        ? fromInlineSize / toInlineSize
+        : 1;
+
+    if (preMotionScrollTop == null || Math.abs(1 - startScale) <= 0.001) {
+      writePptxDocumentAnchorBlockOffset();
+      return;
+    }
+
+    writePptxAnchorBlockOffsetPx(
+      (metrics.scrollTop - preMotionScrollTop) / (1 - startScale),
+    );
+  }, [
+    getScrollMetrics,
+    rendererFrame.fromInlineSize,
+    rendererFrame.toInlineSize,
+    writePptxAnchorBlockOffsetPx,
+    writePptxDocumentAnchorBlockOffset,
+  ]);
 
   const suspendScrollInteractions = React.useCallback(() => {
     const scrollElement = scrollViewportRef.current?.querySelector<HTMLElement>(
@@ -263,20 +291,35 @@ function PptxViewerContent({
     scrollActivity,
     suspendScrollInteractions,
   ]);
-  // Held through the whole motion (slide AND settle): the scroll rebase that
-  // realigns the reader to the re-fit width runs during "settling", so the live
-  // window is briefly derived from a not-yet-rebased scroll position. The union
-  // in the scroller keeps the pre-motion slides mounted until the motion idles.
+  // Held through the whole motion: layout and scroll commit at slide start
+  // (commit-then-relax), but the union in the scroller still keeps the
+  // pre-motion slides mounted until the motion idles as re-render insurance.
   const isDocumentTransitioning = rendererFrame.phase !== "idle";
   const measureBeforeLayoutMotionRef = React.useRef(() => {});
   measureBeforeLayoutMotionRef.current = () => {
-    writePptxDocumentAnchorBlockOffset();
+    preMotionScrollTopRef.current = getScrollMetrics().scrollTop;
     handleScroll();
   };
   const handleBeforeLayoutMotion = React.useCallback(() => {
     captureReadingFraction();
     measureBeforeLayoutMotionRef.current();
   }, [captureReadingFraction]);
+  // Runs inside the slide-start commit after the fraction rebase (hook order
+  // puts the rebase's layout effect first), pinning the transform before the
+  // first frame paints.
+  const isPptxShellTransitioning = rendererFrame.isTransitioning;
+  const writePptxMotionAnchorBlockOffsetRef = React.useRef(
+    writePptxMotionAnchorBlockOffset,
+  );
+  writePptxMotionAnchorBlockOffsetRef.current =
+    writePptxMotionAnchorBlockOffset;
+  useKeyedLayoutEffect(
+    joinEffectKey(["pptx-motion-anchor", isPptxShellTransitioning]),
+    () => {
+      if (!isPptxShellTransitioning) return;
+      writePptxMotionAnchorBlockOffsetRef.current();
+    },
+  );
   const setDocumentSurfaceElement = React.useCallback(
     (element: HTMLDivElement | null) => {
       const previousElement = documentSurfaceRef.current;

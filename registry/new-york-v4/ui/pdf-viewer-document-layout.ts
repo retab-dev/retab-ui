@@ -30,7 +30,6 @@ import {
 } from "./pdf-viewer-document-resource";
 import type { PdfPageSize } from "./pdf-viewer-types";
 import type { ViewerDocumentTransition } from "./viewer-types";
-import { PDF_DOCUMENT_MOTION_SCALE_PROPERTY } from "./pdf-viewer-motion-contract";
 
 export type PdfDocumentLayoutState = {
   containerRef: React.RefCallback<HTMLDivElement>;
@@ -128,18 +127,18 @@ export function usePdfDocumentLayout({
       (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1,
     mode: "settled",
   });
+  // The page layout is already at the motion's target width (commit-then-
+  // relax), so the resolver reprojects that settled stage to the in-flight
+  // visual width with one uniform transform.
   const resolveSurfaceMotionStyle =
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
-          fitContentInlineSize: fitPageWidth,
-          frozenStageInlineSize: pageLayout.maxPageWidth,
           isFitWidth,
-          mode: "inline-scale",
-          scaleProperty: PDF_DOCUMENT_MOTION_SCALE_PROPERTY,
+          stageInlineSize: pageLayout.maxPageWidth,
         }),
-      [fitPageWidth, isFitWidth, pageLayout.maxPageWidth, rendererFrame.align],
+      [isFitWidth, pageLayout.maxPageWidth, rendererFrame.align],
     );
 
   return {

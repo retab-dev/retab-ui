@@ -2593,8 +2593,15 @@ describe("viewer architecture", () => {
     expect(pagesLayer).toContain("setScrollInteractionElement");
     expect(pagesLayer).toContain("useOptionalFileViewerRendererEnvironment");
     expect(pagesLayer).toContain("setDocumentSurfaceElement");
-    expect(pagesLayer).toContain("PDF_DOCUMENT_MOTION_SCALE_PROPERTY");
-    expect(pagesLayer).toContain("pdf-page-motion-frame");
+    // Commit-then-relax: pages sit at their settled layout positions for the
+    // whole shell motion; the kernel's single surface transform is the only
+    // in-flight style. No per-page projection vars or motion frames.
+    expect(pagesLayer).not.toContain("PDF_DOCUMENT_MOTION_SCALE_PROPERTY");
+    expect(pagesLayer).not.toContain("pdf-page-motion-frame");
+    expect(pagesLayer).not.toContain("calc(");
+    expect(pagesLayer).toContain(
+      "top: renderedWindow.beforeHeight + page.windowTop",
+    );
     expect(pagesLayer).not.toContain("data-visual-scale");
     expect(pagesLayer).not.toContain("transform: documentTransform");
     expect(pagesLayer).not.toContain('willChange: "transform"');

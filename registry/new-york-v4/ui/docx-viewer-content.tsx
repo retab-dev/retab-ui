@@ -9,7 +9,14 @@ import { getDocxDocumentResource } from "@/lib/docx-document-resource";
 import { isAbortError, isResourceError } from "@/lib/viewer-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { cn } from "@/lib/utils";
+
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import {
+  createFileViewerFitWidthSurfaceMotionResolver,
+  FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+} from "./file-viewer-fit-width-motion";
+import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
 import {
   resolveFileViewerRendererLayoutInlineSize,
   type FileViewerDocumentAlign,
@@ -28,6 +35,7 @@ import { useDocxHighlight } from "./docx-viewer-highlight";
 import {
   createDocxPageWindowForPage,
   createDocxPageWindowFromScroll,
+  DOCX_READING_MARKER_RATIO,
   type DocxPageLayout,
 } from "./docx-viewer-layout";
 import {
@@ -37,7 +45,10 @@ import {
   renderCachedDocxPreview,
   type DocxRenderedDocument,
 } from "./docx-viewer-render";
-import { useDocxViewerScale } from "./docx-viewer-scale";
+import {
+  DOCX_STAGE_INLINE_PADDING_PX,
+  useDocxViewerScale,
+} from "./docx-viewer-scale";
 import { useDocxViewerScroll } from "./docx-viewer-scroll";
 import {
   buildDocxRenderIndex,
@@ -104,7 +115,7 @@ export function DocxViewerContent({
   const [renderError, setRenderError] = React.useState<Error | null>(null);
   if (renderError) throw renderError;
 
-  const { fitWidth, scale, zoomIn, zoomOut } = useDocxViewerScale({
+  const { fitWidth, isFitWidth, scale, zoomIn, zoomOut } = useDocxViewerScale({
     defaultScale,
     layoutInlineSize,
     onScaleChange,
@@ -181,34 +192,97 @@ export function DocxViewerContent({
     if (!isDocumentTransitioning) projectVisiblePages();
     handleScroll();
   }, [handleScroll, isDocumentTransitioning, projectVisiblePages]);
-  const measureBeforeLayoutMotionRef = React.useRef(measureScroll);
-  measureBeforeLayoutMotionRef.current = measureScroll;
+  // The settled stage box (page + its own p-4 padding). In fit-width this is
+  // exactly the layout width, so the fit-width resolver's affine unit-slope
+  // reprojection hides the slide-start re-fit behind one uniform transform.
+  const stageInlineSize =
+    pageWidth != null
+      ? pageWidth * scale + DOCX_STAGE_INLINE_PADDING_PX
+      : null;
+  const resolveSurfaceMotionStyle =
+    React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
+      () =>
+        createFileViewerFitWidthSurfaceMotionResolver({
+          align: rendererFrame.align,
+          isFitWidth,
+          stageInlineSize: stageInlineSize ?? 0,
+        }),
+      [isFitWidth, rendererFrame.align, stageInlineSize],
+    );
+  const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
+  const [documentSurfaceElement, setDocumentSurfaceElementState] =
+    React.useState<HTMLDivElement | null>(null);
+  const writeDocxDocumentAnchorBlockOffset = React.useCallback(() => {
+    const element = documentSurfaceRef.current;
+    const viewport = scrollViewportRef.current;
+    if (!element || !viewport) return;
+
+    const readingBlock =
+      Math.max(0, viewport.scrollTop) +
+      Math.max(0, viewport.clientHeight) * DOCX_READING_MARKER_RATIO;
+    element.style.setProperty(
+      FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+      `${readingBlock}px`,
+    );
+  }, [scrollViewportRef]);
+  const measureBeforeLayoutMotionRef = React.useRef(() => {});
+  measureBeforeLayoutMotionRef.current = () => {
+    measureScroll();
+    writeDocxDocumentAnchorBlockOffset();
+  };
   const handleBeforeLayoutMotion = React.useCallback(() => {
     measureBeforeLayoutMotionRef.current();
   }, []);
-  // The docx surface re-fits by tracking the live animating frame width, so it
-  // needs no motion resolver — the kernel's identity default is correct (a FLIP
-  // scale on top would double-count the width change and overshoot).
-  const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
-  const setHostElement = React.useCallback(
+  const setDocumentSurfaceElement = React.useCallback(
     (element: HTMLDivElement | null) => {
-      const previousElement = hostRef.current;
+      const previousElement = documentSurfaceRef.current;
       if (previousElement === element) return;
       previousElement?.removeEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
-      surfaceCleanupRef.current?.();
-      surfaceCleanupRef.current = null;
-      hostRef.current = element;
+      documentSurfaceRef.current = element;
+      setDocumentSurfaceElementState((previous) =>
+        previous === element ? previous : element,
+      );
       if (!element) return;
-      surfaceCleanupRef.current = registerDocumentSurface({ element });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
+      writeDocxDocumentAnchorBlockOffset();
     },
-    [handleBeforeLayoutMotion, registerDocumentSurface],
+    [handleBeforeLayoutMotion, writeDocxDocumentAnchorBlockOffset],
+  );
+  const documentSurfaceKey = documentSurfaceElement
+    ? joinEffectKey([
+        "docx-document-surface",
+        documentSurfaceElement,
+        registerDocumentSurface,
+        resolveSurfaceMotionStyle,
+      ])
+    : null;
+  useKeyedLayoutEffect(documentSurfaceKey, () => {
+    if (!documentSurfaceElement) return;
+    return registerDocumentSurface({
+      element: documentSurfaceElement,
+      resolveMotionStyle: resolveSurfaceMotionStyle,
+    });
+  });
+  // The before-layout-motion event fires before the motion target is known,
+  // so the slide-start commit rewrites the block anchor with the rebase-aware
+  // value (useDocxViewerScroll's layout effect has already restored the
+  // reading anchor onto the target layout by the time this runs).
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "docx-anchor-rebase",
+      rendererFrame.isTransitioning,
+      writeDocxDocumentAnchorBlockOffset,
+    ]),
+    () => {
+      if (!rendererFrame.isTransitioning) return;
+      writeDocxDocumentAnchorBlockOffset();
+    },
   );
 
   useKeyedLayoutEffect(
@@ -401,22 +475,27 @@ export function DocxViewerContent({
           viewportRef={scrollViewportRef}
           viewportProps={{ onScroll: handleViewportScroll }}
         >
-          <div ref={containerRef} className="flex flex-col items-center p-4">
-            {!ready ? <DocxSkeleton /> : null}
+          <div ref={containerRef}>
+            {!ready ? (
+              <div className="p-4">
+                <DocxSkeleton />
+              </div>
+            ) : null}
+            {/* The registered document surface is the shrink-wrapped stage box
+                (page + its own padding) so the kernel's fit-width transform
+                scales it about its own laid-out origin; auto margins mirror
+                the resolver's align-margin model. */}
             <div
-              ref={setHostElement}
-              className={
-                ready
-                  ? "w-full opacity-100 transition-opacity duration-200"
-                  : "w-full opacity-0 transition-opacity duration-200"
-              }
-              style={{
-                transformOrigin: getDocxDocumentTransformOrigin(
-                  rendererFrame.align,
-                ),
-                zoom: scale,
-              }}
-            />
+              ref={setDocumentSurfaceElement}
+              className={cn(
+                "p-4 transition-opacity duration-200",
+                ready ? "opacity-100" : "opacity-0",
+                getDocxDocumentMarginClass(rendererFrame.align),
+              )}
+              style={{ width: stageInlineSize ?? undefined }}
+            >
+              <div ref={hostRef} style={{ zoom: scale }} />
+            </div>
           </div>
         </ScrollArea>
       </DocxViewerBody>
@@ -485,14 +564,14 @@ function resolveDocxMeasuredInlineSize(value: number) {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function getDocxDocumentTransformOrigin(align: FileViewerDocumentAlign) {
+function getDocxDocumentMarginClass(align: FileViewerDocumentAlign) {
   switch (align) {
     case "center":
-      return "center top";
+      return "mx-auto";
     case "end":
-      return "right top";
+      return "ml-auto";
     case "start":
-      return "left top";
+      return null;
   }
 }
 

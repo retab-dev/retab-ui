@@ -46,8 +46,11 @@ export function useFileViewerSidebarController({
   const isInsideContent = useIsInsideFileViewerContent();
   const shell = useFileViewerShell("FileViewerSidebar");
   const registerSidebar = shell.registerSidebar;
+  // Observed, not measured-once: the panel's resolved pixel width is the same
+  // number the motion kernel animates the gap to, so it must stay fresh across
+  // font-size and container changes or the panel edge and the layout width
+  // drift apart.
   const sidebarSize = useStableElementSize<HTMLElement>({
-    observe: false,
     retainLastNonZero: true,
   });
   const reactId = React.useId();
@@ -116,6 +119,11 @@ export function useFileViewerSidebarController({
   const customProperties = pickCssCustomProperties(style);
   const panelStyle: React.CSSProperties = {
     width,
+    // Overlay slides on a CSS transition; its duration is the same constant
+    // that drives the kernel clock, so the two timelines cannot drift.
+    ...(isInline
+      ? null
+      : { transitionDuration: `${shell.motionDurationMs}ms` }),
     ...style,
     ...(isSidebarInteractive ? null : { pointerEvents: "none" as const }),
   };

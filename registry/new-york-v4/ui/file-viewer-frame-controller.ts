@@ -21,7 +21,11 @@ import {
   createFileViewerMotionKernel,
   useFileViewerMotionFrame,
 } from "./file-viewer-motion-kernel";
-import type { FileViewerMotionTarget } from "./file-viewer-motion-plan";
+import { useFileViewerMotionTelemetry } from "./viewer-motion-telemetry";
+import {
+  FILE_VIEWER_MOTION_DURATION_MS,
+  type FileViewerMotionTarget,
+} from "./file-viewer-motion-plan";
 import { useFileViewerSidebarOpenController } from "./file-viewer-sidebar-open-state";
 import { useFileViewerSidebarRegistration } from "./file-viewer-sidebar-registration";
 import {
@@ -30,8 +34,6 @@ import {
 } from "./viewer-measurement";
 
 export const FILE_VIEWER_INLINE_BREAKPOINT = 768;
-
-const FILE_VIEWER_MOTION_DURATION_MS = 150;
 
 type FileViewerFrameControllerOptions = {
   inlineBreakpoint: number;
@@ -194,7 +196,17 @@ export function useFileViewerFrameController({
     closeSidebar,
     elementRegistry,
     isSidebarInteractive,
+    isSidebarOverlayDismissible:
+      mode === "overlay" && canToggleSidebar && isSidebarRequestedOpen,
     viewerShellElement: size.element,
+  });
+
+  useFileViewerMotionTelemetry({
+    getElements: elementRegistry.getElements,
+    getIsSidebarOpen: openController.getSidebarRequestedOpen,
+    motionDurationMs: FILE_VIEWER_MOTION_DURATION_MS,
+    motionKernel,
+    toggleSidebar: toggleSidebarRequestedOpen,
   });
 
   const shellStaticContext = React.useMemo<FileViewerShellStaticContextValue>(

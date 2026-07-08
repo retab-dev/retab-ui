@@ -39,11 +39,15 @@ export function resolveFileViewerRendererLayoutInlineSize({
 }) {
   const fallbackSize = resolveMeasuredInlineSize(fallbackInlineSize);
 
+  // Commit-then-relax: the renderer lays out at the motion's TARGET width for
+  // the entire motion (layoutPolicy "target" from the first sliding frame).
+  // The in-flight visual is the surface motion transform reprojecting that
+  // settled layout, so settle never commits layout.
   if (
-    rendererFrame.documentTransition.layoutPolicy === "frozen" &&
-    rendererFrame.fromInlineSize != null
+    rendererFrame.documentTransition.layoutPolicy === "target" &&
+    rendererFrame.toInlineSize != null
   ) {
-    return rendererFrame.fromInlineSize;
+    return rendererFrame.toInlineSize;
   }
 
   return rendererFrame.layoutInlineSize ?? fallbackSize;
@@ -134,10 +138,14 @@ function createFileViewerRendererTransition({
   }
 
   switch (motionFrame.phase) {
+    // Sliding commits the TARGET layout immediately (inside the toggle's own
+    // task, before first paint) and rebases scroll to the reading anchor in
+    // the same commit; the shell transform hides the jump. Settling then has
+    // no layout or scroll work left — it only clears the identity transform.
     case "sliding":
       return {
-        layoutPolicy: "frozen",
-        scrollPolicy: "defer",
+        layoutPolicy: "target",
+        scrollPolicy: "rebase",
         source: "viewer-shell",
         transitionId: motionFrame.motionId,
         visualPolicy: "shell-transform",

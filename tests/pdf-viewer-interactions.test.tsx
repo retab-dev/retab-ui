@@ -389,12 +389,10 @@ describe("PdfViewer — rotation cycle", () => {
     });
     await findByTextContent("Page 1 of 1");
 
-    // The slot expresses its height as a motion calc(); the inner motion
-    // frame carries the concrete page box in pixels.
+    // The page slot carries the concrete page box in pixels (commit-then-
+    // relax: pages always sit at their settled layout size).
     const pageBox = () =>
-      document
-        .querySelector<HTMLElement>("[data-page-number='1']")!
-        .querySelector<HTMLElement>("[data-slot='pdf-page-motion-frame']")!;
+      document.querySelector<HTMLElement>("[data-page-number='1']")!;
     const upright = { width: "100px", height: "200px" };
     const sideways = { width: "200px", height: "100px" };
 

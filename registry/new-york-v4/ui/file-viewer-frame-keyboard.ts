@@ -2,6 +2,9 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
+
 import type { FileViewerElementRegistry } from "./file-viewer-elements";
 import {
   isFileViewerActiveElementInsideShell,
@@ -13,12 +16,14 @@ export function useFileViewerFrameKeyboard({
   closeSidebar,
   elementRegistry,
   isSidebarInteractive,
+  isSidebarOverlayDismissible,
   viewerShellElement,
 }: {
   canToggleSidebar: boolean;
   closeSidebar: () => void;
   elementRegistry: FileViewerElementRegistry;
   isSidebarInteractive: boolean;
+  isSidebarOverlayDismissible: boolean;
   viewerShellElement: HTMLDivElement | null;
 }) {
   React.useLayoutEffect(() => {
@@ -58,4 +63,38 @@ export function useFileViewerFrameKeyboard({
     isSidebarInteractive,
     viewerShellElement,
   ]);
+
+  // An overlay sidebar floats above the document, so a pointer press anywhere
+  // outside the panel (and its trigger, whose own click handles the toggle)
+  // dismisses it — the same light-dismiss contract as a popover.
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "file-viewer-overlay-dismiss",
+      closeSidebar,
+      elementRegistry,
+      isSidebarOverlayDismissible,
+      viewerShellElement,
+    ]),
+    () => {
+      const ownerDocument = viewerShellElement?.ownerDocument;
+      if (!ownerDocument || !isSidebarOverlayDismissible) return;
+
+      const handlePointerDown = (event: PointerEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        const elements = elementRegistry.getElements();
+        if (elements.sidebarElement?.contains(target)) return;
+        if (elements.sidebarTriggerElement?.contains(target)) return;
+        closeSidebar();
+      };
+
+      ownerDocument.addEventListener("pointerdown", handlePointerDown, {
+        capture: true,
+      });
+      return () =>
+        ownerDocument.removeEventListener("pointerdown", handlePointerDown, {
+          capture: true,
+        });
+    },
+  );
 }

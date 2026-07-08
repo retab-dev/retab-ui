@@ -1,43 +1,94 @@
 import { describe, expect, it } from "vitest";
 
-import { createFileViewerFitWidthSurfaceMotionResolver } from "@/registry/new-york-v4/ui/file-viewer-fit-width-motion";
+import {
+  FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  createFileViewerFitWidthSurfaceMotionResolver,
+} from "@/registry/new-york-v4/ui/file-viewer-fit-width-motion";
 import { DEFAULT_FILE_VIEWER_MOTION_FRAME } from "@/registry/new-york-v4/ui/file-viewer-motion-kernel";
 
+// Commit-then-relax: the stage is laid out at the motion's TARGET width from
+// the first sliding frame, and the resolver reprojects it to the in-flight
+// visual width. The transform must start at exactly the pre-toggle stage size
+// and terminate on identity.
 describe("file viewer fit-width motion", () => {
-  it("keeps inline-scale motion proportional to the frozen stage width", () => {
+  it("starts at exactly the pre-toggle stage size (affine width delta)", () => {
+    // Closing the sidebar: layout 966 → 1246; the settled stage measures 1246
+    // (fit-width, zero padding). At the first sliding frame (layout still at
+    // the from width) the visual stage must be the pre-toggle 966.
     const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
-      align: "start",
-      fitContentInlineSize: 612,
-      frozenStageInlineSize: 993,
+      align: "center",
       isFitWidth: true,
-      mode: "inline-scale",
+      stageInlineSize: 1246,
     });
 
     const style = resolveMotionStyle({
       ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
       fromInlineSize: 966,
-      layoutInlineSize: 986,
+      layoutInlineSize: 966,
       phase: "sliding",
       toInlineSize: 1246,
     });
 
-    expect(style?.transform).toContain("scaleX(1.020704)");
+    // (1246 + (966 − 1246)) / 1246 = 966 / 1246
+    expect(style?.transform).toContain("scale(0.775281)");
+    expect(style?.transform).toContain(
+      `var(${FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY}, 0px)`,
+    );
   });
 
-  it("starts uniform-scale motion at exactly the frozen stage size", () => {
-    // The pptx stage is narrower than the kernel width (fit subtracts padding
-    // and the scrollbar). The first sliding frame must still resolve to
-    // scale 1, or the surface bbox inflates and bumps the scroller's
-    // scrollHeight at motion start.
+  it("terminates on identity at the settled width", () => {
     const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
       align: "center",
-      fitContentInlineSize: 960,
-      frozenStageInlineSize: 1112,
       isFitWidth: true,
-      mode: "uniform-scale",
+      stageInlineSize: 1246,
     });
 
     const style = resolveMotionStyle({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 966,
+      layoutInlineSize: 1246,
+      phase: "sliding",
+      toInlineSize: 1246,
+    });
+
+    expect(style?.transform).toBe("");
+  });
+
+  it("clears every motion style outside the sliding phase", () => {
+    const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
+      align: "center",
+      isFitWidth: true,
+      stageInlineSize: 1246,
+    });
+
+    for (const phase of ["settling", "idle"] as const) {
+      const style = resolveMotionStyle({
+        ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+        fromInlineSize: 966,
+        layoutInlineSize: 1100,
+        phase,
+        toInlineSize: 1246,
+      });
+
+      expect(style?.transform).toBe("");
+      expect(style?.transformOrigin).toBe("");
+      expect(style?.willChange).toBe("");
+    }
+  });
+
+  it("handles a stage narrower than the kernel width (padding offset)", () => {
+    // pptx-style stage: fit subtracts padding/scrollbar, so stage ≠ layout
+    // width. The affine unit-slope reprojection must still start exactly at
+    // the pre-toggle stage size: 848-stage at layout 848→1128 opening in
+    // reverse. stage + (layout − to) = 832 + (1128 − 848) = 1112... use
+    // opening: to = 848, from = 1128, stage measured at target = 832.
+    const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
+      align: "center",
+      isFitWidth: true,
+      stageInlineSize: 832,
+    });
+
+    const startStyle = resolveMotionStyle({
       ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
       fromInlineSize: 1128,
       layoutInlineSize: 1128,
@@ -45,9 +96,10 @@ describe("file viewer fit-width motion", () => {
       toInlineSize: 848,
     });
 
-    expect(style?.transform).toBe("");
+    // (832 + (1128 − 848)) / 832 = 1112 / 832
+    expect(startStyle?.transform).toContain("scale(1.336538)");
 
-    const midSlide = resolveMotionStyle({
+    const midStyle = resolveMotionStyle({
       ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
       fromInlineSize: 1128,
       layoutInlineSize: 988,
@@ -55,27 +107,25 @@ describe("file viewer fit-width motion", () => {
       toInlineSize: 848,
     });
 
-    // frozenStage + (layout - from) = 1112 - 140 = 972 → 972 / 1112
-    expect(midSlide?.transform).toContain("scale(0.874101)");
+    // (832 + (988 − 848)) / 832 = 972 / 832
+    expect(midStyle?.transform).toContain("scale(1.168269)");
   });
 
-  it("does not shrink below the target stage while opening an inline sidebar", () => {
+  it("returns identity while not fit-width", () => {
     const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
-      align: "start",
-      fitContentInlineSize: 612,
-      frozenStageInlineSize: 1281,
-      isFitWidth: true,
-      mode: "inline-scale",
+      align: "center",
+      isFitWidth: false,
+      stageInlineSize: 1246,
     });
 
     const style = resolveMotionStyle({
       ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
-      fromInlineSize: 1246,
-      layoutInlineSize: 982,
+      fromInlineSize: 966,
+      layoutInlineSize: 1000,
       phase: "sliding",
-      toInlineSize: 966,
+      toInlineSize: 1246,
     });
 
-    expect(style?.transform).toContain("scaleX(0.788122)");
+    expect(style?.transform).toBe("");
   });
 });

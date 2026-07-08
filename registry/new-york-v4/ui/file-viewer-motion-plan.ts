@@ -7,6 +7,10 @@ import type {
 
 export const FILE_VIEWER_MOTION_EPSILON = 0.5;
 
+// The one duration for every sidebar motion timeline — the kernel clock, the
+// motion targets, and the overlay panel's CSS transition all read this value.
+export const FILE_VIEWER_MOTION_DURATION_MS = 150;
+
 export type FileViewerMotionPhase = "idle" | "sliding" | "settling";
 
 export type FileViewerMotionTarget = {

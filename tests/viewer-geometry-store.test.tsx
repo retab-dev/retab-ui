@@ -996,6 +996,9 @@ describe("createViewerGeometryStore", () => {
         "--file-viewer-document-visual-scale",
       ),
     ).toBe("");
+    // Commit-then-relax: the very first sliding frame already carries the
+    // TARGET layout policy — renderers lay out at the destination width in
+    // the toggle's own commit and the kernel transform hides the jump.
     expect(readFileViewerContractSnapshot("file-contract")).toMatchObject({
       isTransitioning: true,
       layoutInlineSize: 320,
@@ -1006,7 +1009,7 @@ describe("createViewerGeometryStore", () => {
       fromInlineSize: 320,
       toInlineSize: 740,
       documentTransition: {
-        layoutPolicy: "frozen",
+        layoutPolicy: "target",
         source: "viewer-shell",
       },
     });

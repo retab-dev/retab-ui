@@ -237,7 +237,10 @@ test("Sources Viewer image and text renderers keep document identity during side
   ).toBeGreaterThan(4);
 });
 
-test("Sources Viewer DOCX freezes layout while the sidebar slides", async ({
+// Commit-then-relax: the DOCX layout commits its TARGET zoom inside the
+// toggle's own task — the first sampled frame already holds the settled value
+// and nothing re-lays-out at settle.
+test("Sources Viewer DOCX commits the target layout at slide start", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -250,8 +253,13 @@ test("Sources Viewer DOCX freezes layout while the sidebar slides", async ({
       .first(),
   ).toBeVisible({ timeout: 30_000 });
 
-  const { beforeScrollTop, closeSamples, openSamples, settledClose } =
-    await sampleSourcesDocxSidebarToggle(page);
+  const {
+    beforeScrollTop,
+    closeSamples,
+    openSamples,
+    settledClose,
+    settledOpen,
+  } = await sampleSourcesDocxSidebarToggle(page);
 
   expect(beforeScrollTop).toBeGreaterThan(0);
   expect(closeSamples.length).toBeGreaterThan(4);
@@ -267,27 +275,26 @@ test("Sources Viewer DOCX freezes layout while the sidebar slides", async ({
   expect(distinctScaledValues(closeSamples, "zoom", 1000).size).toBe(1);
   expect(distinctRoundedValues(closeSamples, "scrollTop").size).toBe(1);
   expect(distinctStringValues(closeSamples, "mountedPages").size).toBe(1);
-  expect(
-    closeSamples.some(
-      (sample) => sample.transform !== null && sample.transform !== "none",
-    ),
-  ).toBe(true);
 
   expect(distinctScaledValues(openSamples, "zoom", 1000).size).toBe(1);
   expect(distinctRoundedValues(openSamples, "scrollTop").size).toBe(1);
   expect(distinctStringValues(openSamples, "mountedPages").size).toBe(1);
-  expect(
-    openSamples.some(
-      (sample) => sample.transform !== null && sample.transform !== "none",
-    ),
-  ).toBe(true);
 
-  expect(Math.round((settledClose.zoom ?? 0) * 1000)).not.toBe(
+  // The first sampled frame already carries the settled zoom; settle changes
+  // nothing.
+  expect(Math.round((settledClose.zoom ?? 0) * 1000)).toBe(
     Math.round((closeSamples[0]?.zoom ?? 0) * 1000),
+  );
+  // The toggle really re-fits: the two settled states differ.
+  expect(Math.round((settledClose.zoom ?? 0) * 1000)).not.toBe(
+    Math.round((settledOpen.zoom ?? 0) * 1000),
   );
 });
 
-test("PPTX freezes slide layout while FileViewer sidebar slides", async ({
+// Commit-then-relax: the PPTX slide layout commits its TARGET width inside
+// the toggle's own task; the surface transform reprojects it mid-slide and
+// terminates on identity, so settle changes nothing.
+test("PPTX commits the target slide layout at slide start", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -296,8 +303,13 @@ test("PPTX freezes slide layout while FileViewer sidebar slides", async ({
     timeout: 30_000,
   });
 
-  const { beforeScrollTop, closeSamples, openSamples, settledClose } =
-    await samplePptxSidebarToggle(page);
+  const {
+    beforeScrollTop,
+    closeSamples,
+    openSamples,
+    settledClose,
+    settledOpen,
+  } = await samplePptxSidebarToggle(page);
 
   expect(beforeScrollTop).toBeGreaterThan(0);
   expect(closeSamples.length).toBeGreaterThan(4);
@@ -330,12 +342,20 @@ test("PPTX freezes slide layout while FileViewer sidebar slides", async ({
     ),
   ).toBe(true);
 
-  expect(Math.round(settledClose.canvasMinWidth ?? 0)).not.toBe(
+  // The first sampled frame already carries the settled slide width; settle
+  // changes nothing — but the toggle really re-fits between states.
+  expect(Math.round(settledClose.canvasMinWidth ?? 0)).toBe(
     Math.round(closeSamples[0]?.canvasMinWidth ?? 0),
+  );
+  expect(Math.round(settledClose.canvasMinWidth ?? 0)).not.toBe(
+    Math.round(settledOpen.canvasMinWidth ?? 0),
   );
 });
 
-test("Markdown freezes document layout while FileViewer sidebar slides", async ({
+// Commit-then-relax: Markdown re-wraps once at slide start (text reflow is
+// not geometrically scalable, so it takes no transform) and holds that
+// settled layout through the motion.
+test("Markdown commits the target document layout at slide start", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -349,8 +369,13 @@ test("Markdown freezes document layout while FileViewer sidebar slides", async (
     timeout: 30_000,
   });
 
-  const { beforeScrollTop, closeSamples, openSamples, settledClose } =
-    await sampleMarkdownSidebarToggle(page);
+  const {
+    beforeScrollTop,
+    closeSamples,
+    openSamples,
+    settledClose,
+    settledOpen,
+  } = await sampleMarkdownSidebarToggle(page);
 
   expect(beforeScrollTop).toBeGreaterThan(0);
   expect(closeSamples.length).toBeGreaterThan(4);
@@ -369,11 +394,6 @@ test("Markdown freezes document layout while FileViewer sidebar slides", async (
   expect(distinctStringValues(closeSamples, "mountedChunks").size).toBe(1);
   expect(distinctStringValues(closeSamples, "measuredHeightKeys").size).toBe(1);
   expect(
-    closeSamples.some(
-      (sample) => sample.transform !== null && sample.transform !== "none",
-    ),
-  ).toBe(true);
-  expect(
     distinctRoundedValues(closeSamples, "viewportWidth").size,
   ).toBeGreaterThan(4);
 
@@ -383,16 +403,16 @@ test("Markdown freezes document layout while FileViewer sidebar slides", async (
   expect(distinctStringValues(openSamples, "mountedChunks").size).toBe(1);
   expect(distinctStringValues(openSamples, "measuredHeightKeys").size).toBe(1);
   expect(
-    openSamples.some(
-      (sample) => sample.transform !== null && sample.transform !== "none",
-    ),
-  ).toBe(true);
-  expect(
     distinctRoundedValues(openSamples, "viewportWidth").size,
   ).toBeGreaterThan(4);
 
-  expect(Math.round(settledClose.canvasMinWidth ?? 0)).not.toBe(
+  // The first sampled frame already carries the settled canvas width; settle
+  // changes nothing — but the toggle really re-wraps between states.
+  expect(Math.round(settledClose.canvasMinWidth ?? 0)).toBe(
     Math.round(closeSamples[0]?.canvasMinWidth ?? 0),
+  );
+  expect(Math.round(settledClose.canvasMinWidth ?? 0)).not.toBe(
+    Math.round(settledOpen.canvasMinWidth ?? 0),
   );
 });
 

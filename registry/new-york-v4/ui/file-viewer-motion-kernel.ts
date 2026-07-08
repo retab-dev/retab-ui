@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import {
+  FILE_VIEWER_MOTION_DURATION_MS,
   areFileViewerMotionFramesEqual,
   areFileViewerMotionRestFramesEqual,
   createFileViewerIdleMotionFrame,
@@ -21,7 +22,14 @@ import {
 // styles, and publishes to React subscribers only at phase edges
 // (idle → sliding → settling → idle). Everything discrete — data attributes,
 // inert/aria, the overlay translate classes — is owned by React renders.
+//
+// Commit-then-relax ordering: the first sliding frame is flushed
+// synchronously inside the toggle's own task, so renderers commit their
+// TARGET layout and rebase scroll before anything paints; the per-tick style
+// writes then only relax the counter-transform to identity. Settle removes a
+// no-op transform — it never commits layout, so no flushSync runs inside rAF.
 export type FileViewerMotionKernel = {
+  getFlightRecords: () => readonly FileViewerMotionFlightRecord[];
   getInteractiveSnapshot: () => FileViewerMotionFrame;
   getSnapshot: () => FileViewerMotionFrame;
   setDocumentSurface: (surface: FileViewerDocumentSurface | null) => void;
@@ -30,6 +38,30 @@ export type FileViewerMotionKernel = {
   subscribe: (listener: () => void) => () => void;
   syncTarget: (target: FileViewerMotionTarget) => void;
 };
+
+// Always-on flight recorder: every motion leaves a bounded trace (per-tick
+// widths, phase edges, settle holds, inter-frame gaps) so a blink report is
+// diagnosable after the fact without re-instrumenting.
+export type FileViewerMotionFlightRecord = {
+  fromInlineSize: number;
+  id: number;
+  interrupted: boolean;
+  maxTickGapMs: number;
+  open: boolean;
+  settleHoldFrameCount: number;
+  startedAt: number;
+  ticks: FileViewerMotionFlightTick[];
+  toInlineSize: number;
+};
+
+export type FileViewerMotionFlightTick = {
+  elapsedMs: number;
+  phase: FileViewerMotionFrame["phase"];
+  sidebarInlineSize: number;
+};
+
+const FILE_VIEWER_FLIGHT_RECORD_LIMIT = 8;
+const FILE_VIEWER_FLIGHT_TICK_LIMIT = 240;
 
 export type FileViewerDocumentSurface = {
   element: HTMLElement;
@@ -87,7 +119,7 @@ const FILE_VIEWER_SUBPIXEL_ENDPOINT_EPSILON_PX = 1;
 
 export const DEFAULT_FILE_VIEWER_MOTION_FRAME: FileViewerMotionFrame = {
   shellInlineSize: 0,
-  durationMs: 150,
+  durationMs: FILE_VIEWER_MOTION_DURATION_MS,
   fallbackSurfaceScale: 1,
   fromInlineSize: 0,
   layoutInlineSize: 0,
@@ -124,6 +156,51 @@ export function createFileViewerMotionKernel({
   let rafHandle = 0;
   let settleReleaseHandle = 0;
   let motionSequence = 0;
+  const flightRecords: FileViewerMotionFlightRecord[] = [];
+  let activeFlightRecord: FileViewerMotionFlightRecord | null = null;
+  let lastFlightTickAt = 0;
+
+  const beginFlightRecord = (motion: FileViewerActiveMotion) => {
+    if (activeFlightRecord && activeFlightRecord.id !== motion.id) {
+      activeFlightRecord.interrupted = true;
+    }
+    activeFlightRecord = {
+      fromInlineSize: motion.from.layoutInlineSize,
+      id: motion.id,
+      interrupted: false,
+      maxTickGapMs: 0,
+      open: motion.to.open,
+      settleHoldFrameCount: 0,
+      startedAt: motion.startedAt,
+      ticks: [],
+      toInlineSize: motion.to.layoutInlineSize,
+    };
+    lastFlightTickAt = motion.startedAt;
+    flightRecords.push(activeFlightRecord);
+    if (flightRecords.length > FILE_VIEWER_FLIGHT_RECORD_LIMIT) {
+      flightRecords.splice(
+        0,
+        flightRecords.length - FILE_VIEWER_FLIGHT_RECORD_LIMIT,
+      );
+    }
+  };
+
+  const recordFlightTick = (frame: FileViewerMotionFrame, now = readNow()) => {
+    const record = activeFlightRecord;
+    if (!record || frame.motionId !== record.id) return;
+    record.maxTickGapMs = Math.max(
+      record.maxTickGapMs,
+      now - lastFlightTickAt,
+    );
+    lastFlightTickAt = now;
+    if (frame.phase === "settling") record.settleHoldFrameCount += 1;
+    if (record.ticks.length >= FILE_VIEWER_FLIGHT_TICK_LIMIT) return;
+    record.ticks.push({
+      elapsedMs: Math.max(0, now - record.startedAt),
+      phase: frame.phase,
+      sidebarInlineSize: frame.sidebarInlineSize,
+    });
+  };
 
   const notify = () => {
     for (const listener of listeners) listener();
@@ -236,11 +313,12 @@ export function createFileViewerMotionKernel({
       phase: "settling",
     };
 
-    // Clear the counter-scale and re-lay-out the document at its target width
-    // in one synchronous pass, so scroll rebasing never paints against stale
-    // geometry.
+    // Layout and scroll were committed at slide start; settling only clears
+    // the (now identity) counter-transform and holds until shell geometry
+    // stops moving. Nothing here re-renders geometry, so no flushSync in rAF.
     commit(settlingFrame, { publish: false });
-    publishContractFrame(settlingFrame, { flushSubscribers: true });
+    recordFlightTick(settlingFrame);
+    publishContractFrame(settlingFrame);
     scheduleSettleRelease(settlingFrame, idleFrame);
   };
 
@@ -253,6 +331,7 @@ export function createFileViewerMotionKernel({
       return;
     }
     commit(sample, { publish: false });
+    recordFlightTick(sample);
     scheduleTick();
   };
 
@@ -286,6 +365,7 @@ export function createFileViewerMotionKernel({
     if (!settleRelease) return;
 
     commit(settleRelease.settlingFrame, { publish: false });
+    recordFlightTick(settleRelease.settlingFrame);
 
     const snapshot = readSettleSnapshot();
     const stableFrameCount = areSettleSnapshotsEqual(
@@ -355,7 +435,16 @@ export function createFileViewerMotionKernel({
       startedAt: readNow(),
       to: plan.nextRestFrame,
     };
-    commit(readMotionSample(activeMotion, activeMotion.startedAt));
+    beginFlightRecord(activeMotion);
+    const startFrame = readMotionSample(activeMotion, activeMotion.startedAt);
+    // Commit the discontinuity while it cannot be seen: flush the first
+    // sliding frame synchronously (inside the toggle's own task) so renderers
+    // lay out at the target width and rebase scroll before first paint, hidden
+    // behind the counter-transform written above in the same task.
+    writeElementStyles(startFrame);
+    interactiveFrame = startFrame;
+    recordFlightTick(startFrame, activeMotion.startedAt);
+    publishContractFrame(startFrame, { flushSubscribers: true });
     scheduleTick();
   };
 
@@ -377,6 +466,7 @@ export function createFileViewerMotionKernel({
   };
 
   return {
+    getFlightRecords: () => flightRecords.slice(),
     getInteractiveSnapshot: () =>
       activeMotion ? readMotionSample(activeMotion) : interactiveFrame,
     getSnapshot: () => contractFrame,
@@ -436,12 +526,10 @@ export function createFileViewerMotionKernel({
       return;
     }
 
-    // Default (no motion resolver): identity. A surface that has no resolver is
-    // one whose layout already tracks the live animating frame width (docx,
-    // pptx, markdown) — it re-fits smoothly on its own, so applying the
-    // `fallbackSurfaceScale` FLIP on top would double-count and overshoot the
-    // target, then snap back at settle. Renderers whose content is a FIXED
-    // raster that cannot re-fit live (PDF) register their own FLIP resolver.
+    // Default (no motion resolver): identity. Fit-width renderers register
+    // the shared commit-then-relax resolver (file-viewer-fit-width-motion);
+    // a surface without one either tracks the live DOM width on its own or
+    // opts out of shell motion entirely, and must not be transformed here.
     writeDocumentSurfaceCustomProperties(element, null);
     element.style.transform = "";
     element.style.transformOrigin = "";

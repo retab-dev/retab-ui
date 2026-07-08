@@ -4,61 +4,47 @@ import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-moti
 import type { FileViewerMotionFrame } from "./file-viewer-motion-plan";
 import type { FileViewerDocumentAlign } from "./file-viewer-renderer-contract";
 
-export const FILE_VIEWER_FIT_WIDTH_MOTION_SCALE_PROPERTY =
-  "--file-viewer-fit-width-motion-scale";
 export const FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY =
   "--file-viewer-fit-width-anchor-block";
 
-export type FileViewerFitWidthMotionMode = "inline-scale" | "uniform-scale";
-
+// Commit-then-relax: the renderer lays out at the motion's TARGET width from
+// the first commit, and this resolver reprojects that settled layout to the
+// in-flight visual width with one uniform transform. The transform terminates
+// on identity, so settle removes a no-op style instead of committing layout.
+//
+// The anchor custom property is the reading line's block offset in the settled
+// stage's own coordinates (post-rebase scrollTop + marker offset). It is read
+// live via var(), so the renderer writes it once per motion (in a layout
+// effect after the slide-start scroll rebase) without re-entering the kernel.
 export function createFileViewerFitWidthSurfaceMotionResolver({
   align,
   anchorBlockProperty = FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
-  fitContentInlineSize,
-  frozenStageInlineSize,
   isFitWidth,
-  mode,
-  scaleProperty = FILE_VIEWER_FIT_WIDTH_MOTION_SCALE_PROPERTY,
-  stageInlinePadding = 0,
+  stageInlineSize,
 }: {
   align: FileViewerDocumentAlign;
   anchorBlockProperty?: string;
-  fitContentInlineSize: number;
-  frozenStageInlineSize: number;
   isFitWidth: boolean;
-  mode: FileViewerFitWidthMotionMode;
-  scaleProperty?: string;
-  stageInlinePadding?: number;
+  stageInlineSize: number;
 }): FileViewerDocumentSurfaceMotionResolver {
   return (frame) => {
     if (!isFitWidth || frame.phase !== "sliding") {
       return {
-        customProperties: {
-          [scaleProperty]: null,
-        },
         transform: "",
         transformOrigin: "",
         willChange: "",
       };
     }
 
-    const motionStyle = getFileViewerFitWidthSurfaceMotionStyle({
-      align,
-      anchorBlockProperty,
-      fitContentInlineSize,
-      frame,
-      frozenStageInlineSize,
-      mode,
-      stageInlinePadding,
-    });
-
     return {
-      customProperties: {
-        [scaleProperty]: motionStyle.scale,
-      },
-      transform: motionStyle.transform,
+      transform: getFileViewerFitWidthSurfaceMotionTransform({
+        align,
+        anchorBlockProperty,
+        frame,
+        stageInlineSize,
+      }),
       transformOrigin: "0px 0px",
-      willChange: frame.phase === "sliding" ? "transform" : "",
+      willChange: "transform",
     };
   };
 }
@@ -81,84 +67,58 @@ export function getFileViewerFitWidthScale({
   return contentAvailableInlineSize / contentInlineSize;
 }
 
-function getFileViewerFitWidthSurfaceMotionStyle({
+export function getFileViewerFitWidthSurfaceMotionTransform({
   align,
   anchorBlockProperty,
-  fitContentInlineSize,
   frame,
-  frozenStageInlineSize,
-  mode,
-  stageInlinePadding,
+  stageInlineSize,
 }: {
   align: FileViewerDocumentAlign;
   anchorBlockProperty: string;
-  fitContentInlineSize: number;
   frame: FileViewerMotionFrame;
-  frozenStageInlineSize: number;
-  mode: FileViewerFitWidthMotionMode;
-  stageInlinePadding: number;
+  stageInlineSize: number;
 }) {
   if (
-    fitContentInlineSize <= 0 ||
-    frozenStageInlineSize <= 0 ||
-    frame.layoutInlineSize <= 0
+    stageInlineSize <= 0 ||
+    frame.layoutInlineSize <= 0 ||
+    frame.toInlineSize <= 0
   ) {
-    return { scale: "1", transform: "" };
+    return "";
   }
 
-  // Both branches must resolve to exactly the frozen stage size at motion
-  // start (layoutInlineSize === fromInlineSize), or the surface visibly scales
-  // on the first frame and — because the transform extends the scroll-measured
-  // bbox — perturbs the scroller's scrollable height. Renderers size their stage as
-  // an affine function of the available width (stage = width − padding −
-  // scrollbar), so the animating target is the frozen stage plus the width
-  // delta, never an absolute refit of the kernel width.
-  const targetStageInlineSize =
-    frame.fromInlineSize > 0
-      ? mode === "inline-scale"
-        ? frozenStageInlineSize *
-          (frame.layoutInlineSize / frame.fromInlineSize)
-        : frozenStageInlineSize +
-          (frame.layoutInlineSize - frame.fromInlineSize)
-      : getFileViewerFitWidthScale({
-          availableInlineSize: frame.layoutInlineSize,
-          contentInlineSize: fitContentInlineSize,
-          stageInlinePadding,
-        }) *
-          fitContentInlineSize +
-        stageInlinePadding;
-  const currentFrozenMargin = getFileViewerStageInlineMargin({
+  // Fit-width renderers size their stage as an affine function of the
+  // available width with unit slope (stage = width − constant padding), so the
+  // in-flight visual stage is the settled stage plus the live width delta.
+  // At the first frame this resolves to exactly the pre-toggle stage size, and
+  // at the last frame to the settled stage — identity.
+  const visualStageInlineSize = Math.max(
+    1,
+    stageInlineSize + (frame.layoutInlineSize - frame.toInlineSize),
+  );
+  const scale = visualStageInlineSize / stageInlineSize;
+  const settledMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,
-    stageInlineSize: frozenStageInlineSize,
+    stageInlineSize,
   });
-  const targetMargin = getFileViewerStageInlineMargin({
+  const visualMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,
-    stageInlineSize: targetStageInlineSize,
+    stageInlineSize: visualStageInlineSize,
   });
-  const scale = targetStageInlineSize / frozenStageInlineSize;
-  const translateX = targetMargin - currentFrozenMargin;
+  const translateX = visualMargin - settledMargin;
 
   if (Math.abs(scale - 1) <= 0.001 && Math.abs(translateX) <= 0.001) {
-    return { scale: "1", transform: "" };
+    return "";
   }
 
   const formattedScale = formatFileViewerMotionScale(scale);
   const formattedTranslateX = formatFileViewerMotionPixel(translateX);
-  const scaleTransform =
-    mode === "uniform-scale"
-      ? `scale(${formattedScale})`
-      : `scaleX(${formattedScale})`;
-  const translateY =
-    mode === "uniform-scale"
-      ? `calc((1 - ${formattedScale}) * var(${anchorBlockProperty}, 0px))`
-      : "0";
+  // Uniform scale about the stage origin; the anchor term keeps the reading
+  // line fixed: y' = s·y + (1 − s)·anchor equals y at y = anchor.
+  const translateY = `calc((1 - ${formattedScale}) * var(${anchorBlockProperty}, 0px))`;
 
-  return {
-    scale: formattedScale,
-    transform: `translate3d(${formattedTranslateX}px, ${translateY}, 0) ${scaleTransform}`,
-  };
+  return `translate3d(${formattedTranslateX}px, ${translateY}, 0) scale(${formattedScale})`;
 }
 
 function getFileViewerStageInlineMargin({

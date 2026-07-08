@@ -69,32 +69,17 @@ describe("file viewer renderer contract", () => {
     ).toBeNull();
   });
 
-  it("freezes renderer layout width at the motion origin while the shell slides", () => {
+  // Commit-then-relax: the renderer lays out at the motion's TARGET width for
+  // the whole motion (from the very first sliding frame); the shell transform
+  // reprojects it to the in-flight visual width.
+  it("uses the target layout width for the entire shell motion", () => {
     expect(
       resolveFileViewerRendererLayoutInlineSize({
         fallbackInlineSize: 900,
         rendererFrame: frame({
-          layoutInlineSize: 720,
+          layoutInlineSize: 480,
           fromInlineSize: 480,
-          documentTransition: {
-            layoutPolicy: "frozen",
-            scrollPolicy: "defer",
-            source: "viewer-shell",
-            transitionId: 1,
-            visualPolicy: "shell-transform",
-          },
-        }),
-      }),
-    ).toBe(480);
-  });
-
-  it("uses the target layout width after the shell leaves the sliding phase", () => {
-    expect(
-      resolveFileViewerRendererLayoutInlineSize({
-        fallbackInlineSize: 900,
-        rendererFrame: frame({
-          layoutInlineSize: 720,
-          fromInlineSize: 480,
+          toInlineSize: 720,
           documentTransition: {
             layoutPolicy: "target",
             scrollPolicy: "rebase",
@@ -131,7 +116,8 @@ describe("file viewer renderer contract", () => {
     expect(rendererFrame.rasterInlineSize).toBe(840);
     expect(rendererFrame.shellInlineSize).toBe(840);
     expect(rendererFrame.settledInlineSize).toBe(840);
-    expect(rendererFrame.documentTransition.layoutPolicy).toBe("frozen");
+    expect(rendererFrame.documentTransition.layoutPolicy).toBe("target");
+    expect(rendererFrame.documentTransition.scrollPolicy).toBe("rebase");
     expect(rendererFrame.isTransitioning).toBe(true);
   });
 });

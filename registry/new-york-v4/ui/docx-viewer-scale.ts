@@ -9,6 +9,12 @@ import {
 } from "./docx-viewer-core";
 import { joinEffectKey } from "@/lib/effect-key";
 
+// The docx stage's own inline padding (p-4 on both sides). Fit-width sizes the
+// page to the layout width minus this padding, so the settled stage box
+// (page + padding) is an affine unit-slope function of the layout width — the
+// shape the fit-width surface motion resolver reprojects.
+export const DOCX_STAGE_INLINE_PADDING_PX = 32;
+
 export function useDocxViewerScale({
   defaultScale,
   layoutInlineSize,
@@ -40,8 +46,11 @@ export function useDocxViewerScale({
 
   const fitScale =
     layoutInlineSize && pageWidth
-      ? clampDocxScale((layoutInlineSize - 32) / pageWidth)
+      ? clampDocxScale(
+          (layoutInlineSize - DOCX_STAGE_INLINE_PADDING_PX) / pageWidth,
+        )
       : 1;
+  const isFitWidth = normalizedControlledScale == null && manualScale == null;
   const scale = normalizedControlledScale ?? manualScale ?? fitScale;
 
   const setViewerScale = React.useCallback(
@@ -72,6 +81,7 @@ export function useDocxViewerScale({
 
   return {
     fitWidth,
+    isFitWidth,
     isScaleControlled,
     scale,
     setViewerScale,

@@ -144,42 +144,88 @@ export function ImageViewerContent({
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
-          fitContentInlineSize: widestFrameWidth,
-          frozenStageInlineSize:
-            frameLayout.maxFrameWidth + frameLayout.padding * 2,
           isFitWidth,
-          mode: "uniform-scale",
-          stageInlinePadding: frameLayout.padding * 2,
+          stageInlineSize: frameLayout.maxFrameWidth + frameLayout.padding * 2,
         }),
       [
         frameLayout.maxFrameWidth,
         frameLayout.padding,
         isFitWidth,
         rendererFrame.align,
-        widestFrameWidth,
       ],
     );
-  const writeImageDocumentAnchorBlockOffset = React.useCallback(() => {
-    const element = imageDocumentSurfaceRef.current;
-    if (!element) return;
-
-    const metrics = getScrollMetrics();
-    const readingBlock =
-      Math.max(0, metrics.scrollTop) +
-      Math.max(0, metrics.viewportHeight) * IMAGE_READING_MARKER_RATIO;
-    element.style.setProperty(
-      FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
-      `${readingBlock}px`,
-    );
-  }, [getScrollMetrics]);
-  const measureBeforeLayoutMotionRef = React.useRef(
-    writeImageDocumentAnchorBlockOffset,
+  const preMotionScrollTopRef = React.useRef<number | null>(null);
+  const writeImageAnchorBlockOffsetPx = React.useCallback(
+    (anchorBlock: number) => {
+      const element = imageDocumentSurfaceRef.current;
+      if (!element) return;
+      element.style.setProperty(
+        FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+        `${Number.isFinite(anchorBlock) ? anchorBlock : 0}px`,
+      );
+    },
+    [],
   );
-  measureBeforeLayoutMotionRef.current = writeImageDocumentAnchorBlockOffset;
+  const writeImageDocumentAnchorBlockOffset = React.useCallback(() => {
+    const metrics = getScrollMetrics();
+    writeImageAnchorBlockOffsetPx(
+      Math.max(0, metrics.scrollTop) +
+        Math.max(0, metrics.viewportHeight) * IMAGE_READING_MARKER_RATIO,
+    );
+  }, [getScrollMetrics, writeImageAnchorBlockOffsetPx]);
+  // The transform must pin the exact screen line the reading-fraction rebase
+  // preserved. The frame layout scales linearly with the fit width, so the
+  // fixed point of the (scrollTop_old → scrollTop_new, ×r) map in settled
+  // stage coordinates is A = (T_new − T_old) / (1 − s₀) with s₀ = from/to.
+  const writeImageMotionAnchorBlockOffset = React.useCallback(() => {
+    const metrics = getScrollMetrics();
+    const fromInlineSize = rendererFrame.fromInlineSize;
+    const toInlineSize = rendererFrame.toInlineSize;
+    const preMotionScrollTop = preMotionScrollTopRef.current;
+    const startScale =
+      fromInlineSize != null && toInlineSize != null && toInlineSize > 0
+        ? fromInlineSize / toInlineSize
+        : 1;
+
+    if (preMotionScrollTop == null || Math.abs(1 - startScale) <= 0.001) {
+      writeImageDocumentAnchorBlockOffset();
+      return;
+    }
+
+    writeImageAnchorBlockOffsetPx(
+      (metrics.scrollTop - preMotionScrollTop) / (1 - startScale),
+    );
+  }, [
+    getScrollMetrics,
+    rendererFrame.fromInlineSize,
+    rendererFrame.toInlineSize,
+    writeImageAnchorBlockOffsetPx,
+    writeImageDocumentAnchorBlockOffset,
+  ]);
+  const measureBeforeLayoutMotionRef = React.useRef(() => {});
+  measureBeforeLayoutMotionRef.current = () => {
+    preMotionScrollTopRef.current = getScrollMetrics().scrollTop;
+  };
   const handleBeforeLayoutMotion = React.useCallback(() => {
     captureReadingFraction();
     measureBeforeLayoutMotionRef.current();
   }, [captureReadingFraction]);
+  // Runs inside the slide-start commit after the fraction rebase (hook order
+  // puts the rebase's layout effect first), pinning the transform before the
+  // first frame paints.
+  const isImageShellTransitioning = rendererFrame.isTransitioning;
+  const writeImageMotionAnchorBlockOffsetRef = React.useRef(
+    writeImageMotionAnchorBlockOffset,
+  );
+  writeImageMotionAnchorBlockOffsetRef.current =
+    writeImageMotionAnchorBlockOffset;
+  useKeyedLayoutEffect(
+    joinEffectKey(["image-motion-anchor", isImageShellTransitioning]),
+    () => {
+      if (!isImageShellTransitioning) return;
+      writeImageMotionAnchorBlockOffsetRef.current();
+    },
+  );
   const setImageDocumentSurfaceRef = React.useCallback(
     (element: HTMLDivElement | null) => {
       const previousElement = imageDocumentSurfaceRef.current;
