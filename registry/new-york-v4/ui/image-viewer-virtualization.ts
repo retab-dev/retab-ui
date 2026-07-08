@@ -94,15 +94,19 @@ export function createImageFrameLayout({
   gap?: number;
   padding?: number;
 }): ImageFrameLayoutModel {
-  // Vertical spacing scales with the image (rounded to whole pixels), so the
-  // frame stack is linear in scale and the fit-width shell transform
-  // reproduces the pre-toggle frame exactly. The horizontal inline padding
-  // stays constant: `maxFrameWidth + padding × 2` must keep equalling the
-  // available width at fit (the fit subtracts IMAGE_VIEWER_HORIZONTAL_PADDING
-  // = padding × 2), or the stage would no longer fill the viewport.
+  // Vertical spacing scales with the image so the frame stack is a single
+  // linear function of scale and the fit-width shell transform reproduces the
+  // pre-toggle frame exactly. NOT rounded: frameCssSize leaves frame heights
+  // fractional, so a rounded gap would desync the capture (old scale) from the
+  // solve (new scale) at a retarget — exact scaling keeps gap / frame height
+  // perfectly constant. The horizontal inline padding stays CONSTANT: the
+  // returned `padding` field feeds `maxFrameWidth + padding × 2`, which must
+  // keep equalling the available width at fit (the fit subtracts
+  // IMAGE_VIEWER_HORIZONTAL_PADDING = padding × 2), or the stage would no
+  // longer fill the viewport.
   const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-  const blockGap = Math.round(gap * safeScale);
-  const blockPadding = Math.round(padding * safeScale);
+  const blockGap = gap * safeScale;
+  const blockPadding = padding * safeScale;
   let offsetTop = blockPadding;
   let maxFrameWidth = 0;
   const frameLayouts = frames.map((frame, frameIndex) => {

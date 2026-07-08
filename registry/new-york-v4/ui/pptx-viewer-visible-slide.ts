@@ -109,10 +109,11 @@ export function createPptxSlideLayout({
   // Gap and top/bottom padding scale with the slide, so the slide stack is a
   // single linear function of zoom — the space between slides grows and shrinks
   // with the slides themselves, and the fit-width shell transform reproduces
-  // the pre-toggle frame exactly. Not rounded: slide heights are themselves
-  // fractional, so a rounded gap would desync the capture (old zoom) from the
-  // solve (new zoom) at a retarget hand-off; exact scaling keeps gap / slide
-  // height perfectly constant.
+  // the pre-toggle frame exactly. NOT rounded: slide dimensions
+  // (getScaledSlideSize) are fractional, so leaving the gap fractional too
+  // keeps gap / slide height exactly constant and the layout perfectly linear.
+  // (PDF rounds its gap only because its page dimensions are already
+  // integer-rounded; rounding here would gain no integer offsets, just error.)
   const safeZoomScale =
     Number.isFinite(zoomScale) && zoomScale > 0 ? zoomScale : 1;
   const normalizedSlideGap =
