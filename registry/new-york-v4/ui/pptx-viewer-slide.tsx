@@ -243,7 +243,8 @@ export function PptxSlideScroller({
 function PptxSlideFrame({
   source,
   slideIndex,
-  zoomScale,
+  layoutZoomScale,
+  rasterZoomScale,
   rotation,
   eager,
   activity,
@@ -255,7 +256,13 @@ function PptxSlideFrame({
 }: {
   source: PptxSource;
   slideIndex: number;
-  zoomScale: number;
+  // The scale the slide BOX is laid out at (the target of the current motion,
+  // re-fit every commit). Drives the DOM box the shell transform reprojects.
+  layoutZoomScale: number;
+  // The scale the CANVAS bitmap is rastered at. Held frozen through a
+  // transition so the box can re-fit without a re-raster; the bitmap is
+  // CSS-scaled into the box.
+  rasterZoomScale: number;
   rotation: number;
   eager: boolean;
   activity: PptxScrollActivity;
@@ -267,8 +274,8 @@ function PptxSlideFrame({
   priority: PptxSlideRenderPriority;
   shouldRenderImmediately: boolean;
 }) {
-  const slideSize = getScaledSlideSize(source.baseSize, zoomScale);
-  const visibleSize = getVisibleSlideSize(slideSize, rotation);
+  const boxSize = getScaledSlideSize(source.baseSize, layoutZoomScale);
+  const visibleSize = getVisibleSlideSize(boxSize, rotation);
 
   return (
     <div
@@ -280,15 +287,16 @@ function PptxSlideFrame({
       <div
         className="absolute top-1/2 left-1/2"
         style={{
-          width: slideSize.width,
-          height: slideSize.height,
+          width: boxSize.width,
+          height: boxSize.height,
           transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
         }}
       >
         <PptxSlideCanvas
           source={source}
           slideIndex={slideIndex}
-          zoomScale={zoomScale}
+          layoutZoomScale={layoutZoomScale}
+          rasterZoomScale={rasterZoomScale}
           eager={eager}
           activity={activity}
           getSlideRenderTiming={getSlideRenderTiming}
@@ -301,7 +309,7 @@ function PptxSlideFrame({
         <PptxSlideOverlay
           slideNumber={slideIndex + 1}
           visibleSize={visibleSize}
-          zoomScale={zoomScale}
+          zoomScale={layoutZoomScale}
           rotation={rotation}
           renderSlideOverlay={renderSlideOverlay}
         />
@@ -313,7 +321,8 @@ function PptxSlideFrame({
 function PptxSlideCanvas({
   source,
   slideIndex,
-  zoomScale,
+  layoutZoomScale,
+  rasterZoomScale,
   eager,
   activity,
   getSlideRenderTiming,
@@ -323,7 +332,8 @@ function PptxSlideCanvas({
 }: {
   source: PptxSource;
   slideIndex: number;
-  zoomScale: number;
+  layoutZoomScale: number;
+  rasterZoomScale: number;
   eager: boolean;
   activity: PptxScrollActivity;
   getSlideRenderTiming?: () =>
@@ -335,7 +345,9 @@ function PptxSlideCanvas({
 }) {
   const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
   const pixelRatio = getPptxRenderPixelRatio(rawDpr);
-  const slideSize = getScaledSlideSize(source.baseSize, zoomScale);
+  // Display size follows the box (target) scale; the backing store is rastered
+  // at the raster (possibly frozen) scale and CSS-scaled into it.
+  const slideSize = getScaledSlideSize(source.baseSize, layoutZoomScale);
   const [renderState, setRenderState] =
     React.useState<SlideRenderState>("idle");
   const canvasElementRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -344,6 +356,10 @@ function PptxSlideCanvas({
     canvasElementRef.current = canvas;
   }, []);
 
+  // Keyed on the RASTER scale (and stable priority primitives), never the
+  // layout scale — re-fitting the box to a new target must not re-raster the
+  // held bitmap. distanceFromReadingMarker is a scheduling hint only, so its
+  // per-frame drift is deliberately excluded from the raster key.
   useKeyedLayoutEffect(
     joinEffectKey([
       activity,
@@ -351,9 +367,11 @@ function PptxSlideCanvas({
       getSlideRenderTiming,
       isProjectedLive,
       pixelRatio,
-      priority,
+      priority.isCurrentSlide,
+      priority.isInViewport,
+      priority.isScrollLead,
       shouldRenderImmediately,
-      zoomScale,
+      rasterZoomScale,
       slideIndex,
       source,
     ]),
@@ -362,7 +380,7 @@ function PptxSlideCanvas({
       if (!canvas) return;
 
       let cancelled = false;
-      const renderScale = zoomScale * pixelRatio;
+      const renderScale = rasterZoomScale * pixelRatio;
       if (isProjectedLive && !isProjectedLive()) return;
 
       const cachedResult = source.drawCachedBitmap({
@@ -525,11 +543,20 @@ type PptxSlideProjectionWindow = {
 
 type PptxProjectedSlide = {
   activity: PptxScrollActivity | null;
+  getSlideRenderTiming: () =>
+    | ((timing: PptxSlideRenderTiming) => void)
+    | undefined;
   isLive: boolean;
+  isProjectedLive: () => boolean;
   onSlideRenderTiming:
     | ((timing: PptxSlideRenderTiming) => void)
     | null
     | undefined;
+  // The zoom scale the slide's canvas bitmap was last rastered at. The slide's
+  // BOX tracks the target layout scale every commit (so the shell transform
+  // reprojects it continuously), but its raster is held at this scale through a
+  // transition — the frozen bitmap is CSS-scaled to the box, no re-raster.
+  rasterZoomScale: number | null;
   renderSlideOverlay:
     | ((props: PptxSlideOverlayProps) => React.ReactNode)
     | null
@@ -695,32 +722,41 @@ function projectPptxSlides({
     const projectedSlide =
       existingSlide ?? createPptxProjectedSlide(virtualSlide);
     patchPptxProjectedSlide(projectedSlide.shell, virtualSlide);
-    // A held-only slide that already has a bitmap keeps it: repositioned above
-    // but not re-rendered, so the transition adds no raster work.
+    // A held-only slide that already has a bitmap keeps that bitmap (rastered
+    // at its frozen scale) — so the transition adds no raster work — but its
+    // BOX still re-fits to the target layout scale. The box drives the shell
+    // transform's continuity; freezing the box (as skipping the render did)
+    // makes the uniform counter-transform expose a scale jump at the retarget
+    // hand-off, where the reading-line content snaps. The frozen bitmap is
+    // CSS-scaled into the re-fit box, so the raster stays crisp-at-old-scale
+    // without a re-render blink.
     const retainHeldRaster =
       heldOnlyIndexes.has(virtualSlide.index) &&
       existingSlide != null &&
+      existingSlide.rasterZoomScale != null &&
       existingSlide.renderKey !== "";
-    if (!retainHeldRaster) {
-      renderPptxProjectedSlide({
-        activity,
-        eager,
-        onSlideRenderTiming,
-        projectedSlide,
-        priority: getPptxSlideRenderPriority({
-          layout,
-          scrollDirection,
-          scrollTop: metrics.scrollTop,
-          viewportHeight: metrics.viewportHeight || viewportHeight,
-          virtualSlide,
-        }),
-        renderSlideOverlay,
-        rotation,
-        source,
+    const rasterZoomScale = retainHeldRaster
+      ? existingSlide.rasterZoomScale!
+      : zoomScale;
+    renderPptxProjectedSlide({
+      activity,
+      eager,
+      layoutZoomScale: zoomScale,
+      onSlideRenderTiming,
+      projectedSlide,
+      priority: getPptxSlideRenderPriority({
+        layout,
+        scrollDirection,
+        scrollTop: metrics.scrollTop,
+        viewportHeight: metrics.viewportHeight || viewportHeight,
         virtualSlide,
-        zoomScale,
-      });
-    }
+      }),
+      rasterZoomScale,
+      renderSlideOverlay,
+      rotation,
+      source,
+      virtualSlide,
+    });
     cache.slides.set(virtualSlide.index, projectedSlide);
     placePptxProjectedSlide(
       projectionWindow.content,
@@ -765,21 +801,29 @@ function getHeldPptxVirtualSlides(
   return unionPptxVirtualSlides([], heldIndexes, layout);
 }
 
-function createPptxProjectedSlide(virtualSlide: PptxVirtualSlide) {
+function createPptxProjectedSlide(
+  virtualSlide: PptxVirtualSlide,
+): PptxProjectedSlide {
   const shell = document.createElement("div");
   shell.className = "absolute top-0 left-1/2";
   shell.dataset.slot = "pptx-slide-slot";
   shell.dataset.virtualSlideNumber = String(virtualSlide.slideNumber);
-  return {
+  // Stable identities so a box-only re-render (target scale commit) does not
+  // churn the canvas raster effect, whose key is object-identity sensitive.
+  const projectedSlide: PptxProjectedSlide = {
     activity: null,
+    getSlideRenderTiming: () => projectedSlide.onSlideRenderTiming ?? undefined,
     isLive: true,
+    isProjectedLive: () => projectedSlide.isLive,
     onSlideRenderTiming: null,
+    rasterZoomScale: null,
     renderSlideOverlay: null,
     renderKey: "",
     root: createRoot(shell),
     shell,
     source: null,
   };
+  return projectedSlide;
 }
 
 function patchPptxProjectedSlide(
@@ -893,32 +937,35 @@ function syncPptxProjectionWindow(
 function renderPptxProjectedSlide({
   activity,
   eager,
+  layoutZoomScale,
   onSlideRenderTiming,
   projectedSlide,
   priority,
+  rasterZoomScale,
   renderSlideOverlay,
   rotation,
   source,
   virtualSlide,
-  zoomScale,
 }: {
   activity: PptxScrollActivity;
   eager: boolean;
+  layoutZoomScale: number;
   onSlideRenderTiming?: (timing: PptxSlideRenderTiming) => void;
   projectedSlide: PptxProjectedSlide;
   priority: PptxSlideRenderPriority;
+  rasterZoomScale: number;
   renderSlideOverlay?: (props: PptxSlideOverlayProps) => React.ReactNode;
   rotation: number;
   source: PptxSource;
   virtualSlide: PptxVirtualSlide;
-  zoomScale: number;
 }) {
   const renderKey = [
     virtualSlide.index,
     getPptxProjectionSourceKey(source),
     source.baseSize.width,
     source.baseSize.height,
-    zoomScale,
+    layoutZoomScale,
+    rasterZoomScale,
     rotation,
     eager,
     priority.isCurrentSlide,
@@ -932,6 +979,7 @@ function renderPptxProjectedSlide({
     projectedSlide.renderSlideOverlay !== renderSlideOverlay;
 
   projectedSlide.onSlideRenderTiming = onSlideRenderTiming;
+  projectedSlide.rasterZoomScale = rasterZoomScale;
 
   if (!shouldRender) {
     return;
@@ -945,15 +993,14 @@ function renderPptxProjectedSlide({
     <PptxSlideFrame
       source={source}
       slideIndex={virtualSlide.index}
-      zoomScale={zoomScale}
+      layoutZoomScale={layoutZoomScale}
+      rasterZoomScale={rasterZoomScale}
       rotation={rotation}
       eager={eager}
       activity={activity}
       renderSlideOverlay={renderSlideOverlay}
-      getSlideRenderTiming={() =>
-        projectedSlide.onSlideRenderTiming ?? undefined
-      }
-      isProjectedLive={() => projectedSlide.isLive}
+      getSlideRenderTiming={projectedSlide.getSlideRenderTiming}
+      isProjectedLive={projectedSlide.isProjectedLive}
       priority={priority}
       shouldRenderImmediately={
         priority.isCurrentSlide ||

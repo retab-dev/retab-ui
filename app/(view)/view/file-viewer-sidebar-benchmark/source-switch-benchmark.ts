@@ -53,6 +53,18 @@ const SOURCE_SWITCH_WARM_RENDER_BUDGET_MS = 1_000;
 const SOURCE_SWITCH_MUTATION_BUDGET = 2_000;
 const SOURCE_SWITCH_MIN_TEXT_CONTENT_LENGTH = 80;
 const SOURCE_SWITCH_SETTLE_FRAME_COUNT = 12;
+const SOURCE_SWITCH_CONTENT_SELECTORS = [
+  '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+  '[data-slot="image-viewer-document"] canvas[data-image-frame-rendered="true"]',
+  '[data-slot="xlsx-grid"]',
+  '[data-slot="pptx-slide"]',
+  '[data-slot="docx-viewer"] .docx-wrapper > section.docx',
+  '[data-slot="csv-grid"]',
+  '[data-slot="markdown-virtual-canvas"]',
+  '[data-slot="html-file-viewer-content"] iframe',
+  '[data-slot="code-viewer"] [data-code-render-window]',
+  '[data-slot="text-virtual-canvas"]',
+] as const;
 
 type SourceSwitchRuntime = {
   formatButtons: Map<string, HTMLButtonElement>;
@@ -60,6 +72,7 @@ type SourceSwitchRuntime = {
 };
 
 type SourceSwitchSample = {
+  hasContinuity: boolean;
   hasContent: boolean;
   skeletonCount: number;
 };
@@ -221,7 +234,7 @@ async function sampleSourceSwitch(
     if (sample.hasContent) {
       hadContentSinceSwitch = true;
       if (timeToContentMs == null) timeToContentMs = elapsedMs;
-    } else {
+    } else if (!sample.hasContinuity) {
       emptyFrameCount += 1;
       if (
         oldContentDroppedAtMs == null &&
@@ -274,9 +287,19 @@ function readSourceSwitchSample(surface: HTMLElement): SourceSwitchSample {
   const viewport = surface.querySelector<HTMLElement>(
     '[data-slot="file-viewer-viewport"]',
   );
-  if (!viewport) return { hasContent: false, skeletonCount: 0 };
+  if (!viewport) {
+    return { hasContinuity: false, hasContent: false, skeletonCount: 0 };
+  }
 
   const viewportRect = viewport.getBoundingClientRect();
+  const hasRendererContent = SOURCE_SWITCH_CONTENT_SELECTORS.some((selector) =>
+    hasVisibleSourceSwitchElement(viewport, viewportRect, selector),
+  );
+  const hasContinuityShell = hasVisibleSourceSwitchElement(
+    viewport,
+    viewportRect,
+    '[data-slot="html-file-viewer-content"]',
+  );
   let visibleCanvasCount = 0;
   let visibleIframeCount = 0;
   let shadowTextLength = 0;
@@ -310,13 +333,35 @@ function readSourceSwitchSample(surface: HTMLElement): SourceSwitchSample {
   ].filter((element) => element.getBoundingClientRect().width > 4).length;
 
   return {
+    hasContinuity:
+      hasRendererContent || skeletonCount > 0 || hasContinuityShell,
     hasContent:
+      hasRendererContent ||
       visibleCanvasCount > 0 ||
       visibleIframeCount > 0 ||
       textLength >= SOURCE_SWITCH_MIN_TEXT_CONTENT_LENGTH ||
       shadowTextLength >= SOURCE_SWITCH_MIN_TEXT_CONTENT_LENGTH,
     skeletonCount,
   };
+}
+
+function hasVisibleSourceSwitchElement(
+  root: HTMLElement,
+  viewportRect: DOMRect,
+  selector: string,
+) {
+  for (const element of root.querySelectorAll<HTMLElement>(selector)) {
+    const rect = element.getBoundingClientRect();
+    if (
+      rect.width > 4 &&
+      rect.height > 4 &&
+      rect.bottom > viewportRect.top &&
+      rect.top < viewportRect.bottom
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function collectSourceSwitchMetrics(

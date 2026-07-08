@@ -49,6 +49,7 @@ export interface ImageFrameProps {
   source: FrameSource;
   frameIndex: number;
   scale: number;
+  rasterScale?: number;
   rotation: QuarterTurn;
   renderQuality?: ImageRenderQuality;
   renderOverlay?: (props: FrameOverlayProps) => React.ReactNode;
@@ -79,6 +80,7 @@ export function ImageFrame({
   source,
   frameIndex,
   scale,
+  rasterScale = scale,
   rotation,
   renderQuality = "high",
   renderOverlay,
@@ -99,7 +101,8 @@ export function ImageFrame({
       <ImageFrameCanvas
         source={source}
         frameIndex={frameIndex}
-        scale={scale}
+        layoutScale={scale}
+        rasterScale={rasterScale}
         rotation={rotation}
         renderQuality={renderQuality}
         onFrameRenderTiming={onFrameRenderTiming}
@@ -121,21 +124,32 @@ export function ImageFrame({
 function ImageFrameCanvas({
   source,
   frameIndex,
-  scale,
+  layoutScale,
+  rasterScale,
   rotation,
   renderQuality,
   onFrameRenderTiming,
 }: {
   source: FrameSource;
   frameIndex: number;
-  scale: number;
+  layoutScale: number;
+  rasterScale: number;
   rotation: QuarterTurn;
   renderQuality: ImageRenderQuality;
   onFrameRenderTiming?: (timing: ImageFrameRenderTiming) => void;
 }) {
   const descriptor = source.frames[frameIndex];
   const dpr = getImageDevicePixelRatio();
-  const frameRect = frameCssSize(descriptor.intrinsicSize, scale, rotation);
+  const layoutFrameRect = frameCssSize(
+    descriptor.intrinsicSize,
+    layoutScale,
+    rotation,
+  );
+  const rasterFrameRect = frameCssSize(
+    descriptor.intrinsicSize,
+    rasterScale,
+    rotation,
+  );
   const [drawError, setDrawError] = React.useState<Error | null>(null);
 
   if (drawError) throw drawError;
@@ -146,12 +160,17 @@ function ImageFrameCanvas({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const canvasWidth = Math.max(1, Math.floor(frameRect.width * dpr));
-      const canvasHeight = Math.max(1, Math.floor(frameRect.height * dpr));
+      const canvasWidth = Math.max(1, Math.floor(rasterFrameRect.width * dpr));
+      const canvasHeight = Math.max(
+        1,
+        Math.floor(rasterFrameRect.height * dpr),
+      );
+      const cached = source.hasDecodedFrame(frameIndex);
       const previousCanvas = resizeImageCanvas(
         canvas,
         canvasWidth,
         canvasHeight,
+        { preserve: !cached },
       );
       if (previousCanvas) {
         preserveCanvasImage(ctx, previousCanvas, canvasWidth, canvasHeight);
@@ -160,9 +179,8 @@ function ImageFrameCanvas({
       let cancelled = false;
       let settled = false;
       let reported = false;
-      const cached = source.hasDecodedFrame(frameIndex);
       const startedAt = now();
-      const renderScale = scale * dpr;
+      const renderScale = rasterScale * dpr;
       const report = (status: ImageFrameRenderTiming["status"]) => {
         if (reported) return;
         reported = true;
@@ -183,10 +201,10 @@ function ImageFrameCanvas({
           ctx.save();
           try {
             ctx.scale(dpr, dpr);
-            ctx.translate(frameRect.width / 2, frameRect.height / 2);
+            ctx.translate(rasterFrameRect.width / 2, rasterFrameRect.height / 2);
             ctx.rotate((rotation * Math.PI) / 180);
-            const drawWidth = descriptor.intrinsicSize.width * scale;
-            const drawHeight = descriptor.intrinsicSize.height * scale;
+            const drawWidth = descriptor.intrinsicSize.width * rasterScale;
+            const drawHeight = descriptor.intrinsicSize.height * rasterScale;
             ctx.imageSmoothingQuality = renderQuality;
             ctx.drawImage(
               bitmap,
@@ -228,12 +246,12 @@ function ImageFrameCanvas({
       descriptor.intrinsicSize.width,
       dpr,
       frameIndex,
-      frameRect.height,
-      frameRect.width,
       onFrameRenderTiming,
+      rasterFrameRect.height,
+      rasterFrameRect.width,
+      rasterScale,
       renderQuality,
       rotation,
-      scale,
       source,
     ],
   );
@@ -241,7 +259,7 @@ function ImageFrameCanvas({
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: frameRect.width, height: frameRect.height }}
+      style={{ width: layoutFrameRect.width, height: layoutFrameRect.height }}
       className="block bg-white"
     />
   );
@@ -364,6 +382,7 @@ export function ImageFrameScroller({
       resetKey: projectionResetKey,
       rotation,
       scale,
+      shouldHoldRaster: freezeVisibleFrameWindow,
       source,
       sourceKey,
       visibleFrameNumbers,
@@ -379,6 +398,7 @@ export function ImageFrameScroller({
     renderFrameNumbers,
     rotation,
     scale,
+    freezeVisibleFrameWindow,
     source,
     sourceKey,
     visibleFrameNumbers,
@@ -542,6 +562,7 @@ type ProjectedImageFrame = {
   decodedPixels: number;
   isLive: boolean;
   lastSeen: number;
+  rasterScale: number | null;
   renderedPixels: number;
   renderKey: string;
   root: Root;
@@ -812,6 +833,7 @@ function projectImageFrames({
   resetKey,
   rotation,
   scale,
+  shouldHoldRaster,
   source,
   sourceKey,
   visibleFrameNumbers,
@@ -829,6 +851,7 @@ function projectImageFrames({
   resetKey: string;
   rotation: QuarterTurn;
   scale: number;
+  shouldHoldRaster: boolean;
   source: FrameSource;
   sourceKey: number;
   visibleFrameNumbers: readonly number[];
@@ -864,12 +887,21 @@ function projectImageFrames({
       shell: projectedFrame.shell,
     });
     if (activeFrameNumberSet.has(frame.frameNumber)) {
+      const retainHeldRaster =
+        shouldHoldRaster &&
+        existingFrame != null &&
+        existingFrame.rasterScale != null &&
+        existingFrame.renderKey !== "";
+      const rasterScale = retainHeldRaster
+        ? existingFrame.rasterScale!
+        : scale;
       renderProjectedImageFrame({
         frame,
         onFrameRenderTiming,
         projectedFrame,
         renderFrameOverlay,
         renderQuality,
+        rasterScale,
         rotation,
         scale,
         source,
@@ -902,6 +934,7 @@ function createProjectedImageFrame(
     decodedPixels: 0,
     isLive: true,
     lastSeen: 0,
+    rasterScale: null,
     renderedPixels: 0,
     renderKey: "",
     root: createRoot(shell),
@@ -935,6 +968,7 @@ function renderProjectedImageFrame({
   projectedFrame,
   renderFrameOverlay,
   renderQuality,
+  rasterScale,
   rotation,
   scale,
   source,
@@ -945,6 +979,7 @@ function renderProjectedImageFrame({
   projectedFrame: ProjectedImageFrame;
   renderFrameOverlay?: ImageViewerProps["renderFrameOverlay"];
   renderQuality: ImageRenderQuality;
+  rasterScale: number;
   rotation: QuarterTurn;
   scale: number;
   source: FrameSource;
@@ -956,12 +991,15 @@ function renderProjectedImageFrame({
     frame.width,
     frame.height,
     scale,
+    rasterScale,
     rotation,
     renderQuality,
     getImageProjectionCallbackKey(renderFrameOverlay),
     getImageProjectionCallbackKey(onFrameRenderTiming),
     getImageDevicePixelRatio(),
   ].join("\u0000");
+
+  projectedFrame.rasterScale = rasterScale;
 
   if (projectedFrame.renderKey === renderKey) return;
   projectedFrame.renderKey = renderKey;
@@ -970,6 +1008,7 @@ function renderProjectedImageFrame({
       source={source}
       frameIndex={frame.frameIndex}
       scale={scale}
+      rasterScale={rasterScale}
       rotation={rotation}
       renderQuality={renderQuality}
       onFrameRenderTiming={onFrameRenderTiming}
@@ -1138,9 +1177,11 @@ function resizeImageCanvas(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
+  { preserve }: { preserve: boolean },
 ) {
   if (canvas.width === width && canvas.height === height) return null;
-  const shouldPreserve = canvas.dataset.imageFrameRendered === "true";
+  const shouldPreserve =
+    preserve && canvas.dataset.imageFrameRendered === "true";
   const previousCanvas =
     shouldPreserve && canvas.width > 0 && canvas.height > 0
       ? copyCanvasContents(canvas)

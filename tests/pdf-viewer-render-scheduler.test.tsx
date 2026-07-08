@@ -134,4 +134,45 @@ describe("usePdfPageRenderScheduler", () => {
 
     expect(result.current.activePageNumbers).toEqual([1, 2, 3, 4, 5]);
   });
+
+  it("keeps rendered pages active but blocks pending pages while paused", () => {
+    const { result, rerender } = renderHook(
+      ({ isPaused }: { isPaused: boolean }) =>
+        usePdfPageRenderScheduler({
+          isPaused,
+          pageNumbers: [5, 6],
+          warmPageNumbers: [4],
+          lowPriorityPageNumbers: [3],
+          scale: 1,
+          rotation: 0,
+          devicePixelRatio: 1,
+          resetKey: "doc",
+          maxRunning: 2,
+          maxLowPriorityRunning: 1,
+        }),
+      {
+        initialProps: { isPaused: false },
+      },
+    );
+
+    act(() => {
+      result.current.onPageRenderTiming({
+        pageNumber: 5,
+        scale: 1,
+        rotation: 0,
+        devicePixelRatio: 1,
+        status: "rendered",
+        durationMs: 0,
+      });
+    });
+
+    rerender({ isPaused: true });
+
+    expect(result.current.activePageNumbers).toEqual([5]);
+    expect(result.current.isRenderQueueIdle).toBe(false);
+
+    rerender({ isPaused: false });
+
+    expect(result.current.activePageNumbers).toEqual([4, 5, 6]);
+  });
 });

@@ -21,6 +21,7 @@ export function getPdfThumbnailItemId(pageNumber: number) {
 export function PdfThumbnailRailViewport({
   doc,
   documentKey,
+  isRenderingSuspended = false,
   layout,
   visibleItems,
   viewportHeight,
@@ -36,6 +37,7 @@ export function PdfThumbnailRailViewport({
 }: {
   doc: PdfDocumentProxy;
   documentKey: string;
+  isRenderingSuspended?: boolean;
   layout: PdfThumbnailLayout;
   visibleItems: readonly PdfThumbnailLayoutItem[];
   viewportHeight: number;
@@ -151,6 +153,7 @@ export function PdfThumbnailRailViewport({
                       documentKey={documentKey}
                       item={item}
                       active={activePage === item.pageNumber}
+                      isRenderingSuspended={isRenderingSuspended}
                       itemId={getPdfThumbnailItemId(item.pageNumber)}
                       onSelectPage={handleSelectPage}
                       renderCache={renderCache}

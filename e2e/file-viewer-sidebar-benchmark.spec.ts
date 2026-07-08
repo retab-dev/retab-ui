@@ -525,6 +525,82 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     ).toBe(false);
   });
 
+  test("PPTX deep telemetry keeps the reading line continuous through a retarget", async ({
+    page,
+  }) => {
+    // Guards the interrupted-toggle (rapid-toggle) retarget hand-off for pptx:
+    // the projected slides re-fit their box to the target scale every commit so
+    // the shell counter-transform stays continuous, instead of exposing a slide
+    // scale jump at the retarget frame (~25-33px content snap at deep and
+    // near-bottom scroll). pptx virtualizes with a detached, held-raster
+    // projection, so it needs its own gate — the tiff/pdf gates never exercise
+    // this path.
+    test.setTimeout(90_000);
+    const telemetryConsoleMessages: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (text.includes("[file-viewer:sidebar-benchmark]")) {
+        telemetryConsoleMessages.push(text);
+      }
+    });
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await selectBenchmarkFormat(page, "pptx");
+    await waitForBenchmarkFormat(page, "pptx");
+    await page.locator('[data-benchmark-scroll-target-option="deep"]').click();
+    await page.waitForFunction(() => {
+      const scroller = document.querySelector<HTMLElement>(
+        '[data-slot="file-viewer-root"][data-benchmark-active-format="pptx"] [data-slot="pptx-viewer"] [data-slot="scroll-area-viewport"]',
+      );
+      return (
+        scroller != null && scroller.scrollHeight > scroller.clientHeight * 4
+      );
+    });
+
+    const result = (await page.evaluate(async () => {
+      const telemetry = Reflect.get(
+        window,
+        "__fileViewerSidebarBenchmarkTelemetry",
+      ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      // Discarded warm-up run (module compile / first raster), then the
+      // asserted steady-state run.
+      await telemetry?.run({
+        actionOrder: "close-open",
+        scrollTargetId: "deep",
+      });
+      return (
+        (await telemetry?.run({
+          actionOrder: "close-open",
+          scrollTargetId: "deep",
+        })) ?? null
+      );
+    })) as FileViewerSidebarBenchmarkTelemetryResult | null;
+
+    expect(result).not.toBeNull();
+    expect(result?.format).toBe("pptx");
+    expect(result?.scrollTarget).toBe("deep");
+    if (!process.env.CI) {
+      expect(result?.status).toBe("passed");
+    }
+    const retargetContinuity = result?.metrics.find(
+      (metric) => metric.id === "retarget-continuity",
+    );
+    // The retarget-continuity budget is hardware-independent (a per-frame pixel
+    // envelope, not a timing metric), so it is asserted on CI too.
+    expect(retargetContinuity?.passed, retargetContinuity?.value).toBe(true);
+    expect(
+      collectBlockingTelemetryMetrics(result?.metrics).map(
+        (metric) => metric.id,
+      ),
+    ).toEqual([]);
+    expect(
+      telemetryConsoleMessages.some((message) =>
+        message.startsWith("[file-viewer:sidebar-benchmark] failures "),
+      ),
+    ).toBe(false);
+  });
+
   test("production PDF telemetry reports no sidebar motion regressions", async ({
     page,
   }) => {
@@ -613,11 +689,10 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       });
 
       failures.push(
-        ...collectBlockingTelemetryMetrics(result?.metrics)
-          .map(
-            (metric) =>
-              `${scenario.label}/${metric.id}: ${metric.value} exceeds ${metric.budget}. ${metric.detail}`,
-          ),
+        ...collectBlockingTelemetryMetrics(result?.metrics).map(
+          (metric) =>
+            `${scenario.label}/${metric.id}: ${metric.value} exceeds ${metric.budget}. ${metric.detail}`,
+        ),
       );
     }
 
@@ -1679,9 +1754,7 @@ async function runPdfPageGapBenchmark(
               .filter((gap) => gap.pageHeight > 1)
               .map((gap) => gap.value / gap.pageHeight);
             const ratioRange =
-              ratios.length > 1
-                ? Math.max(...ratios) - Math.min(...ratios)
-                : 0;
+              ratios.length > 1 ? Math.max(...ratios) - Math.min(...ratios) : 0;
 
             return {
               gapValues: values.map(roundMetric),
@@ -2149,7 +2222,9 @@ function collectMotionSampleFailures(
         failures.push(
           `${prefix} ${field.label} covered ${(
             firstFrameProgress * 100
-          ).toFixed(1)}% of its travel on the first sampled frame: ${formatValues(
+          ).toFixed(
+            1,
+          )}% of its travel on the first sampled frame: ${formatValues(
             [run.before, ...run.samples, run.after].map(
               (sample) => sample[field.key],
             ),

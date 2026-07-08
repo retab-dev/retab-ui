@@ -13,6 +13,10 @@ import {
   PDF_THUMBNAIL_OVERSCAN_PX,
   type PdfThumbnailShape,
 } from "./pdf-thumbnail-layout";
+import {
+  useOptionalFileViewerShell,
+  type FileViewerShellContextValue,
+} from "./file-viewer-context";
 import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail";
 import { usePdfViewerThumbnails } from "./pdf-viewer-context";
 import { useIsClient } from "./use-is-client";
@@ -24,6 +28,9 @@ import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
 import { ViewerErrorBoundary } from "./viewer-error";
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { joinEffectKey } from "@/lib/effect-key";
+
+const PDF_THUMBNAIL_RENDER_RESUME_DELAY_MS = 1400;
+const PDF_THUMBNAIL_CLOSED_WARM_DELAY_MS = 2200;
 
 export interface PdfViewerThumbnailsProps {
   /** Thumbnail image width in CSS pixels. The sidebar shell owns rail width. */
@@ -53,11 +60,14 @@ export function PdfViewerThumbnails({
   thumbnailWidth,
 }: PdfViewerThumbnailsProps) {
   const thumbnails = usePdfViewerThumbnails();
+  const shell = useOptionalFileViewerShell();
+  const isRenderingSuspended = usePdfThumbnailRenderSuspension(shell);
 
   return (
-    <PdfThumbnailRail
+    <PdfThumbnailRailShell
       className={className}
       currentPage={thumbnails.currentPage}
+      isRenderingSuspended={isRenderingSuspended}
       onSelectPage={thumbnails.onSelectPage}
       resource={thumbnails.resource}
       thumbnailShape={thumbnailShape}
@@ -74,6 +84,30 @@ export function PdfThumbnailRail({
   thumbnailShape,
   thumbnailWidth,
 }: PdfThumbnailRailProps) {
+  return (
+    <PdfThumbnailRailShell
+      className={className}
+      currentPage={currentPage}
+      isRenderingSuspended={false}
+      onSelectPage={onSelectPage}
+      resource={resource}
+      thumbnailShape={thumbnailShape}
+      thumbnailWidth={thumbnailWidth}
+    />
+  );
+}
+
+function PdfThumbnailRailShell({
+  className,
+  currentPage,
+  isRenderingSuspended,
+  onSelectPage,
+  resource,
+  thumbnailShape,
+  thumbnailWidth,
+}: PdfThumbnailRailProps & {
+  isRenderingSuspended: boolean;
+}) {
   const isClient = useIsClient();
 
   if (!isClient) {
@@ -93,6 +127,7 @@ export function PdfThumbnailRail({
       <React.Suspense fallback={<ThumbnailsFallback className={className} />}>
         <PdfThumbnailRailInner
           currentPage={currentPage}
+          isRenderingSuspended={isRenderingSuspended}
           onSelectPage={onSelectPage}
           resource={resource}
           thumbnailShape={thumbnailShape}
@@ -107,16 +142,20 @@ export function PdfThumbnailRail({
 function PdfThumbnailRailInner({
   resource,
   currentPage,
+  isRenderingSuspended,
   onSelectPage,
   thumbnailShape = "page",
   thumbnailWidth = 120,
   className,
-}: PdfThumbnailRailProps) {
+}: PdfThumbnailRailProps & {
+  isRenderingSuspended: boolean;
+}) {
   const doc = usePdfThumbnailDocument(resource);
   const renderCache = usePdfRenderedPageCache(doc);
   const pageMetrics = usePdfThumbnailPageMetrics(doc, doc);
   const { metricByPageNumber, pageCount, requestPageMetrics } = pageMetrics;
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
+  const activeCurrentPage = isRenderingSuspended ? null : currentPage;
 
   const layout = React.useMemo(
     () =>
@@ -135,22 +174,24 @@ function PdfThumbnailRailInner({
     initialViewportHeight: PDF_THUMBNAIL_INITIAL_VIEWPORT_HEIGHT,
   });
   const follow = useThumbnailRailFollow({
-    currentPage,
+    currentPage: activeCurrentPage,
     layout,
     viewportRef,
     resetKey: doc,
   });
   useKeyedMountEffect(
     joinEffectKey([
-      currentPage,
+      activeCurrentPage,
+      isRenderingSuspended,
       layout.pageCount,
       requestPageMetrics,
       thumbnailWindow.visibleItems,
     ]),
     () => {
+      if (isRenderingSuspended) return;
       requestPageMetrics(
         getRequestedThumbnailMetricPages({
-          currentPage,
+          currentPage: activeCurrentPage,
           pageCount: layout.pageCount,
           visibleItems: thumbnailWindow.visibleItems,
         }),
@@ -162,10 +203,11 @@ function PdfThumbnailRailInner({
     <PdfThumbnailRailViewport
       doc={doc}
       documentKey={resource.content.key}
+      isRenderingSuspended={isRenderingSuspended}
       layout={layout}
       visibleItems={thumbnailWindow.visibleItems}
       viewportHeight={thumbnailWindow.viewportHeight}
-      currentPage={currentPage}
+      currentPage={activeCurrentPage}
       viewportRef={viewportRef}
       onSelectPage={onSelectPage}
       onPageActivate={follow.onPageActivate}
@@ -176,6 +218,65 @@ function PdfThumbnailRailInner({
       renderCache={renderCache}
     />
   );
+}
+
+function usePdfThumbnailRenderSuspension(
+  shell: FileViewerShellContextValue | null,
+) {
+  const isMotionManaged =
+    shell?.mode === "inline" && shell.canToggleSidebar === true;
+  const isSidebarRequestedOpen = shell?.isSidebarRequestedOpen === true;
+  const isSidebarInteractive = shell?.isSidebarInteractive === true;
+  const isSidebarTransitioning = shell?.isSidebarTransitioning === true;
+  const [isOpenSettling, setIsOpenSettling] = React.useState(false);
+  const [isClosedWarmReleased, setIsClosedWarmReleased] =
+    React.useState(false);
+
+  React.useEffect(() => {
+    if (!isMotionManaged) {
+      setIsOpenSettling(false);
+      setIsClosedWarmReleased(false);
+      return;
+    }
+
+    if (!isSidebarRequestedOpen) {
+      setIsOpenSettling(false);
+      setIsClosedWarmReleased(false);
+      if (isSidebarTransitioning) return;
+
+      const timer = window.setTimeout(() => {
+        setIsClosedWarmReleased(true);
+      }, PDF_THUMBNAIL_CLOSED_WARM_DELAY_MS);
+
+      return () => window.clearTimeout(timer);
+    }
+
+    setIsClosedWarmReleased(false);
+
+    if (isSidebarTransitioning || !isSidebarInteractive) {
+      setIsOpenSettling(true);
+      return;
+    }
+
+    if (!isOpenSettling) return;
+
+    const timer = window.setTimeout(() => {
+      setIsOpenSettling(false);
+    }, PDF_THUMBNAIL_RENDER_RESUME_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isMotionManaged,
+    isOpenSettling,
+    isSidebarInteractive,
+    isSidebarRequestedOpen,
+    isSidebarTransitioning,
+  ]);
+
+  if (!isMotionManaged) return false;
+  if (!isSidebarRequestedOpen) return !isClosedWarmReleased;
+  if (isSidebarTransitioning || !isSidebarInteractive) return true;
+  return isOpenSettling;
 }
 
 function getRequestedThumbnailMetricPages({

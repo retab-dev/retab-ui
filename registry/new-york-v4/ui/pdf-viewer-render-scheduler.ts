@@ -27,6 +27,7 @@ export function getPdfPageRenderKey({
 }
 
 export function usePdfPageRenderScheduler({
+  isPaused = false,
   pageNumbers,
   warmPageNumbers = [],
   lowPriorityPageNumbers = [],
@@ -40,6 +41,7 @@ export function usePdfPageRenderScheduler({
   pageNumbers: readonly number[];
   warmPageNumbers?: readonly number[];
   lowPriorityPageNumbers?: readonly number[];
+  isPaused?: boolean;
   scale: number;
   rotation: number;
   devicePixelRatio: number;
@@ -182,10 +184,9 @@ export function usePdfPageRenderScheduler({
     }
 
     const maxPrimaryRunning = Math.max(1, maxRunning);
-    const activePrimaryPendingCount = Math.min(
-      pendingPageNumbers.length,
-      maxPrimaryRunning,
-    );
+    const activePrimaryPendingCount = isPaused
+      ? 0
+      : Math.min(pendingPageNumbers.length, maxPrimaryRunning);
     const activePrimaryPageNumbers = [
       ...renderedPageNumbers,
       ...stalePageNumbers,
@@ -195,17 +196,16 @@ export function usePdfPageRenderScheduler({
       0,
       maxRunning - activePrimaryPendingCount,
     );
-    const activeWarmPendingCount = Math.min(
-      warmPendingPageNumbers.length,
-      remainingWarmSlots,
-    );
+    const activeWarmPendingCount = isPaused
+      ? 0
+      : Math.min(warmPendingPageNumbers.length, remainingWarmSlots);
     const activeWarmPageNumbers = [
       ...warmRenderedPageNumbers,
       ...warmStalePageNumbers,
       ...warmPendingPageNumbers.slice(0, activeWarmPendingCount),
     ];
     const activeLowPriorityPageNumbers =
-      activePrimaryPendingCount + activeWarmPendingCount > 0
+      isPaused || activePrimaryPendingCount + activeWarmPendingCount > 0
         ? [...lowPriorityRenderedPageNumbers, ...lowPriorityStalePageNumbers]
         : [
             ...lowPriorityRenderedPageNumbers,
@@ -229,6 +229,7 @@ export function usePdfPageRenderScheduler({
       ]),
     };
   }, [
+    isPaused,
     lowPriorityRequestedRenders,
     maxLowPriorityRunning,
     maxRunning,

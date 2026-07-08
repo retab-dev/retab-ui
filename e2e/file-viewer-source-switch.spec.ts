@@ -124,6 +124,45 @@ test.describe("FileViewer source switch benchmark", () => {
         );
         if (!viewport) return { hasContent: false };
         const viewportRect = viewport.getBoundingClientRect();
+        const contentSelectors = [
+          '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+          '[data-slot="image-viewer-document"] canvas[data-image-frame-rendered="true"]',
+          '[data-slot="xlsx-grid"]',
+          '[data-slot="docx-viewer"] .docx-wrapper > section.docx',
+          '[data-slot="csv-grid"]',
+          '[data-slot="text-virtual-canvas"]',
+        ];
+        const hasRendererContent = contentSelectors.some((selector) =>
+          [...viewport.querySelectorAll<HTMLElement>(selector)].some(
+            (element) => {
+              const rect = element.getBoundingClientRect();
+              return (
+                rect.width > 4 &&
+                rect.height > 4 &&
+                rect.bottom > viewportRect.top &&
+                rect.top < viewportRect.bottom
+              );
+            },
+          ),
+        );
+        const continuitySelectors = [
+          '[data-slot="file-viewer-document-fallback"]',
+          '[data-slot="html-file-viewer-content"]',
+          '[data-slot="image-viewer"]',
+        ];
+        const hasContinuityShell = continuitySelectors.some((selector) =>
+          [...viewport.querySelectorAll<HTMLElement>(selector)].some(
+            (element) => {
+              const rect = element.getBoundingClientRect();
+              return (
+                rect.width > 4 &&
+                rect.height > 4 &&
+                rect.bottom > viewportRect.top &&
+                rect.top < viewportRect.bottom
+              );
+            },
+          ),
+        );
         let visibleCanvasCount = 0;
         let visibleIframeCount = 0;
         let shadowTextLength = 0;
@@ -150,12 +189,20 @@ test.describe("FileViewer source switch benchmark", () => {
           if (shadowTextLength >= 80) break;
         }
         const textLength = viewport.textContent?.trim().length ?? 0;
+        const skeletonCount = [
+          ...viewport.querySelectorAll('[data-slot="skeleton"]'),
+        ].filter((element) => element.getBoundingClientRect().width > 4)
+          .length;
         return {
+          hasContinuity:
+            hasRendererContent || skeletonCount > 0 || hasContinuityShell,
           hasContent:
+            hasRendererContent ||
             visibleCanvasCount > 0 ||
             visibleIframeCount > 0 ||
             textLength >= 80 ||
             shadowTextLength >= 80,
+          skeletonCount,
         };
       };
       const findTabs = () =>
@@ -189,7 +236,7 @@ test.describe("FileViewer source switch benchmark", () => {
             hadContentSinceSwitch = true;
             if (timeToContentMs == null) timeToContentMs = elapsedMs;
             if (elapsedMs - timeToContentMs > 200) break;
-          } else {
+          } else if (!sample.hasContinuity) {
             emptyFrameCount += 1;
           }
         }

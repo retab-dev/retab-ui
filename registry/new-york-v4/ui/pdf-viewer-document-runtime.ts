@@ -40,6 +40,8 @@ import type {
 import { usePdfViewerTelemetry } from "./pdf-viewer-telemetry";
 import { usePdfPageVirtualization } from "./pdf-viewer-virtualization";
 
+const PDF_SHELL_MOTION_RENDER_RESUME_DELAY_MS = 1400;
+
 export type PdfDocumentRuntimeState = {
   currentPage: number;
   handle: PdfViewerHandle;
@@ -227,11 +229,17 @@ export function usePdfDocumentRuntime({
   const renderedPageCache = usePdfRenderedPageCache(document);
   const shouldUseRenderedPageCache =
     performanceOptions?.renderedPageCache !== false;
+  const isShellMotionActive =
+    layout.rendererFrame.phase !== "idle" ||
+    layout.transition.source === "viewer-shell";
+  const isPageRenderingPaused =
+    usePdfShellMotionRenderPause(isShellMotionActive);
   const {
     activePageNumbers: activeRenderPageNumbers,
     isRenderQueueIdle,
     onPageRenderTiming: handleScheduledPageRenderTiming,
   } = usePdfPageRenderScheduler({
+    isPaused: isPageRenderingPaused,
     pageNumbers: visiblePageNumbers,
     warmPageNumbers:
       performanceOptions?.directionAwarePreRender === false
@@ -250,15 +258,8 @@ export function usePdfDocumentRuntime({
       performanceOptions?.directionAwarePreRender === false ? 0 : 1,
   });
   useKeyedMountEffect(
-    joinEffectKey([
-      isRenderQueueIdle,
-      layout.rendererFrame.phase,
-      layout.transition.source,
-    ]),
+    joinEffectKey([isShellMotionActive, isRenderQueueIdle]),
     () => {
-      const isShellMotionActive =
-        layout.rendererFrame.phase !== "idle" ||
-        layout.transition.source === "viewer-shell";
       const nextShouldHold =
         isShellMotionActive ||
         (shouldHoldPageWindowForRaster && !isRenderQueueIdle);
@@ -426,6 +427,27 @@ export function usePdfDocumentRuntime({
     },
     setViewportElement,
   };
+}
+
+function usePdfShellMotionRenderPause(isShellMotionActive: boolean) {
+  const [isSettling, setIsSettling] = React.useState(false);
+
+  useKeyedMountEffect(joinEffectKey([isShellMotionActive, isSettling]), () => {
+    if (isShellMotionActive) {
+      setIsSettling(true);
+      return;
+    }
+
+    if (!isSettling) return;
+
+    const timer = setTimeout(() => {
+      setIsSettling(false);
+    }, PDF_SHELL_MOTION_RENDER_RESUME_DELAY_MS);
+
+    return () => clearTimeout(timer);
+  });
+
+  return isShellMotionActive || isSettling;
 }
 
 function usePdfScrollInteractionSuspension(

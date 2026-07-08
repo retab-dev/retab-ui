@@ -436,22 +436,6 @@ function replaceCanvasImage(
   width: number,
   height: number,
 ) {
-  if (canvas.width === width && canvas.height === height) {
-    drawCanvasImage(context, image, width, height);
-    return;
-  }
-
-  const swapCanvas = canvas.ownerDocument.createElement("canvas");
-  swapCanvas.width = width;
-  swapCanvas.height = height;
-  const swapContext = swapCanvas.getContext("2d");
-  if (swapContext) {
-    drawCanvasImage(swapContext, image, width, height);
-    resizeCanvas(canvas, width, height);
-    drawCanvasImage(context, swapCanvas, width, height);
-    return;
-  }
-
   resizeCanvas(canvas, width, height);
   drawCanvasImage(context, image, width, height);
 }

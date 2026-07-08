@@ -17,6 +17,7 @@ export function PdfThumbnailItem({
   documentKey,
   item,
   active,
+  isRenderingSuspended = false,
   itemId,
   onSelectPage,
   renderCache,
@@ -25,6 +26,7 @@ export function PdfThumbnailItem({
   documentKey: string;
   item: PdfThumbnailLayoutItem;
   active: boolean;
+  isRenderingSuspended?: boolean;
   itemId: string;
   onSelectPage?: (pageNumber: number) => void;
   renderCache?: PdfRenderedPageCache;
@@ -51,6 +53,7 @@ export function PdfThumbnailItem({
           <PdfThumbnailCanvas
             doc={doc}
             documentKey={documentKey}
+            isRenderingSuspended={isRenderingSuspended}
             pageNumber={item.pageNumber}
             renderCache={renderCache}
             width={item.imageWidth}

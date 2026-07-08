@@ -19,12 +19,14 @@ const PDF_THUMBNAIL_MAX_DEVICE_PIXEL_RATIO = 1;
 export function PdfThumbnailCanvas({
   doc,
   documentKey,
+  isRenderingSuspended = false,
   pageNumber,
   renderCache,
   width,
 }: {
   doc: PdfDocumentProxy;
   documentKey: string;
+  isRenderingSuspended?: boolean;
   pageNumber: number;
   renderCache?: PdfRenderedPageCache;
   width: number;
@@ -70,6 +72,11 @@ export function PdfThumbnailCanvas({
       const cachedPage = readPdfRenderedPageCache(renderCache, renderSignature);
 
       resizeCanvas(canvas, canvasWidth, canvasHeight);
+      if (isRenderingSuspended) {
+        markCanvasRenderStatus(canvas, renderSignature, "suspended");
+        return;
+      }
+
       if (cachedPage) {
         drawCanvasImage(context, cachedPage.canvas, canvasWidth, canvasHeight);
         markCanvasRenderStatus(canvas, renderSignature, "rendered", "cache");
@@ -123,6 +130,7 @@ export function PdfThumbnailCanvas({
       baseViewport.width,
       documentKey,
       dpr,
+      isRenderingSuspended,
       page,
       pageNumber,
       renderCache,
@@ -166,7 +174,7 @@ function drawCanvasImage(
 function markCanvasRenderStatus(
   canvas: HTMLCanvasElement,
   rendered: PdfRenderedPageSignature,
-  status: "pending" | "rendered" | "cancelled" | "failed",
+  status: "pending" | "rendered" | "cancelled" | "failed" | "suspended",
   source?: "cache" | "pdfjs",
 ) {
   canvas.dataset.pdfPageNumber = String(rendered.pageNumber);
