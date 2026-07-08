@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import {
+  useOptionalFileViewerShell,
   useOptionalFileViewerShellStatic,
   useFileViewerShellStatic,
 } from "./file-viewer-context";
@@ -61,6 +62,31 @@ export function useOptionalFileViewerRendererEnvironment(): FileViewerRendererEn
       usesShellGeometry,
     }),
     [registerDocumentSurface, usesShellGeometry],
+  );
+}
+
+export type FileViewerSidebarMotion = {
+  /** True when the shell animates the sidebar (inline mode with a toggle). */
+  isMotionManaged: boolean;
+  isSidebarInteractive: boolean;
+  isSidebarRequestedOpen: boolean;
+  isSidebarTransitioning: boolean;
+};
+
+export function useOptionalFileViewerSidebarMotion(): FileViewerSidebarMotion | null {
+  const shell = useOptionalFileViewerShell();
+
+  return React.useMemo(
+    () =>
+      shell
+        ? {
+            isMotionManaged: shell.mode === "inline" && shell.canToggleSidebar,
+            isSidebarInteractive: shell.isSidebarInteractive,
+            isSidebarRequestedOpen: shell.isSidebarRequestedOpen,
+            isSidebarTransitioning: shell.isSidebarTransitioning,
+          }
+        : null,
+    [shell],
   );
 }
 

@@ -14,9 +14,9 @@ import {
   type PdfThumbnailShape,
 } from "./pdf-thumbnail-layout";
 import {
-  useOptionalFileViewerShell,
-  type FileViewerShellContextValue,
-} from "./file-viewer-context";
+  useOptionalFileViewerSidebarMotion,
+  type FileViewerSidebarMotion,
+} from "./file-viewer-renderer-frame";
 import { PdfThumbnailRailViewport } from "./pdf-thumbnail-rail";
 import { usePdfViewerThumbnails } from "./pdf-viewer-context";
 import { useIsClient } from "./use-is-client";
@@ -60,8 +60,8 @@ export function PdfViewerThumbnails({
   thumbnailWidth,
 }: PdfViewerThumbnailsProps) {
   const thumbnails = usePdfViewerThumbnails();
-  const shell = useOptionalFileViewerShell();
-  const isRenderingSuspended = usePdfThumbnailRenderSuspension(shell);
+  const sidebarMotion = useOptionalFileViewerSidebarMotion();
+  const isRenderingSuspended = usePdfThumbnailRenderSuspension(sidebarMotion);
 
   return (
     <PdfThumbnailRailShell
@@ -221,13 +221,14 @@ function PdfThumbnailRailInner({
 }
 
 function usePdfThumbnailRenderSuspension(
-  shell: FileViewerShellContextValue | null,
+  sidebarMotion: FileViewerSidebarMotion | null,
 ) {
-  const isMotionManaged =
-    shell?.mode === "inline" && shell.canToggleSidebar === true;
-  const isSidebarRequestedOpen = shell?.isSidebarRequestedOpen === true;
-  const isSidebarInteractive = shell?.isSidebarInteractive === true;
-  const isSidebarTransitioning = shell?.isSidebarTransitioning === true;
+  const isMotionManaged = sidebarMotion?.isMotionManaged === true;
+  const isSidebarRequestedOpen =
+    sidebarMotion?.isSidebarRequestedOpen === true;
+  const isSidebarInteractive = sidebarMotion?.isSidebarInteractive === true;
+  const isSidebarTransitioning =
+    sidebarMotion?.isSidebarTransitioning === true;
   const [isOpenSettling, setIsOpenSettling] = React.useState(false);
   const [isClosedWarmReleased, setIsClosedWarmReleased] =
     React.useState(false);

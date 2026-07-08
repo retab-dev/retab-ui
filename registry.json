@@ -4998,6 +4998,7 @@
       "title": "PDF Viewer Thumbnails",
       "description": "PDF-owned page thumbnail navigation for explicit PdfViewer composition: lazy pdfjs thumbnails, active-page highlight, and click-to-jump.",
       "registryDependencies": [
+        "@retab/file-viewer",
         "@retab/pdf-viewer",
         "@retab/utils",
         "@retab/spinner"
