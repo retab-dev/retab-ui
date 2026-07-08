@@ -117,6 +117,7 @@ export function useFileViewerMotionTelemetry(
   const lastResultRef = React.useRef<FileViewerMotionTelemetryResult | null>(
     null,
   );
+  const isRunningRef = React.useRef(false);
   hostRef.current = host;
 
   useKeyedMountEffect(joinEffectKey(["file-viewer-motion-telemetry"]), () => {
@@ -129,10 +130,18 @@ export function useFileViewerMotionTelemetry(
       readSample: () =>
         readFileViewerMotionTelemetrySample(hostRef.current, performance.now()),
       run: async (options) => {
-        const result = await runFileViewerMotionTelemetry(hostRef, options);
-        lastResultRef.current = result;
-        if (result) logFileViewerMotionTelemetryResult(result);
-        return result;
+        // A telemetry run drives real toggles; a concurrent run would
+        // interleave motions and score garbage. One at a time.
+        if (isRunningRef.current) return null;
+        isRunningRef.current = true;
+        try {
+          const result = await runFileViewerMotionTelemetry(hostRef, options);
+          lastResultRef.current = result;
+          if (result) logFileViewerMotionTelemetryResult(result);
+          return result;
+        } finally {
+          isRunningRef.current = false;
+        }
       },
     };
 

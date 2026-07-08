@@ -516,8 +516,7 @@ function shouldRetainPdfPageWindow({
   return (
     isLayoutTransitioning ||
     (transition?.source === "viewer-shell" &&
-      (transition.layoutPolicy === "frozen" ||
-        transition.layoutPolicy === "target"))
+      transition.layoutPolicy === "target")
   );
 }
 

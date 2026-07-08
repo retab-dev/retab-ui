@@ -461,7 +461,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 420,
       fromInlineSize: 420,
       toInlineSize: 420,
-      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(sidebarGapElement.style.flexBasis).toBe("420px");
@@ -486,7 +485,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 420,
       fromInlineSize: 420,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(sidebarGapElement.style.flexBasis).toBe("420px");
@@ -503,7 +501,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 210,
       fromInlineSize: 420,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1.5,
     });
     expect(sidebarGapElement.style.width).toBe("210px");
     expect(sidebarGapElement.style.flexBasis).toBe("210px");
@@ -520,7 +517,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 420,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("0px");
     expect(sidebarGapElement.style.flexBasis).toBe("0px");
@@ -532,7 +528,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 420,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -629,7 +624,6 @@ describe("createViewerGeometryStore", () => {
       layoutInlineSize: 630,
       motionProgress: 0.5,
       sidebarInlineSize: 210,
-      fallbackSurfaceScale: 1.5,
     });
     expect(listener).toHaveBeenCalledTimes(1);
 
@@ -640,7 +634,6 @@ describe("createViewerGeometryStore", () => {
       motionProgress: 1,
       phase: "settling",
       sidebarInlineSize: 0,
-      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -679,7 +672,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 420,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1,
     });
     expect(documentSurfaceElement.style.transform).toBe("");
     expect(listener).toHaveBeenCalledTimes(2);
@@ -702,7 +694,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 0,
       fromInlineSize: 840,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(3);
   });
@@ -793,7 +784,6 @@ describe("createViewerGeometryStore", () => {
       open: false,
       phase: "idle",
       sidebarInlineSize: 0,
-      fallbackSurfaceScale: 1,
     });
     expect(listener).toHaveBeenCalledTimes(3);
   });
@@ -833,7 +823,6 @@ describe("createViewerGeometryStore", () => {
       open: false,
       phase: "idle",
       sidebarInlineSize: 0,
-      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("0px");
     expect(documentSurfaceElement.style.transform).toBe("");
@@ -876,7 +865,6 @@ describe("createViewerGeometryStore", () => {
       sidebarInlineSize: 420,
       fromInlineSize: 420,
       toInlineSize: 840,
-      fallbackSurfaceScale: 1,
     });
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(documentSurfaceElement.style.transform).toBe("");
@@ -887,7 +875,6 @@ describe("createViewerGeometryStore", () => {
       layoutInlineSize: 630,
       motionProgress: 0.5,
       sidebarInlineSize: 210,
-      fallbackSurfaceScale: 1.5,
     });
     expect(sidebarGapElement.style.width).toBe("210px");
     expect(documentSurfaceElement.style.transform).toBe("");

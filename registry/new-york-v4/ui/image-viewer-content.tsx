@@ -35,10 +35,16 @@ import {
   type ViewerControlsState,
 } from "@/components/ui/viewer-controls";
 
-import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import {
+  FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+  readFileViewerBeforeLayoutMotionFrame,
+} from "./file-viewer-elements";
+import type { FileViewerMotionFrame } from "./file-viewer-motion-plan";
+import {
+  captureFileViewerFitWidthAnchorScreenOffset,
   createFileViewerFitWidthSurfaceMotionResolver,
   FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  resolveFileViewerFitWidthMotionAnchorBlock,
 } from "./file-viewer-fit-width-motion";
 import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
 import { resolveFileViewerRendererLayoutInlineSize } from "./file-viewer-renderer-contract";
@@ -47,7 +53,11 @@ import {
   useOptionalFileViewerRendererFrame,
 } from "./file-viewer-renderer-frame";
 import { useReadingFractionRebase } from "./use-reading-fraction-rebase";
-import { createImageFrameLayout } from "./image-viewer-virtualization";
+import {
+  createImageFrameLayout,
+  getCurrentImageFrameNumber,
+  getImageFrameLayout,
+} from "./image-viewer-virtualization";
 import { joinEffectKey } from "@/lib/effect-key";
 
 export function ImageViewerContent({
@@ -82,11 +92,9 @@ export function ImageViewerContent({
     rendererFrame,
   });
   // While the sidebar transition is running, hold the virtualization's
-  // mounted-frame window so the reading frames stay visible instead of
-  // windowing to the top and rebasing at settle. The freeze must span both the
-  // frozen slide and the settling rebase (the scroll container reports a
-  // transient top-of-document position until the settle scroll has landed);
-  // re-derive the window normally only once the transition is idle again.
+  // mounted-frame window so the reading frames stay mounted through the
+  // slide-start commit and the brief settle hold; re-derive the window
+  // normally once the transition is idle again.
   const freezeVisibleFrameWindow = rendererFrame.phase !== "idle";
   const {
     isFitWidth,
@@ -154,65 +162,117 @@ export function ImageViewerContent({
         rendererFrame.align,
       ],
     );
-  const preMotionScrollTopRef = React.useRef<number | null>(null);
+  const imageStageInlineSize =
+    frameLayout.maxFrameWidth + frameLayout.padding * 2;
+  const preMotionAnchorRef = React.useRef<{
+    frameNumber: number;
+    screenRelTop: number;
+  } | null>(null);
+  const lastAnchorBlockRef = React.useRef<number | null>(null);
   const writeImageAnchorBlockOffsetPx = React.useCallback(
     (anchorBlock: number) => {
       const element = imageDocumentSurfaceRef.current;
       if (!element) return;
+      const safeAnchorBlock = Number.isFinite(anchorBlock) ? anchorBlock : 0;
+      lastAnchorBlockRef.current = safeAnchorBlock;
       element.style.setProperty(
         FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
-        `${Number.isFinite(anchorBlock) ? anchorBlock : 0}px`,
+        `${safeAnchorBlock}px`,
       );
     },
     [],
   );
   const writeImageDocumentAnchorBlockOffset = React.useCallback(() => {
     const metrics = getScrollMetrics();
+    // Stage (physical) coordinates: the transform scales the stage, so the
+    // marker offset is anchored to the live DOM scroll position.
+    const physicalScrollTop = scrollerRef.current?.scrollTop ?? 0;
     writeImageAnchorBlockOffsetPx(
-      Math.max(0, metrics.scrollTop) +
+      Math.max(0, physicalScrollTop) +
         Math.max(0, metrics.viewportHeight) * IMAGE_READING_MARKER_RATIO,
     );
   }, [getScrollMetrics, writeImageAnchorBlockOffsetPx]);
-  // The transform must pin the exact screen line the reading-fraction rebase
-  // preserved. The frame layout scales linearly with the fit width, so the
-  // fixed point of the (scrollTop_old → scrollTop_new, ×r) map in settled
-  // stage coordinates is A = (T_new − T_old) / (1 − s₀) with s₀ = from/to.
+  // The transform must pin the exact screen line the slide-start commit
+  // preserved. Measured against the frame layout models (old model at
+  // capture, new model at solve) in the stage's PHYSICAL coordinates — the
+  // frame offsets are logical, so they are mapped through the paged-scroll
+  // delta (logical − physical) like the PDF runtime does. Exact across
+  // constant gaps and padding, rebase clamps, paged scroll spaces, and
+  // mid-flight retargets (the capture applies the in-flight transform it was
+  // seen under).
   const writeImageMotionAnchorBlockOffset = React.useCallback(() => {
     const metrics = getScrollMetrics();
-    const fromInlineSize = rendererFrame.fromInlineSize;
-    const toInlineSize = rendererFrame.toInlineSize;
-    const preMotionScrollTop = preMotionScrollTopRef.current;
-    const startScale =
-      fromInlineSize != null && toInlineSize != null && toInlineSize > 0
-        ? fromInlineSize / toInlineSize
-        : 1;
+    const physicalScrollTop = scrollerRef.current?.scrollTop ?? 0;
+    const logicalDelta = metrics.scrollTop - physicalScrollTop;
+    const preMotionAnchor = preMotionAnchorRef.current;
+    const newFrameLayout = preMotionAnchor
+      ? getImageFrameLayout(frameLayout, preMotionAnchor.frameNumber)
+      : null;
+    const anchorBlock =
+      preMotionAnchor && newFrameLayout
+        ? resolveFileViewerFitWidthMotionAnchorBlock({
+            fromInlineSize: rendererFrame.fromInlineSize,
+            probeScreenOffset: preMotionAnchor.screenRelTop,
+            probeStageOffset: newFrameLayout.offsetTop - logicalDelta,
+            scrollTop: physicalScrollTop,
+            stageInlineSize: imageStageInlineSize,
+            toInlineSize: rendererFrame.toInlineSize,
+          })
+        : null;
 
-    if (preMotionScrollTop == null || Math.abs(1 - startScale) <= 0.001) {
+    if (anchorBlock == null) {
       writeImageDocumentAnchorBlockOffset();
       return;
     }
-
-    writeImageAnchorBlockOffsetPx(
-      (metrics.scrollTop - preMotionScrollTop) / (1 - startScale),
-    );
+    writeImageAnchorBlockOffsetPx(anchorBlock);
   }, [
+    frameLayout,
     getScrollMetrics,
+    imageStageInlineSize,
     rendererFrame.fromInlineSize,
     rendererFrame.toInlineSize,
     writeImageAnchorBlockOffsetPx,
     writeImageDocumentAnchorBlockOffset,
   ]);
-  const measureBeforeLayoutMotionRef = React.useRef(() => {});
-  measureBeforeLayoutMotionRef.current = () => {
-    preMotionScrollTopRef.current = getScrollMetrics().scrollTop;
+  const measureBeforeLayoutMotionRef = React.useRef(
+    (_liveFrame: FileViewerMotionFrame | null) => {},
+  );
+  measureBeforeLayoutMotionRef.current = (liveFrame) => {
+    const metrics = getScrollMetrics();
+    const physicalScrollTop = scrollerRef.current?.scrollTop ?? 0;
+    const logicalDelta = metrics.scrollTop - physicalScrollTop;
+    const frameNumber = getCurrentImageFrameNumber({
+      layout: frameLayout,
+      scrollTop: metrics.scrollTop,
+      viewportHeight: metrics.viewportHeight,
+    });
+    const frame = getImageFrameLayout(frameLayout, frameNumber);
+    preMotionAnchorRef.current = frame
+      ? {
+          frameNumber,
+          screenRelTop: captureFileViewerFitWidthAnchorScreenOffset({
+            lastAnchorBlock: lastAnchorBlockRef.current,
+            liveFrame,
+            probeStageOffset: frame.offsetTop - logicalDelta,
+            scrollTop: physicalScrollTop,
+            stageInlineSize: imageStageInlineSize,
+          }),
+        }
+      : null;
   };
-  const handleBeforeLayoutMotion = React.useCallback(() => {
-    captureReadingFraction();
-    measureBeforeLayoutMotionRef.current();
-  }, [captureReadingFraction]);
+  const handleBeforeLayoutMotion = React.useCallback(
+    (event: Event) => {
+      captureReadingFraction();
+      measureBeforeLayoutMotionRef.current(
+        readFileViewerBeforeLayoutMotionFrame(event),
+      );
+    },
+    [captureReadingFraction],
+  );
   // Runs inside the slide-start commit after the fraction rebase (hook order
   // puts the rebase's layout effect first), pinning the transform before the
-  // first frame paints.
+  // first frame paints. Keyed on the transition id so a mid-flight retarget
+  // (same isTransitioning) re-solves against the new motion.
   const isImageShellTransitioning = rendererFrame.isTransitioning;
   const writeImageMotionAnchorBlockOffsetRef = React.useRef(
     writeImageMotionAnchorBlockOffset,
@@ -220,7 +280,12 @@ export function ImageViewerContent({
   writeImageMotionAnchorBlockOffsetRef.current =
     writeImageMotionAnchorBlockOffset;
   useKeyedLayoutEffect(
-    joinEffectKey(["image-motion-anchor", isImageShellTransitioning]),
+    joinEffectKey([
+      "image-motion-anchor",
+      isImageShellTransitioning,
+      rendererFrame.documentTransition.transitionId,
+      writeImageMotionAnchorBlockOffset,
+    ]),
     () => {
       if (!isImageShellTransitioning) return;
       writeImageMotionAnchorBlockOffsetRef.current();

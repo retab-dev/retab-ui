@@ -14,6 +14,7 @@ export type SidebarMotionBenchmarkMetricId =
   | "anchor-stability"
   | "cycle-invariance"
   | "rapid-toggle"
+  | "retarget-continuity"
   | "renderer-mutations"
   | "resource-quiet"
   | "layout-shift"
@@ -293,6 +294,7 @@ export async function runFileViewerSidebarMotionBenchmark(
     collectAnchorStabilityMetric(close, open),
     collectCycleInvarianceMetric(close, open),
     collectRapidToggleMetric(rapidToggle),
+    collectRetargetContinuityMetric(close, open, rapidToggle),
     collectRendererMutationsMetric(close, open),
     collectResourceQuietMetric(close, open),
     collectLayoutShiftMetric(close, open),
@@ -669,8 +671,18 @@ async function sampleRapidToggle(
   mutationObserver.observe(rendererRoot, { childList: true, subtree: true });
 
   try {
+    // Sample the interrupt frames too: the retarget frame (second click) must
+    // be in the stream so retarget-continuity can score the hand-off between
+    // the two motions.
     runtime.trigger.click();
-    await sampleAnimationFrames(BENCHMARK_RAPID_INTERRUPT_FRAME_COUNT);
+    for (
+      let index = 0;
+      index < BENCHMARK_RAPID_INTERRUPT_FRAME_COUNT;
+      index += 1
+    ) {
+      await nextAnimationFrame();
+      samples.push(readSample(runtime));
+    }
     runtime.trigger.click();
 
     for (let index = 0; index < BENCHMARK_SAMPLE_FRAME_COUNT; index += 1) {
@@ -1096,7 +1108,7 @@ function collectScrollEventsMetric(
     value: String(eventCount),
     budget: "<= 4",
     detail:
-      "The toggle dispatches at most one settle-rebase scroll per direction, never a scroll loop.",
+      "The toggle dispatches at most one slide-start rebase scroll per direction, never a scroll loop.",
   };
 }
 
@@ -1104,7 +1116,7 @@ function collectScrollGeometryMetric(
   close: BenchmarkMotionRun,
   open: BenchmarkMotionRun,
 ): SidebarMotionBenchmarkMetric {
-  // A shell-owned fit-width resize freezes renderer layout during the slide and
+  // A shell-owned fit-width resize commits the target layout at slide start and
   // moves the surface with a transform; the DOM scroll range is materialized at
   // settle. The invariant is therefore the settled rendered reading anchor,
   // while in-flight smoothness is covered by renderer continuity, anchor
@@ -1261,6 +1273,77 @@ function collectCycleInvarianceMetric(
   };
 }
 
+// HARD constraint on the reading line: the content under the marker may only
+// move as fast as the motion that drives it. Per consecutive-frame pair the
+// content step is bounded by a small noise floor PLUS a multiple of that
+// frame's gap-width step — at interior positions the anchor pins the marker
+// (steps ~0); at clamped positions (document extremes) the pinned fixed point
+// sits off-viewport, so marker content legitimately drifts a small multiple
+// of the gap sweep; on a dropped frame the gap step grows with it (no flake).
+// The frames where snaps live — the retarget hand-off of an interrupted
+// toggle and the settle boundary — have a ~zero gap step, so the strict floor
+// applies exactly there (the pre-fix retarget bug measured 50–700px against
+// this ~3px allowance). Endpoint checks (rapid-toggle) structurally miss
+// this: a mid-flight anchor solved against a stale fixed point snaps the
+// content at the second click and still lands on the correct endpoint.
+const RETARGET_CONTINUITY_NOISE_FLOOR_PX = 3;
+const RETARGET_CONTINUITY_GAP_STEP_FACTOR = 3;
+
+function collectRetargetContinuityMetric(
+  close: BenchmarkMotionRun,
+  open: BenchmarkMotionRun,
+  rapidToggle: BenchmarkRapidToggleRun,
+): SidebarMotionBenchmarkMetric {
+  let maxExcessPx = 0;
+  let maxStepPx = 0;
+  let scoredPairCount = 0;
+
+  for (const run of [close, open, rapidToggle]) {
+    const samples = [run.before, ...run.samples, run.after];
+    for (let index = 1; index < samples.length; index += 1) {
+      const previous = samples[index - 1]!;
+      const current = samples[index]!;
+      const previousAnchor = previous.readingAnchor;
+      const currentAnchor = current.readingAnchor;
+      if (
+        !previousAnchor ||
+        !currentAnchor ||
+        previousAnchor.kind === "top" ||
+        currentAnchor.kind === "top" ||
+        previousAnchor.id !== currentAnchor.id
+      ) {
+        continue;
+      }
+      const anchorHeight =
+        current.rendererAnchors.find(
+          (anchor) => anchor.id === currentAnchor.id,
+        )?.height ?? 0;
+      if (anchorHeight <= 0) continue;
+      scoredPairCount += 1;
+      const stepPx =
+        Math.abs(currentAnchor.yRatio - previousAnchor.yRatio) * anchorHeight;
+      const gapStepPx = Math.abs(current.gapWidth - previous.gapWidth);
+      maxStepPx = Math.max(maxStepPx, stepPx);
+      maxExcessPx = Math.max(
+        maxExcessPx,
+        stepPx -
+          (RETARGET_CONTINUITY_NOISE_FLOOR_PX +
+            RETARGET_CONTINUITY_GAP_STEP_FACTOR * gapStepPx),
+      );
+    }
+  }
+
+  return {
+    id: "retarget-continuity",
+    label: "Retarget continuity",
+    passed: maxExcessPx <= 0,
+    value: `${Math.max(0, maxExcessPx).toFixed(2)}px excess / ${maxStepPx.toFixed(2)}px max step / ${scoredPairCount} pairs`,
+    budget: `<= ${RETARGET_CONTINUITY_NOISE_FLOOR_PX}px + ${RETARGET_CONTINUITY_GAP_STEP_FACTOR}x gap step, per frame`,
+    detail:
+      "The content under the reading marker may move at most as fast as the sidebar gap that drives it — through the slide, the settle boundary, and the retarget frame of an interrupted toggle.",
+  };
+}
+
 function collectRapidToggleMetric(
   rapidToggle: BenchmarkRapidToggleRun,
 ): SidebarMotionBenchmarkMetric {
@@ -1374,12 +1457,12 @@ function collectMainThreadMetric(
     // The resize re-rasters the visible pages at the new scale on settle, which
     // is real main-thread work (raster is deferred off the slide so it never
     // starves the animation, then runs once at the end). Bound it to catch a
-    // pathological blocking task while accepting the settle re-raster.
+    // pathological blocking task while accepting the post-motion re-raster.
     passed: longTaskDuration <= 120,
     value: `${longTaskDuration.toFixed(1)}ms / ${longTaskCount}`,
     budget: "<= 120.0ms",
     detail:
-      "Raster is deferred off the slide; the settle re-raster stays within a bounded main-thread budget.",
+      "Raster is deferred off the slide; the post-motion re-raster stays within a bounded main-thread budget.",
   };
 }
 

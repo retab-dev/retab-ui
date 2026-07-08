@@ -232,7 +232,9 @@ export function useViewerDocumentGeometryTransaction<Anchor>({
         previousVisualLayerRect: visualLayerRectRef.current,
         shouldAnimate:
           isLayoutTransition && transition.visualPolicy === "document-flip",
-        shouldRestoreScroll: transition.scrollPolicy !== "defer",
+        // Every remaining scroll policy restores (rebase) or preserves through
+        // an explicit restore target; nothing defers anymore.
+        shouldRestoreScroll: true,
         viewportBlockSize: transactionViewportBlockSize,
       };
     },
@@ -362,9 +364,7 @@ function shouldRetainViewerDocumentTransitionAnchor<Anchor>(
   layout: ViewerDocumentLayoutModel<Anchor>,
 ) {
   const transition = getViewerDocumentTransition(layout);
-  return (
-    layout.isTransitioning === true || transition.layoutPolicy === "frozen"
-  );
+  return layout.isTransitioning === true;
 }
 
 function getReusableViewerDocumentTransitionAnchor<Anchor>({

@@ -120,7 +120,6 @@ const FILE_VIEWER_SUBPIXEL_ENDPOINT_EPSILON_PX = 1;
 export const DEFAULT_FILE_VIEWER_MOTION_FRAME: FileViewerMotionFrame = {
   shellInlineSize: 0,
   durationMs: FILE_VIEWER_MOTION_DURATION_MS,
-  fallbackSurfaceScale: 1,
   fromInlineSize: 0,
   layoutInlineSize: 0,
   mode: "overlay",
@@ -294,8 +293,6 @@ export function createFileViewerMotionKernel({
       sidebarInlineSize,
       sidebarWidth: motion.to.sidebarWidth,
       toInlineSize: motion.to.layoutInlineSize,
-      fallbackSurfaceScale:
-        fromInlineSize > 0 ? layoutInlineSize / fromInlineSize : 1,
     };
   };
 
@@ -382,6 +379,9 @@ export function createFileViewerMotionKernel({
     ) {
       const idleFrame = settleRelease.idleFrame;
       settleRelease = null;
+      // Natural completion: close the flight record so the next motion does
+      // not mark this one interrupted.
+      activeFlightRecord = null;
       commit(idleFrame);
       return;
     }
@@ -395,17 +395,35 @@ export function createFileViewerMotionKernel({
     scheduleSettleReleaseFrame();
   };
 
-  const dispatchBeforeLayoutMotion = () => {
+  // The event carries the kernel's LIVE frame so renderers can capture their
+  // pre-commit anchor against what is actually on screen — during a mid-flight
+  // retarget that is the settled layout PLUS the in-flight transform, not the
+  // settled layout alone.
+  const dispatchBeforeLayoutMotion = (currentFrame: FileViewerMotionFrame) => {
     documentSurface?.element.dispatchEvent(
-      new Event(FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT),
+      new CustomEvent<FileViewerMotionFrame>(
+        FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+        { detail: currentFrame },
+      ),
     );
+  };
+
+  const interruptActiveFlightRecord = () => {
+    if (!activeFlightRecord) return;
+    activeFlightRecord.interrupted = true;
+    activeFlightRecord = null;
   };
 
   const retarget = (nextTarget: FileViewerMotionTarget, animate: boolean) => {
     cancelSettleRelease();
-    const currentFrame = activeMotion
-      ? readMotionSample(activeMotion)
-      : interactiveFrame.shellInlineSize > 0
+    // Continuity is with what is PAINTED, not with the clock: mid-flight the
+    // screen shows the last tick's commit (`interactiveFrame`), which can be
+    // a frame behind a fresh clock sample. Planning (and the before-motion
+    // capture renderers do off the event detail) from the painted frame keeps
+    // the retarget hand-off pixel-continuous; the new motion simply re-lerps
+    // from the painted geometry.
+    const currentFrame =
+      interactiveFrame.shellInlineSize > 0
         ? interactiveFrame
         : createFileViewerIdleMotionFrame(
             createFileViewerMotionRestFrame(target),
@@ -416,11 +434,12 @@ export function createFileViewerMotionKernel({
       nextTarget,
     });
     if (shouldDispatchBeforeLayoutMotion(plan)) {
-      dispatchBeforeLayoutMotion();
+      dispatchBeforeLayoutMotion(currentFrame);
     }
     target = plan.resolvedTarget;
 
     if (!plan.shouldAnimate) {
+      if (activeMotion) interruptActiveFlightRecord();
       activeMotion = null;
       cancelTick();
       commit(createFileViewerIdleMotionFrame(plan.nextRestFrame));
@@ -454,6 +473,18 @@ export function createFileViewerMotionKernel({
     if (activeMotion) {
       target = nextTarget;
       if (areFileViewerMotionRestFramesEqual(activeMotion.to, nextRestFrame)) {
+        return;
+      }
+      // A mode flip mid-motion (breakpoint crossing during the slide) cannot
+      // be animated: React re-renders the new mode immediately, so an inline
+      // slide continuing against overlay DOM (or vice versa) double-moves the
+      // surface. Snap to the new rest geometry instead.
+      if (nextRestFrame.mode !== activeMotion.to.mode) {
+        interruptActiveFlightRecord();
+        activeMotion = null;
+        cancelTick();
+        cancelSettleRelease();
+        commit(createFileViewerIdleMotionFrame(nextRestFrame));
         return;
       }
       retarget(nextTarget, true);

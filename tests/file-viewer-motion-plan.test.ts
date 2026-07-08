@@ -70,7 +70,11 @@ describe("FileViewer motion plan", () => {
     expect(plan.nextRestFrame.sidebarInlineSize).toBe(0);
   });
 
-  it("preserves the original raster width when retargeting mid-motion", () => {
+  // A mid-flight retarget continues from the picture the reader is looking
+  // at: the live interpolated width, not the interrupted motion's origin.
+  // Renderers solve their anchor with this as the first-frame width, so the
+  // retarget frame stays pixel-continuous.
+  it("continues from the live interpolated width when retargeting mid-motion", () => {
     const currentFrame = {
       ...createFileViewerIdleMotionFrame(
         createFileViewerMotionRestFrame({
@@ -82,9 +86,14 @@ describe("FileViewer motion plan", () => {
           sidebarWidth: 240,
         }),
       ),
-      isTransitioning: true,
+      phase: "sliding" as const,
+      motionId: 1,
+      motionProgress: 0.4,
+      // Mid-flight: gap interpolated to 96px → live layout width 904.
+      sidebarInlineSize: 96,
+      layoutInlineSize: 904,
       fromInlineSize: 1000,
-      fallbackSurfaceScale: 0.9,
+      toInlineSize: 760,
     };
     const plan = createFileViewerMotionPlan({
       animate: true,
@@ -100,6 +109,6 @@ describe("FileViewer motion plan", () => {
     });
 
     expect(plan.shouldAnimate).toBe(true);
-    expect(plan.fromInlineSize).toBe(1000);
+    expect(plan.fromInlineSize).toBe(904);
   });
 });

@@ -24,8 +24,11 @@ export type ViewerDocumentTransitionSource =
   | "viewer-shell"
   | "document-layout";
 
-export type ViewerDocumentLayoutPolicy = "live" | "frozen" | "target";
-export type ViewerDocumentScrollPolicy = "preserve" | "defer" | "rebase";
+// Commit-then-relax: layout commits its target inside the motion's first
+// frame and scroll rebases in the same commit, so there is no frozen layout
+// and no deferred scroll left in the vocabulary.
+export type ViewerDocumentLayoutPolicy = "live" | "target";
+export type ViewerDocumentScrollPolicy = "preserve" | "rebase";
 export type ViewerDocumentVisualPolicy =
   | "none"
   | "document-flip"

@@ -25,7 +25,6 @@ export type FileViewerMotionTarget = {
 export type FileViewerMotionFrame = {
   shellInlineSize: number;
   durationMs: number;
-  fallbackSurfaceScale: number;
   fromInlineSize: number;
   layoutInlineSize: number;
   mode: FileViewerSidebarMode;
@@ -85,7 +84,6 @@ export function createFileViewerIdleMotionFrame(
 ): FileViewerMotionFrame {
   return {
     ...restFrame,
-    fallbackSurfaceScale: 1,
     fromInlineSize: restFrame.layoutInlineSize,
     motionId: null,
     motionProgress: 1,
@@ -122,10 +120,14 @@ export function createFileViewerMotionPlan({
   });
   const currentRestFrame = pickFileViewerMotionRestFrame(currentFrame);
   const nextRestFrame = createFileViewerMotionRestFrame(resolvedTarget);
+  // The motion's visual origin is what is on screen RIGHT NOW: for a fresh
+  // motion that is the rest layout; for a mid-flight retarget it is the live
+  // interpolated width, so the new motion's first frame (and every renderer's
+  // anchor solve) continues from the picture the reader is looking at rather
+  // than the interrupted motion's origin.
   const fromInlineSize =
-    currentFrame.phase === "sliding" ||
-    !areFileViewerMotionNumbersEqual(currentFrame.fallbackSurfaceScale, 1)
-      ? currentFrame.fromInlineSize
+    currentFrame.phase === "sliding"
+      ? currentFrame.layoutInlineSize
       : currentRestFrame.layoutInlineSize;
   const shouldAnimate =
     animate &&
@@ -182,10 +184,6 @@ export function areFileViewerMotionFramesEqual(
       next.motionProgress,
     ) &&
     previous.phase === next.phase &&
-    areFileViewerMotionNumbersEqual(
-      previous.fallbackSurfaceScale,
-      next.fallbackSurfaceScale,
-    ) &&
     areFileViewerMotionNumbersEqual(
       previous.fromInlineSize,
       next.fromInlineSize,

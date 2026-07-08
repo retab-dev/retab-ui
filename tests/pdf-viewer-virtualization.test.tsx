@@ -449,8 +449,8 @@ describe("usePdfPageVirtualization", () => {
     const viewportHeight = 400;
     const scrollTop = getPdfPageLayout(layout, 10)!.offsetTop;
     const transition: ViewerDocumentTransition = {
-      layoutPolicy: "frozen",
-      scrollPolicy: "defer",
+      layoutPolicy: "target",
+      scrollPolicy: "rebase",
       source: "viewer-shell",
       transitionId: "test-chrome-resize",
       visualPolicy: "shell-transform",
@@ -536,8 +536,8 @@ describe("usePdfPageVirtualization", () => {
     const initialScrollTop = getPdfPageLayout(initialLayout, 10)!.offsetTop;
     const nextScrollTop = getPdfPageLayout(nextLayout, 10)!.offsetTop;
     const freezeTransition: ViewerDocumentTransition = {
-      layoutPolicy: "frozen",
-      scrollPolicy: "defer",
+      layoutPolicy: "target",
+      scrollPolicy: "rebase",
       source: "viewer-shell",
       transitionId: "test-chrome-resize",
       visualPolicy: "shell-transform",

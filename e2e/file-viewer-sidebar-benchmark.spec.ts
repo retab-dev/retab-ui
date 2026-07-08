@@ -142,11 +142,14 @@ type PdfPageGapRun = {
 };
 
 type PdfPageGapPair = {
+  // Uniform-scale invariant: gaps interpolate from the first in-flight value
+  // (gap × first-frame scale) to the settled 16px — monotonically, inside the
+  // envelope spanned by the first observation, the first in-flight value, and
+  // the settled endpoint.
+  envelopeExcess: number;
   gapValues: number[];
-  movingRange: number;
   pair: string;
-  range: number;
-  reversals: number;
+  postStepReversals: number;
   settleSnap: number;
 };
 
@@ -385,7 +388,7 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       "data-benchmark-run-scroll-target",
       "page-4-gap",
     );
-    await expect(page.locator("[data-benchmark-metric]")).toHaveCount(20);
+    await expect(page.locator("[data-benchmark-metric]")).toHaveCount(21);
   });
 
   test("telemetry runtime exposes full active benchmark result", async ({
@@ -432,7 +435,7 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     expect(result).not.toBeNull();
     expect(result?.format).toBe("tiff");
     expect(result?.sampledFrameCount).toBeGreaterThan(80);
-    expect(result?.metrics).toHaveLength(20);
+    expect(result?.metrics).toHaveLength(21);
     expect(result?.runs?.close.samples.length).toBeGreaterThan(20);
     expect(result?.runs?.open.samples.length).toBeGreaterThan(20);
     expect(result?.runs?.rapidToggle.samples.length).toBeGreaterThan(20);
@@ -1653,8 +1656,6 @@ async function runPdfPageGapBenchmark(
                 (sample) => sample.gaps.find((gap) => gap.pair === pair)?.value,
               )
               .filter((value): value is number => Number.isFinite(value));
-            const range = valueRange(values);
-            const movingRange = valueRange(movingValues);
             const settleSnap =
               movingValues.length > 0 && values.length > 0
                 ? Math.abs(
@@ -1662,13 +1663,44 @@ async function runPdfPageGapBenchmark(
                       movingValues[movingValues.length - 1],
                   )
                 : 0;
+            // Uniform scale interpolates the on-screen gap from
+            // gap × first-frame-scale back to the settled value. The envelope
+            // spans the first observation (which for a page pair revealed by
+            // the motion is already in-flight), the first in-flight value,
+            // and the settled endpoint; within it the gap must progress
+            // monotonically (no wobble). Run-level cycle invariance and the
+            // settle-snap check own return-to-baseline.
+            const firstObserved = values[0] ?? 0;
+            const inFlightStart = values[1] ?? firstObserved;
+            const settled = values[values.length - 1] ?? firstObserved;
+            const envelopeMin = Math.min(
+              firstObserved,
+              inFlightStart,
+              settled,
+            );
+            const envelopeMax = Math.max(
+              firstObserved,
+              inFlightStart,
+              settled,
+            );
+            const envelopeExcess = values.reduce(
+              (excess, value) =>
+                Math.max(
+                  excess,
+                  envelopeMin - value,
+                  value - envelopeMax,
+                ),
+              0,
+            );
 
             return {
+              envelopeExcess: roundMetric(Math.max(0, envelopeExcess)),
               gapValues: values.map(roundMetric),
-              movingRange: roundMetric(movingRange),
               pair,
-              range: roundMetric(range),
-              reversals: countDirectionalReversals(values, 0.25),
+              postStepReversals: countDirectionalReversals(
+                values.slice(1),
+                0.25,
+              ),
               settleSnap: roundMetric(settleSnap),
             };
           }),
@@ -1750,18 +1782,11 @@ function collectPdfPageGapRunFailures(run: PdfPageGapRun, label: string) {
   const prefix = `${label} ${run.action}`;
 
   for (const pair of run.pairs) {
-    if (pair.range > 1) {
+    if (pair.envelopeExcess > 1) {
       failures.push(
-        `${prefix} ${pair.pair} page gap range exceeded 1px: ${formatValues(
-          pair.gapValues,
-        )}`,
-      );
-    }
-    if (pair.movingRange > 1) {
-      failures.push(
-        `${prefix} ${pair.pair} moving page gap range exceeded 1px: ${formatValues(
-          pair.gapValues,
-        )}`,
+        `${prefix} ${pair.pair} page gap left its interpolation envelope by ${pair.envelopeExcess.toFixed(
+          2,
+        )}px: ${formatValues(pair.gapValues)}`,
       );
     }
     if (pair.settleSnap > 1) {
@@ -1771,9 +1796,9 @@ function collectPdfPageGapRunFailures(run: PdfPageGapRun, label: string) {
         )}px after sidebar movement: ${formatValues(pair.gapValues)}`,
       );
     }
-    if (pair.reversals > 0) {
+    if (pair.postStepReversals > 0) {
       failures.push(
-        `${prefix} ${pair.pair} page gap reversed ${pair.reversals} times: ${formatValues(
+        `${prefix} ${pair.pair} page gap reversed ${pair.postStepReversals} times mid-interpolation: ${formatValues(
           pair.gapValues,
         )}`,
       );
@@ -2535,11 +2560,20 @@ function collectVisualSmoothnessFailures(
 
     if (start == null || end == null || values.length < 2) continue;
 
+    // Commit-then-relax reprojects the settled layout with one uniform
+    // transform, so the surface BOX legitimately starts at a transformed
+    // position (scaled gaps/padding pin the reading line, not the box) and
+    // interpolates to the settled endpoint. The envelope therefore spans the
+    // pre-toggle box, the first in-flight frame, and the settled endpoint;
+    // inside it the box must progress monotonically and settle without a
+    // snap. Content-line continuity is asserted separately (the hard
+    // retarget-continuity budget in the benchmark harness).
+    const inFlightStart = values[1] ?? start;
     failures.push(
       ...collectOvershootFailures({
         label: field.label,
-        start,
-        end,
+        start: Math.min(start, inFlightStart, end),
+        end: Math.max(start, inFlightStart, end),
         values,
         tolerance: 2,
       }),
@@ -2547,9 +2581,9 @@ function collectVisualSmoothnessFailures(
     failures.push(
       ...collectMonotonicFailures({
         label: field.label,
-        start,
+        start: inFlightStart,
         end,
-        values,
+        values: values.slice(1),
         tolerance: 0.75,
       }),
     );

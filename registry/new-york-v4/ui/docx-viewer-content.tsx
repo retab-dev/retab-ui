@@ -11,12 +11,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { cn } from "@/lib/utils";
 
-import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import {
+  FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+  readFileViewerBeforeLayoutMotionFrame,
+} from "./file-viewer-elements";
+import {
+  captureFileViewerFitWidthAnchorScreenOffset,
   createFileViewerFitWidthSurfaceMotionResolver,
   FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  resolveFileViewerFitWidthMotionAnchorBlock,
 } from "./file-viewer-fit-width-motion";
 import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
+import type { FileViewerMotionFrame } from "./file-viewer-motion-plan";
 import {
   resolveFileViewerRendererLayoutInlineSize,
   type FileViewerDocumentAlign,
@@ -36,6 +42,8 @@ import {
   createDocxPageWindowForPage,
   createDocxPageWindowFromScroll,
   DOCX_READING_MARKER_RATIO,
+  DOCX_VIEWER_PADDING_PX,
+  findDocxPageByMarker,
   type DocxPageLayout,
 } from "./docx-viewer-layout";
 import {
@@ -212,26 +220,104 @@ export function DocxViewerContent({
   const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [documentSurfaceElement, setDocumentSurfaceElementState] =
     React.useState<HTMLDivElement | null>(null);
+  const preMotionAnchorRef = React.useRef<{
+    pageNumber: number;
+    screenRelTop: number;
+  } | null>(null);
+  const lastAnchorBlockRef = React.useRef<number | null>(null);
+  const writeDocxAnchorBlockOffsetPx = React.useCallback(
+    (anchorBlock: number) => {
+      const element = documentSurfaceRef.current;
+      if (!element) return;
+      const safeAnchorBlock = Number.isFinite(anchorBlock) ? anchorBlock : 0;
+      lastAnchorBlockRef.current = safeAnchorBlock;
+      element.style.setProperty(
+        FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+        `${safeAnchorBlock}px`,
+      );
+    },
+    [],
+  );
   const writeDocxDocumentAnchorBlockOffset = React.useCallback(() => {
-    const element = documentSurfaceRef.current;
     const viewport = scrollViewportRef.current;
-    if (!element || !viewport) return;
-
-    const readingBlock =
+    if (!viewport) return;
+    writeDocxAnchorBlockOffsetPx(
       Math.max(0, viewport.scrollTop) +
-      Math.max(0, viewport.clientHeight) * DOCX_READING_MARKER_RATIO;
-    element.style.setProperty(
-      FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
-      `${readingBlock}px`,
+        Math.max(0, viewport.clientHeight) * DOCX_READING_MARKER_RATIO,
     );
-  }, [scrollViewportRef]);
-  const measureBeforeLayoutMotionRef = React.useRef(() => {});
-  measureBeforeLayoutMotionRef.current = () => {
+  }, [scrollViewportRef, writeDocxAnchorBlockOffsetPx]);
+  // The transform must pin the exact screen line the slide-start commit
+  // preserved. Measured against the page layout models (intrinsic page tops ×
+  // the old scale at capture, × the new scale at solve), which is exact
+  // across the constant page gap and padding, rebase clamps, and mid-flight
+  // retargets (the capture applies the in-flight transform it was seen under).
+  const writeDocxMotionAnchorBlockOffset = React.useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    const preMotionAnchor = preMotionAnchorRef.current;
+    const page =
+      preMotionAnchor && pageLayout
+        ? (pageLayout.pages[preMotionAnchor.pageNumber - 1] ?? null)
+        : null;
+    const anchorBlock =
+      viewport && preMotionAnchor && page && stageInlineSize != null
+        ? resolveFileViewerFitWidthMotionAnchorBlock({
+            fromInlineSize: rendererFrame.fromInlineSize,
+            probeScreenOffset: preMotionAnchor.screenRelTop,
+            probeStageOffset: DOCX_VIEWER_PADDING_PX + page.top * scale,
+            scrollTop: viewport.scrollTop,
+            stageInlineSize,
+            toInlineSize: rendererFrame.toInlineSize,
+          })
+        : null;
+
+    if (anchorBlock == null) {
+      writeDocxDocumentAnchorBlockOffset();
+      return;
+    }
+    writeDocxAnchorBlockOffsetPx(anchorBlock);
+  }, [
+    pageLayout,
+    rendererFrame.fromInlineSize,
+    rendererFrame.toInlineSize,
+    scale,
+    scrollViewportRef,
+    stageInlineSize,
+    writeDocxAnchorBlockOffsetPx,
+    writeDocxDocumentAnchorBlockOffset,
+  ]);
+  const measureBeforeLayoutMotionRef = React.useRef(
+    (_liveFrame: FileViewerMotionFrame | null) => {},
+  );
+  measureBeforeLayoutMotionRef.current = (liveFrame) => {
+    const viewport = scrollViewportRef.current;
+    const page =
+      viewport && pageLayout
+        ? findDocxPageByMarker({
+            layout: pageLayout,
+            scale,
+            scrollTop: viewport.scrollTop,
+            viewportHeight: viewport.clientHeight,
+          })
+        : null;
+    preMotionAnchorRef.current =
+      viewport && page && stageInlineSize != null
+        ? {
+            pageNumber: page.pageNumber,
+            screenRelTop: captureFileViewerFitWidthAnchorScreenOffset({
+              lastAnchorBlock: lastAnchorBlockRef.current,
+              liveFrame,
+              probeStageOffset: DOCX_VIEWER_PADDING_PX + page.top * scale,
+              scrollTop: viewport.scrollTop,
+              stageInlineSize,
+            }),
+          }
+        : null;
     measureScroll();
-    writeDocxDocumentAnchorBlockOffset();
   };
-  const handleBeforeLayoutMotion = React.useCallback(() => {
-    measureBeforeLayoutMotionRef.current();
+  const handleBeforeLayoutMotion = React.useCallback((event: Event) => {
+    measureBeforeLayoutMotionRef.current(
+      readFileViewerBeforeLayoutMotionFrame(event),
+    );
   }, []);
   const setDocumentSurfaceElement = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -269,19 +355,21 @@ export function DocxViewerContent({
       resolveMotionStyle: resolveSurfaceMotionStyle,
     });
   });
-  // The before-layout-motion event fires before the motion target is known,
-  // so the slide-start commit rewrites the block anchor with the rebase-aware
-  // value (useDocxViewerScroll's layout effect has already restored the
-  // reading anchor onto the target layout by the time this runs).
+  // Runs inside the slide-start commit after useDocxViewerScroll's layout
+  // effect has restored the reading anchor onto the target layout, pinning
+  // the transform before the first frame paints. Keyed on the transition id
+  // so a mid-flight retarget (same isTransitioning) re-solves against the
+  // new motion.
   useKeyedLayoutEffect(
     joinEffectKey([
       "docx-anchor-rebase",
+      rendererFrame.documentTransition.transitionId,
       rendererFrame.isTransitioning,
-      writeDocxDocumentAnchorBlockOffset,
+      writeDocxMotionAnchorBlockOffset,
     ]),
     () => {
       if (!rendererFrame.isTransitioning) return;
-      writeDocxDocumentAnchorBlockOffset();
+      writeDocxMotionAnchorBlockOffset();
     },
   );
 

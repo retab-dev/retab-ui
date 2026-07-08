@@ -36,6 +36,7 @@
     "verify:markdown-viewer:performance": "node scripts/verify-markdown-viewer-performance.mjs",
     "verify:text-viewer:performance": "node scripts/verify-text-viewer-performance.mjs",
     "verify:viewer-skeletons": "node scripts/verify-viewer-skeletons.mjs",
+    "verify:file-viewer-visual-blink": "playwright test e2e/file-viewer-visual-blink.spec.ts --project=chromium",
     "verify:file-viewer-sidebar-motion": "playwright test e2e/file-viewer-sidebar-benchmark.spec.ts --project=chromium",
     "verify:file-viewer-sidebar-motion:strict": "FILE_VIEWER_ASSERT_RENDERER_CONTINUITY=1 playwright test e2e/file-viewer-sidebar-benchmark.spec.ts --project=chromium",
     "verify:file-viewer-sidebar-motion:visual": "FILE_VIEWER_ASSERT_VISUAL_SMOOTHNESS=1 playwright test e2e/file-viewer-sidebar-benchmark.spec.ts --project=chromium --grep \"PDF sidebar\"",

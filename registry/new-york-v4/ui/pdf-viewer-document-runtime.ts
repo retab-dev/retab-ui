@@ -15,8 +15,16 @@ import {
 import type { PdfDocumentLayoutState } from "./pdf-viewer-document-layout";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
 import type { PdfDocumentPagesLayerProps } from "./pdf-viewer-pages-layer";
-import { FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY } from "./file-viewer-fit-width-motion";
-import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import {
+  FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  captureFileViewerFitWidthAnchorScreenOffset,
+  resolveFileViewerFitWidthMotionAnchorBlock,
+} from "./file-viewer-fit-width-motion";
+import {
+  FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
+  readFileViewerBeforeLayoutMotionFrame,
+} from "./file-viewer-elements";
+import type { FileViewerMotionFrame } from "./file-viewer-motion-plan";
 import { usePdfRenderedPageCache } from "./pdf-viewer-render-cache";
 import {
   PDF_SCROLLING_PAGE_RENDER_CONCURRENCY,
@@ -80,21 +88,23 @@ export function usePdfDocumentRuntime({
   });
   const documentSurfaceElementRef = React.useRef<HTMLElement | null>(null);
   // The transform's anchor line, in the visual stage's own (physical scroll)
-  // coordinates. Layout and scroll are already settled when a shell motion
-  // slides. The idle write is the live reading-marker offset; the slide-start
-  // write derives the EXACT fixed point of the rebase that just ran (see
-  // below), so the transform's first frame reproduces the pre-toggle screen
-  // even where the rebase clamped (document top/bottom).
+  // coordinates. The idle write is the live reading-marker offset; the
+  // slide-start write derives the EXACT fixed point of the commit that just
+  // ran (see writeMotionAnchorBlockOffset), so the transform's first frame
+  // reproduces the pre-toggle screen even where the rebase clamped.
   const preMotionAnchorRef = React.useRef<{
     pageNumber: number;
     screenRelTop: number;
   } | null>(null);
+  const lastAnchorBlockRef = React.useRef<number | null>(null);
   const writeAnchorBlockOffsetPx = React.useCallback((anchorBlock: number) => {
     const documentSurfaceElement = documentSurfaceElementRef.current;
     if (!documentSurfaceElement) return;
+    const safeAnchorBlock = Number.isFinite(anchorBlock) ? anchorBlock : 0;
+    lastAnchorBlockRef.current = safeAnchorBlock;
     documentSurfaceElement.style.setProperty(
       FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
-      `${Number.isFinite(anchorBlock) ? anchorBlock : 0}px`,
+      `${safeAnchorBlock}px`,
     );
   }, []);
   const writeDocumentAnchorBlockOffset = React.useCallback(() => {
@@ -107,44 +117,37 @@ export function usePdfDocumentRuntime({
   // The transform must pin the exact screen line the slide-start commit
   // preserved, or the first sliding frame drifts off the pre-toggle screen.
   // Rather than assuming anything about the rebase or the layout models,
-  // measure the fixed point: capture the marker page's screen-relative top
-  // against the OLD layout model before the commit, then solve for the stage
-  // anchor A that puts the same page top back on that screen line under the
-  // NEW layout model and the first frame's scale s₀:
-  //   s₀·O_new + (1 − s₀)·A − physicalScrollTop = screenRelTop_old
-  // where O_new is the page's stage offset in the committed layout. This is
-  // exact in both direct and rebased (paged) scroll spaces, at clamps, and
-  // regardless of how measured/estimated page sizes shifted the models.
+  // measure the fixed point: capture the marker page's (transform-aware)
+  // on-screen top against the OLD layout model before the commit, then solve
+  // for the stage anchor that puts the same page top back on that screen line
+  // under the NEW layout model at the motion's first-frame scale. Exact in
+  // both direct and rebased (paged) scroll spaces, at clamps, across
+  // measured/estimated page-size differences, and through mid-flight
+  // retargets (the capture applies the in-flight transform it was seen under).
   const writeMotionAnchorBlockOffset = React.useCallback(() => {
     const metrics = getScrollMetrics();
-    const fromInlineSize = layout.rendererFrame.fromInlineSize;
-    const toInlineSize = layout.rendererFrame.toInlineSize;
     const preMotionAnchor = preMotionAnchorRef.current;
-    const startScale =
-      fromInlineSize != null && toInlineSize != null && toInlineSize > 0
-        ? fromInlineSize / toInlineSize
-        : 1;
     const newPageLayout = preMotionAnchor
       ? getPdfPageLayout(layout.pageLayout, preMotionAnchor.pageNumber)
       : null;
+    const logicalDelta = metrics.scrollTop - metrics.physicalScrollTop;
+    const anchorBlock =
+      preMotionAnchor && newPageLayout
+        ? resolveFileViewerFitWidthMotionAnchorBlock({
+            fromInlineSize: layout.rendererFrame.fromInlineSize,
+            probeScreenOffset: preMotionAnchor.screenRelTop,
+            probeStageOffset: newPageLayout.offsetTop - logicalDelta,
+            scrollTop: metrics.physicalScrollTop,
+            stageInlineSize: layout.pageLayout.maxPageWidth,
+            toInlineSize: layout.rendererFrame.toInlineSize,
+          })
+        : null;
 
-    if (
-      !preMotionAnchor ||
-      !newPageLayout ||
-      Math.abs(1 - startScale) <= 0.001
-    ) {
+    if (anchorBlock == null) {
       writeDocumentAnchorBlockOffset();
       return;
     }
-
-    const logicalDelta = metrics.scrollTop - metrics.physicalScrollTop;
-    const stageOffset = newPageLayout.offsetTop - logicalDelta;
-    writeAnchorBlockOffsetPx(
-      (preMotionAnchor.screenRelTop +
-        metrics.physicalScrollTop -
-        startScale * stageOffset) /
-        (1 - startScale),
-    );
+    writeAnchorBlockOffsetPx(anchorBlock);
   }, [
     getScrollMetrics,
     layout.pageLayout,
@@ -153,25 +156,37 @@ export function usePdfDocumentRuntime({
     writeAnchorBlockOffsetPx,
     writeDocumentAnchorBlockOffset,
   ]);
-  const measureBeforeLayoutMotion = React.useCallback(() => {
-    const metrics = getScrollMetrics();
-    const markerOffset =
-      metrics.scrollTop +
-      Math.max(0, metrics.viewportHeight) * PDF_READING_MARKER_RATIO;
-    const pageNumber = findPdfPageByOffset(layout.pageLayout, markerOffset);
-    const pageLayout = getPdfPageLayout(layout.pageLayout, pageNumber);
-    preMotionAnchorRef.current = pageLayout
-      ? {
-          pageNumber,
-          screenRelTop: pageLayout.offsetTop - metrics.scrollTop,
-        }
-      : null;
-    measureScroll();
-  }, [getScrollMetrics, layout.pageLayout, measureScroll]);
+  const measureBeforeLayoutMotion = React.useCallback(
+    (liveFrame: FileViewerMotionFrame | null) => {
+      const metrics = getScrollMetrics();
+      const markerOffset =
+        metrics.scrollTop +
+        Math.max(0, metrics.viewportHeight) * PDF_READING_MARKER_RATIO;
+      const pageNumber = findPdfPageByOffset(layout.pageLayout, markerOffset);
+      const pageLayout = getPdfPageLayout(layout.pageLayout, pageNumber);
+      const logicalDelta = metrics.scrollTop - metrics.physicalScrollTop;
+      preMotionAnchorRef.current = pageLayout
+        ? {
+            pageNumber,
+            screenRelTop: captureFileViewerFitWidthAnchorScreenOffset({
+              lastAnchorBlock: lastAnchorBlockRef.current,
+              liveFrame,
+              probeStageOffset: pageLayout.offsetTop - logicalDelta,
+              scrollTop: metrics.physicalScrollTop,
+              stageInlineSize: layout.pageLayout.maxPageWidth,
+            }),
+          }
+        : null;
+      measureScroll();
+    },
+    [getScrollMetrics, layout.pageLayout, measureScroll],
+  );
   const measureBeforeLayoutMotionRef = React.useRef(measureBeforeLayoutMotion);
   measureBeforeLayoutMotionRef.current = measureBeforeLayoutMotion;
-  const handleBeforeLayoutMotion = React.useCallback(() => {
-    measureBeforeLayoutMotionRef.current();
+  const handleBeforeLayoutMotion = React.useCallback((event: Event) => {
+    measureBeforeLayoutMotionRef.current(
+      readFileViewerBeforeLayoutMotionFrame(event),
+    );
   }, []);
   const setDocumentSurfaceElement = React.useCallback(
     (element: HTMLElement | null) => {
@@ -339,6 +354,7 @@ export function usePdfDocumentRuntime({
   // first frame paints.
   useKeyedLayoutEffect(
     joinEffectKey([
+      layout.rendererFrame.documentTransition.transitionId,
       layout.rendererFrame.isTransitioning,
       writeMotionAnchorBlockOffset,
     ]),

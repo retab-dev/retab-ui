@@ -59,6 +59,13 @@ jobs:
         run: pnpm verify:file-viewer-sidebar-motion
       - name: Strict renderer-continuity gate
         run: pnpm verify:file-viewer-sidebar-motion:strict
+      # Screen-space gate: scores real composited frames over a CDP screencast
+      # (whiteout, below-endpoint ink dip, post-motion churn) plus the shell
+      # telemetry budgets — the only detector that sees paint-level artifacts
+      # DOM sampling cannot. Blocking by design; its budgets are
+      # timing-insensitive (main-thread is excluded inside the spec).
+      - name: Visual blink pixel gate
+        run: pnpm verify:file-viewer-visual-blink
       - name: Simple PDF viewer telemetry gate
         run: pnpm verify:simple-pdf-file-viewer-telemetry
       # The visual gate scores timing-sensitive budgets (main-thread, layout

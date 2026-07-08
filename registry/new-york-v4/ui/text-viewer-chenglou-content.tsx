@@ -375,8 +375,6 @@ export function TextViewerContent({
       viewportWidth,
     ]),
     () => {
-      if (rendererFrame.documentTransition.layoutPolicy === "frozen") return;
-
       const nextContentWidth = Math.max(
         1,
         viewportWidth - TEXT_VIEWER_HORIZONTAL_PADDING * 2,

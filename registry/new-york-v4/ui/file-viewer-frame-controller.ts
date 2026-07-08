@@ -142,12 +142,16 @@ export function useFileViewerFrameController({
   }, [motionTarget]);
 
   // Adopt idle geometry (mount, resizes, mode flips) without animating. While
-  // a motion is in flight the kernel owns the target; it re-syncs here once
-  // the contract returns to idle.
+  // a motion is in flight the kernel owns the target — EXCEPT on a mode flip:
+  // React renders the new mode immediately, so the kernel must be told (it
+  // snaps the motion) or an inline slide keeps writing gap widths against
+  // overlay DOM until settle.
   React.useLayoutEffect(() => {
-    if (motionFrame.phase !== "idle") return;
+    if (motionFrame.phase !== "idle" && motionFrame.mode === motionTarget.mode) {
+      return;
+    }
     motionKernel.syncTarget(motionTarget);
-  }, [motionFrame.phase, motionKernel, motionTarget]);
+  }, [motionFrame.mode, motionFrame.phase, motionKernel, motionTarget]);
 
   // Single owner of focus restoration: when the sidebar stops being
   // interactive while focus is inside it, hand focus back to the trigger.

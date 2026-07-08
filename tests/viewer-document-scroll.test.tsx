@@ -284,56 +284,9 @@ describe("useViewerDocumentScroll", () => {
     await waitFor(() => expect(viewport.element.scrollTop).toBe(740));
   });
 
-  it("defers anchor restoration while chrome resize owns visual motion", async () => {
-    const viewport = createControlledViewport({
-      clientHeight: 100,
-      scrollTop: 200,
-    });
-
-    function Harness({
-      blockSize,
-      transition,
-    }: {
-      blockSize: number;
-      transition?: ViewerDocumentTransition;
-    }) {
-      const scroll = useViewerDocumentScroll<TestAnchor, TestTarget>({
-        layout: createLayout(
-          blockSize,
-          transition?.layoutPolicy === "frozen",
-          transition,
-        ),
-        resetKey: "same-document",
-        scrollMapper: SIMPLE_SCROLL_MAPPER,
-      });
-
-      useMountEffect(() => {
-        scroll.setViewportElement(viewport.element);
-        return () => scroll.setViewportElement(null);
-      });
-
-      return null;
-    }
-
-    const view = render(<Harness blockSize={1000} />);
-
-    view.rerender(
-      <Harness
-        blockSize={2000}
-        transition={{
-          layoutPolicy: "frozen",
-          scrollPolicy: "defer",
-          source: "viewer-shell",
-          transitionId: "test-chrome-resize",
-          visualPolicy: "shell-transform",
-        }}
-      />,
-    );
-
-    await waitFor(() => expect(viewport.element.scrollTop).toBe(200));
-    expect(viewport.scrollTo).not.toHaveBeenCalled();
-  });
-
+  // Commit-then-relax: shell transitions carry the target layout and the
+  // rebase in ONE commit — there is no deferred-restore phase anymore, so the
+  // rebase-immediately behavior below is the whole contract.
   it("rebases the reading anchor once when chrome resize settles", async () => {
     const viewport = createControlledViewport({
       clientHeight: 100,
@@ -383,7 +336,11 @@ describe("useViewerDocumentScroll", () => {
     });
   });
 
-  it("keeps the frozen chrome-resize anchor when DOM scroll changes before settle", async () => {
+  // Once a shell motion captures its transition anchor at the slide-start
+  // commit, a mid-motion user scroll must not corrupt it: a same-transition
+  // geometry replay (e.g. page-size refinements landing mid-slide) restores
+  // from the RETAINED anchor, not from the mid-motion scroll position.
+  it("keeps the retained shell-transition anchor when DOM scroll changes mid-motion", async () => {
     const viewport = createControlledViewport({
       clientHeight: 100,
       scrollTop: 1500,
@@ -402,7 +359,7 @@ describe("useViewerDocumentScroll", () => {
       const scroll = useViewerDocumentScroll<TestAnchor, TestTarget>({
         layout: createLayout(
           blockSize,
-          transition?.layoutPolicy === "frozen",
+          transition?.source === "viewer-shell",
           transition,
         ),
         resetKey: "same-document",
@@ -424,24 +381,8 @@ describe("useViewerDocumentScroll", () => {
       api.handleScroll?.();
     });
 
-    view.rerender(
-      <Harness
-        blockSize={2000}
-        transition={{
-          layoutPolicy: "frozen",
-          scrollPolicy: "defer",
-          source: "viewer-shell",
-          transitionId: "test-chrome-resize",
-          visualPolicy: "shell-transform",
-        }}
-      />,
-    );
-
-    viewport.element.scrollTop = 400;
-    act(() => {
-      api.handleScroll?.();
-    });
-
+    // Slide-start commit: layout + rebase in one pass. ratio(1500 @2000) =
+    // 0.76 → 0.76·1000 − 20 = 740.
     view.rerender(
       <Harness
         blockSize={1000}
@@ -456,9 +397,33 @@ describe("useViewerDocumentScroll", () => {
     );
 
     await waitFor(() => expect(viewport.element.scrollTop).toBe(740));
+
+    viewport.element.scrollTop = 400;
+    act(() => {
+      api.handleScroll?.();
+    });
+
+    // Same-transition geometry replay: the retained 0.76 anchor wins over the
+    // mid-motion 400 scroll → 0.76·1200 − 20 = 892.
+    view.rerender(
+      <Harness
+        blockSize={1200}
+        transition={{
+          layoutPolicy: "target",
+          scrollPolicy: "rebase",
+          source: "viewer-shell",
+          transitionId: "test-chrome-resize",
+          visualPolicy: "shell-transform",
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(viewport.element.scrollTop).toBe(892));
   });
 
-  it("uses the preflight cached anchor instead of a stale null-id chrome-resize anchor", async () => {
+  // An anchor retained by a PREVIOUS motion must not leak into a new motion
+  // with a different transition id — the fresh reading-anchor cache wins.
+  it("uses the fresh cached anchor instead of a stale prior-transition anchor", async () => {
     const viewport = createControlledViewport({
       clientHeight: 100,
       scrollTop: 500,
@@ -477,7 +442,7 @@ describe("useViewerDocumentScroll", () => {
       const scroll = useViewerDocumentScroll<TestAnchor, TestTarget>({
         layout: createLayout(
           blockSize,
-          transition?.layoutPolicy === "frozen",
+          transition?.source === "viewer-shell",
           transition,
         ),
         resetKey: "same-document",
@@ -495,28 +460,38 @@ describe("useViewerDocumentScroll", () => {
 
     const view = render(<Harness blockSize={2000} />);
 
+    act(() => {
+      api.handleScroll?.();
+    });
+
+    // First motion retains its anchor: ratio(500 @2000) = 0.26 → 0.26·1000 −
+    // 20 = 240.
     view.rerender(
       <Harness
-        blockSize={2000}
+        blockSize={1000}
         transition={{
-          layoutPolicy: "frozen",
-          scrollPolicy: "defer",
+          layoutPolicy: "target",
+          scrollPolicy: "rebase",
           source: "viewer-shell",
-          transitionId: null,
+          transitionId: "first-chrome-resize",
           visualPolicy: "shell-transform",
         }}
       />,
     );
 
-    viewport.element.scrollTop = 1500;
+    await waitFor(() => expect(viewport.element.scrollTop).toBe(240));
+
+    viewport.element.scrollTop = 300;
     act(() => {
       api.handleScroll?.();
     });
-    viewport.element.scrollTop = 500;
 
+    // A NEW motion (different id) must solve from the fresh 300 cache, not
+    // the retained 0.26 anchor: ratio(300 @1000) = 0.32 → 0.32·2000 − 20 =
+    // 620 (stale anchor would land at 500).
     view.rerender(
       <Harness
-        blockSize={1000}
+        blockSize={2000}
         transition={{
           layoutPolicy: "target",
           scrollPolicy: "rebase",
@@ -527,7 +502,7 @@ describe("useViewerDocumentScroll", () => {
       />,
     );
 
-    await waitFor(() => expect(viewport.element.scrollTop).toBe(740));
+    await waitFor(() => expect(viewport.element.scrollTop).toBe(620));
   });
 
   it("replays anchor restoration when the virtual scroll range grows after settle", async () => {

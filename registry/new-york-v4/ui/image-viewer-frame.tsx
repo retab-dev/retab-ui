@@ -403,6 +403,18 @@ export function ImageFrameScroller({
     projectFrames();
   });
 
+  // Commit-then-relax: a re-fit commit (scale/layout/rotation change) must
+  // project the frame boxes BEFORE paint — the shell motion transform is
+  // computed for the settled layout, so stale boxes under it would paint one
+  // mismatched frame. Scroll-driven window updates keep the deferred (rAF)
+  // projection above.
+  useKeyedLayoutEffect(
+    joinEffectKey(["image-project-refit", layoutResetKey]),
+    () => {
+      projectFramesRef.current();
+    },
+  );
+
   useMountEffect(() => {
     return () => {
       if (

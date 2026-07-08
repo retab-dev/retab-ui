@@ -567,11 +567,9 @@ export function useViewerDocumentScroll<Anchor, Target>({
           viewportBlockSize: transaction.viewportBlockSize,
         });
         if (targetTop != null) {
-          scrollViewportToLogicalTop(viewportElement, targetTop, undefined, {
-            preservePhysicalScrollTop:
-              transition?.source === "viewer-shell" &&
-              transition.scrollPolicy !== "rebase",
-          });
+          // Shell motions always rebase (commit-then-relax rebases scroll in
+          // the slide-start commit), so the restore is a real scroll write.
+          scrollViewportToLogicalTop(viewportElement, targetTop);
         } else {
           cacheAnchor({
             anchor: transaction.anchor,

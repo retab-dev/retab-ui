@@ -67,7 +67,109 @@ export function getFileViewerFitWidthScale({
   return contentAvailableInlineSize / contentInlineSize;
 }
 
-export function getFileViewerFitWidthSurfaceMotionTransform({
+// The visual scale the resolver renders for a given live width — the same
+// affine unit-slope reprojection as the transform itself. Renderers use it to
+// reason about the on-screen state (anchor capture/solve) without duplicating
+// the formula.
+export function getFileViewerFitWidthVisualScale({
+  liveInlineSize,
+  stageInlineSize,
+  targetInlineSize,
+}: {
+  liveInlineSize: number;
+  stageInlineSize: number;
+  targetInlineSize: number;
+}) {
+  if (
+    stageInlineSize <= 0 ||
+    !Number.isFinite(liveInlineSize) ||
+    !Number.isFinite(targetInlineSize)
+  ) {
+    return 1;
+  }
+  return (
+    Math.max(1, stageInlineSize + (liveInlineSize - targetInlineSize)) /
+    stageInlineSize
+  );
+}
+
+// Capture side of the motion anchor: the probe content line's on-screen block
+// offset relative to the scroll box, taken just before a motion (or retarget)
+// commits. When a motion is already in flight the DOM is the settled layout
+// PLUS the live transform, so the capture applies that transform — otherwise
+// a retarget would solve continuity against a picture the reader never saw.
+export function captureFileViewerFitWidthAnchorScreenOffset({
+  lastAnchorBlock,
+  liveFrame,
+  probeStageOffset,
+  scrollTop,
+  stageInlineSize,
+}: {
+  lastAnchorBlock: number | null;
+  liveFrame: FileViewerMotionFrame | null;
+  probeStageOffset: number;
+  scrollTop: number;
+  stageInlineSize: number;
+}) {
+  const untransformed = probeStageOffset - scrollTop;
+  if (!liveFrame || liveFrame.phase !== "sliding") return untransformed;
+
+  const liveScale = getFileViewerFitWidthVisualScale({
+    liveInlineSize: liveFrame.layoutInlineSize,
+    stageInlineSize,
+    targetInlineSize: liveFrame.toInlineSize,
+  });
+  if (Math.abs(1 - liveScale) <= 0.001) return untransformed;
+
+  return (
+    liveScale * probeStageOffset +
+    (1 - liveScale) * (lastAnchorBlock ?? 0) -
+    scrollTop
+  );
+}
+
+// Solve side: the anchor block offset that puts the probe content line back on
+// its captured screen position under the NEW layout model at the motion's
+// first-frame scale. Exact regardless of how the rebase clamped or how the
+// old/new layout models relate (measured page sizes, constant gaps/padding).
+// Returns null when the motion is degenerate (caller falls back to the live
+// reading marker).
+export function resolveFileViewerFitWidthMotionAnchorBlock({
+  fromInlineSize,
+  probeScreenOffset,
+  probeStageOffset,
+  scrollTop,
+  stageInlineSize,
+  toInlineSize,
+}: {
+  fromInlineSize: number | null;
+  probeScreenOffset: number;
+  probeStageOffset: number;
+  scrollTop: number;
+  stageInlineSize: number;
+  toInlineSize: number | null;
+}) {
+  if (fromInlineSize == null || toInlineSize == null) return null;
+
+  const startScale = getFileViewerFitWidthVisualScale({
+    liveInlineSize: fromInlineSize,
+    stageInlineSize,
+    targetInlineSize: toInlineSize,
+  });
+  if (
+    !Number.isFinite(startScale) ||
+    Math.abs(1 - startScale) <= 0.001
+  ) {
+    return null;
+  }
+
+  return (
+    (probeScreenOffset + scrollTop - startScale * probeStageOffset) /
+    (1 - startScale)
+  );
+}
+
+function getFileViewerFitWidthSurfaceMotionTransform({
   align,
   anchorBlockProperty,
   frame,
@@ -91,11 +193,12 @@ export function getFileViewerFitWidthSurfaceMotionTransform({
   // in-flight visual stage is the settled stage plus the live width delta.
   // At the first frame this resolves to exactly the pre-toggle stage size, and
   // at the last frame to the settled stage — identity.
-  const visualStageInlineSize = Math.max(
-    1,
-    stageInlineSize + (frame.layoutInlineSize - frame.toInlineSize),
-  );
-  const scale = visualStageInlineSize / stageInlineSize;
+  const scale = getFileViewerFitWidthVisualScale({
+    liveInlineSize: frame.layoutInlineSize,
+    stageInlineSize,
+    targetInlineSize: frame.toInlineSize,
+  });
+  const visualStageInlineSize = scale * stageInlineSize;
   const settledMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,

@@ -195,9 +195,10 @@ function getPdfPreparedFitWidthRenderScale({
 }) {
   if (!enabled || rasterInlineSize == null) return fallbackScale;
 
-  // The CSS page frame stays frozen during shell motion; this prepares the
-  // backing canvas for the largest start/current/target width without forcing a
-  // visible layout resize or blanking the old canvas while the render is pending.
+  // Layout commits the target width at slide start; this prepares the
+  // backing canvas for the largest width the motion touches so the already-
+  // rendered bitmap only ever CSS-rescales — never blanks — while the
+  // target-resolution render is pending.
   return getPdfFitWidthScale(rasterInlineSize, pageWidth, 0);
 }
 
