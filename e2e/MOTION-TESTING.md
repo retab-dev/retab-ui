@@ -14,17 +14,25 @@ resizes, mode flips, and interruptions. Two failure axes:
 - **Flight path**: where it travels in between (`corridor`), and how much
   of that travel is wasted round-tripping (`excursion = corridor − |net|`
   — the literal "back and forth" number).
+- **Time**: how it moves through the frames. `pop` is the peak per-frame
+  X velocity normalized by the motion plan's ideal peak (cubic ease-out
+  peaks at 3·distance/duration): a clean flight scores ~1, a single-frame
+  teleport ~3 — the jump `corridorX` cannot see, because a smooth 140px
+  recenter and a 140px teleport trace the same corridor. `settleMs` is
+  time-to-rest; it catches runaway or oscillating settles. Velocity uses
+  measured frame time, so dropped frames don't read as pops.
 
 A motion can be perfectly smooth and still wrong (it glides to the wrong
-place), or land perfectly and still wrong (it swings 300px on the way).
-Gate both, always.
+place), land perfectly and still wrong (it swings 300px on the way), or
+do both perfectly and still wrong (it teleports there in one frame).
+Gate all three, always.
 
 ## Gate inventory (all blocking in CI)
 
 | Gate | What it catches |
 | --- | --- |
-| `verify:sources-viewer-toggle-matrix` | Reading-line trajectory on the sources page: formats × viewports × scroll depths × {close, open, rapid, cycle} |
-| `verify:benchmark-toggle-matrix` | Same trajectory scoring over the full format roster at real scroll ranges, plus resize sweeps |
+| `verify:sources-viewer-toggle-matrix` | Reading-line trajectory + temporal (pop, settleMs) on the sources page: formats × viewports × scroll depths × {close, open, rapid, cycle} |
+| `verify:benchmark-toggle-matrix` | Same trajectory + temporal scoring over the full format roster at real scroll ranges, plus resize sweeps |
 | `verify:mode-state-matrix` | Overlay mode (document must not move at all), breakpoint-crossing resizes, explicit-zoom toggles, reduced-motion snaps |
 | `verify:motion-conflict-and-leak` | Wheel-during-flight (binary contract: cleanly ignored or cleanly applied) and resource round trips (DOM/canvas census returns to baseline) |
 | `verify:viewer-monkey-fuzz` | Seeded random interleavings incl. mid-flight format switches, under zero-console-error + bounded-resource + bounded-GC'd-heap invariants |
@@ -44,6 +52,9 @@ Gate both, always.
   anchor miss lived at exactly one depth) hide between structural points.
 - `MONKEY_SEED=$RANDOM [MONKEY_ACTIONS=160]` — random fuzzing; every run
   prints its seed and action log, so any find replays exactly.
+- `MATRIX_DPR=1|3` — re-run the benchmark matrix at a different device
+  pixel ratio; raster scaling and half-pixel rounding are dpr-sensitive
+  and every default run is dpr2.
 - `--project=webkit` / `--project=firefox` — the trajectory matrices are
   engine-portable (18/18 clean on all three engines as of 2026-07-10); the
   scrollable-overflow-includes-transforms bug was engine behavior, so

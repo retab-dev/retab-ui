@@ -29,8 +29,22 @@ const CYCLE_EXCURSION_BUDGET_PX = 40;
 const X_CORRIDOR_BUDGET_CENTERED_PX = 218;
 const X_CORRIDOR_BUDGET_START_PX = 12;
 const RAPID_X_CORRIDOR_BUDGET_PX = 280;
+// TEMPORAL budgets. popScoreX ~1.0 is a clean cubic ease-out flight, ~3.0
+// a single-frame teleport of the whole travel — the jump corridorX cannot
+// see. Survey: close/open 0.68-1.00, rapid legs 1.11-1.31 (they launch
+// from a moving start). settleMs: motion must be DONE; survey ≤103ms on a
+// 150ms plan — the budget exists to catch runaway/oscillating settles.
+const POP_SCORE_BUDGET = 1.5;
+const RAPID_POP_SCORE_BUDGET = 1.9;
+const SETTLE_MS_BUDGET = 600;
 
-test.use({ deviceScaleFactor: 2, viewport: { width: 1440, height: 1000 } });
+// Hunt axis: MATRIX_DPR=1|3 re-runs the matrix at a different device pixel
+// ratio — the raster paths (rasterDeviceScale, canvas backing sizes) and
+// half-pixel rounding are dpr-sensitive, and everything else runs at dpr2.
+test.use({
+  deviceScaleFactor: Number(process.env.MATRIX_DPR ?? 2),
+  viewport: { width: 1440, height: 1000 },
+});
 
 type MatrixFormat = ReadingLineTarget & {
   id: string;
@@ -183,7 +197,7 @@ for (const format of FORMATS) {
           { rapid: action === "rapid", cycles: action === "cycle" ? 4 : 0 },
         );
         await page.waitForTimeout(500);
-        const line = `${format.id} scroll=${scrollLabel} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
+        const line = `${format.id} scroll=${scrollLabel} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} pop=${trace.popScoreX.toFixed(2)} settleMs=${trace.settleMs.toFixed(0)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
         console.log(`BMATRIX ${line}`);
         recordMotionMetric(
           `bmatrix:${format.id}:${scrollLabel}:${action}`,
@@ -193,6 +207,8 @@ for (const format of FORMATS) {
             excursion: trace.excursion,
             settleX: trace.settleDriftX,
             corridorX: trace.corridorX,
+            pop: trace.popScoreX,
+            settleMs: trace.settleMs,
           },
         );
 
@@ -208,10 +224,14 @@ for (const format of FORMATS) {
             : format.align === "center"
               ? X_CORRIDOR_BUDGET_CENTERED_PX
               : X_CORRIDOR_BUDGET_START_PX;
+        const popBudget =
+          action === "rapid" ? RAPID_POP_SCORE_BUDGET : POP_SCORE_BUDGET;
         if (
           Math.abs(trace.settleDrift) > SETTLE_DRIFT_BUDGET_PX ||
           trace.excursion > excursionBudget ||
-          trace.corridorX > xBudget
+          trace.corridorX > xBudget ||
+          trace.popScoreX > popBudget ||
+          (action !== "cycle" && trace.settleMs > SETTLE_MS_BUDGET)
         ) {
           failures.push(line);
         }

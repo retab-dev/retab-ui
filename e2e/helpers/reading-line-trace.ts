@@ -27,6 +27,10 @@ export type ReadingLineTrace = {
   excursion: number;
   settleDriftX: number;
   corridorX: number;
+  /** Peak X velocity vs the motion plan's ideal peak; ~1 smooth, ~3+ teleport. */
+  popScoreX: number;
+  /** Time from the first flight sample to the last one still in motion. */
+  settleMs: number;
   samples: number;
 };
 
@@ -189,6 +193,7 @@ export async function traceReadingLineThroughToggle(
 
       const positions: number[] = [];
       const centersX: number[] = [];
+      const times: number[] = [];
       const sampleFrames = async (count: number) => {
         for (let index = 0; index < count; index += 1) {
           await new Promise<void>((resolve) =>
@@ -199,6 +204,7 @@ export async function traceReadingLineThroughToggle(
           const rect = element.getBoundingClientRect();
           positions.push(rect.top + contentAtMarker * rect.height - markerY);
           centersX.push(readX(rect) - centerX0);
+          times.push(performance.now());
         }
       };
 
@@ -239,14 +245,50 @@ export async function traceReadingLineThroughToggle(
       for (const centerX of centersX) {
         corridorX = Math.max(corridorX, Math.abs(centerX));
       }
+      const settleDriftX = centersX.at(-1) ?? 0;
+
+      // TEMPORAL metrics — the spatial ones cannot tell a smooth 140px
+      // recenter glide from a single-frame 140px teleport, and a teleport
+      // is exactly the visible "jump" this suite exists to catch. Velocity
+      // is computed against MEASURED frame time, so dropped frames on a
+      // loaded runner don't read as pops. popScoreX normalizes the peak
+      // X velocity by the motion plan's ideal peak (cubic ease-out peaks
+      // at 3·distance/duration): a clean flight scores ~1, a teleport ~3+.
+      // Scored only when the X travel is real (≥24px) — pop of a nothing
+      // motion is sampling noise.
+      const MOTION_DURATION_MS = 150;
+      let peakVelocityX = 0;
+      let lastMovingT = times[0] ?? 0;
+      for (let index = 1; index < times.length; index += 1) {
+        const dt = times[index]! - times[index - 1]!;
+        if (dt <= 0) continue;
+        const vx = Math.abs(centersX[index]! - centersX[index - 1]!) / dt;
+        peakVelocityX = Math.max(peakVelocityX, vx);
+        const moved =
+          Math.abs(centersX[index]! - settleDriftX) > 2 ||
+          Math.abs(positions[index]! - settleDrift) > 2;
+        if (moved) lastMovingT = times[index]!;
+      }
+      // Travel is the larger of net displacement and corridor: a rapid
+      // retarget round-trips to net ~0 but still flies a real corridor,
+      // and its return leg deserves a score too.
+      const travelX = Math.max(Math.abs(settleDriftX), corridorX);
+      const popScoreX =
+        travelX >= 24
+          ? (peakVelocityX * MOTION_DURATION_MS) / (3 * travelX)
+          : 0;
+      const settleMs = lastMovingT - (times[0] ?? 0);
+
       return {
         scrollBefore,
         scrollAfter: scroller?.scrollTop ?? 0,
         settleDrift,
         corridor,
         excursion: corridor - Math.abs(settleDrift),
-        settleDriftX: centersX.at(-1) ?? 0,
+        settleDriftX,
         corridorX,
+        popScoreX,
+        settleMs,
         samples: positions.length,
       };
     },

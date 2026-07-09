@@ -19,6 +19,10 @@ const TOLERANCE = {
   excursion: 12,
   settleX: 15,
   corridorX: 15,
+  // Temporal: pop ~1.0 is a clean ease-out flight (run noise ±0.15);
+  // settleMs rides rAF scheduling, so its noise band is a few frames.
+  pop: 0.35,
+  settleMs: 150,
 };
 
 const [runPath, flag] = process.argv.slice(2);

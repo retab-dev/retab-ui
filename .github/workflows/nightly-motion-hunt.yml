@@ -46,6 +46,9 @@ jobs:
       - name: Firefox trajectory matrix
         run: pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=firefox --workers=2
 
+      - name: DPR-1 trajectory matrix (raster rounding hunt)
+        run: MATRIX_DPR=1 pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=chromium --workers=2
+
       - name: Motion baseline drift check
         run: |
           MOTION_METRICS_PATH="$RUNNER_TEMP/metrics.jsonl" pnpm verify:sources-viewer-toggle-matrix

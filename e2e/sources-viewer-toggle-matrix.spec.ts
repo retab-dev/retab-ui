@@ -39,6 +39,15 @@ const CYCLE_EXCURSION_BUDGET_PX = 40;
 // (~300px measured on this page) — same tracked anomaly as the rapid case;
 // hold its ceiling until the painted-x-anchor fix lands.
 const CYCLE_X_CORRIDOR_BUDGET_PX = 310;
+// TEMPORAL budgets (see MOTION-TESTING.md). Survey: DOCX/PDF 0.7-1.1 on
+// plain toggles, rapids ≤1.46. Image OPEN runs 1.23-1.47 on THIS page at
+// every depth/viewport (benchmark page: ≤1.00; close leg: ~1.0) — a
+// tracked ~40% velocity excess over the motion plan on the open leg
+// (task chip filed); the budget rides just above it and drops to ~1.5
+// when that lands. A single-frame teleport scores ~3.
+const POP_SCORE_BUDGET = 1.6;
+const RAPID_POP_SCORE_BUDGET = 1.9;
+const SETTLE_MS_BUDGET = 600;
 
 // The two heights that discriminated during calibration: the in-flight
 // clamp-drag only appeared at viewports >= 1000px tall (deeper max scroll).
@@ -127,7 +136,7 @@ for (const viewport of VIEWPORTS) {
             { rapid: action === "rapid", cycles: action === "cycle" ? 4 : 0 },
           );
           await page.waitForTimeout(500);
-          const line = `${format.name} ${viewport.width}x${viewport.height} scroll=${scroll} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
+          const line = `${format.name} ${viewport.width}x${viewport.height} scroll=${scroll} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} pop=${trace.popScoreX.toFixed(2)} settleMs=${trace.settleMs.toFixed(0)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
           console.log(`MATRIX ${line}`);
           recordMotionMetric(
             `smatrix:${format.name}:${viewport.width}x${viewport.height}:${scroll}:${action}`,
@@ -137,6 +146,8 @@ for (const viewport of VIEWPORTS) {
               excursion: trace.excursion,
               settleX: trace.settleDriftX,
               corridorX: trace.corridorX,
+              pop: trace.popScoreX,
+              settleMs: trace.settleMs,
             },
           );
           // A rapid retarget legitimately travels toward the target before
@@ -155,10 +166,14 @@ for (const viewport of VIEWPORTS) {
               : action === "cycle"
                 ? CYCLE_X_CORRIDOR_BUDGET_PX
                 : X_CORRIDOR_BUDGET_PX;
+          const popBudget =
+            action === "rapid" ? RAPID_POP_SCORE_BUDGET : POP_SCORE_BUDGET;
           if (
             Math.abs(trace.settleDrift) > SETTLE_DRIFT_BUDGET_PX ||
             trace.excursion > excursionBudget ||
-            trace.corridorX > xBudget
+            trace.corridorX > xBudget ||
+            trace.popScoreX > popBudget ||
+            (action !== "cycle" && trace.settleMs > SETTLE_MS_BUDGET)
           ) {
             failures.push(line);
           }
