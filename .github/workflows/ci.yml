@@ -66,6 +66,8 @@ jobs:
       # timing-insensitive (main-thread is excluded inside the spec).
       - name: Visual blink pixel gate
         run: pnpm verify:file-viewer-visual-blink
+      - name: Sources viewer pixel gate
+        run: pnpm verify:sources-viewer-visual-blink
       - name: Simple PDF viewer telemetry gate
         run: pnpm verify:simple-pdf-file-viewer-telemetry
       # The visual gate scores timing-sensitive budgets (main-thread, layout

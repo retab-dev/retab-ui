@@ -382,7 +382,6 @@ export function ImageFrameScroller({
       resetKey: projectionResetKey,
       rotation,
       scale,
-      shouldHoldRaster: freezeVisibleFrameWindow,
       source,
       sourceKey,
       visibleFrameNumbers,
@@ -562,7 +561,6 @@ type ProjectedImageFrame = {
   decodedPixels: number;
   isLive: boolean;
   lastSeen: number;
-  rasterScale: number | null;
   renderedPixels: number;
   renderKey: string;
   root: Root;
@@ -833,7 +831,6 @@ function projectImageFrames({
   resetKey,
   rotation,
   scale,
-  shouldHoldRaster,
   source,
   sourceKey,
   visibleFrameNumbers,
@@ -851,7 +848,6 @@ function projectImageFrames({
   resetKey: string;
   rotation: QuarterTurn;
   scale: number;
-  shouldHoldRaster: boolean;
   source: FrameSource;
   sourceKey: number;
   visibleFrameNumbers: readonly number[];
@@ -887,21 +883,18 @@ function projectImageFrames({
       shell: projectedFrame.shell,
     });
     if (activeFrameNumberSet.has(frame.frameNumber)) {
-      const retainHeldRaster =
-        shouldHoldRaster &&
-        existingFrame != null &&
-        existingFrame.rasterScale != null &&
-        existingFrame.renderKey !== "";
-      const rasterScale = retainHeldRaster
-        ? existingFrame.rasterScale!
-        : scale;
+      // Commit-then-relax applies to the raster too: the committed layout
+      // scale IS the motion target, so rastering at it immediately keeps the
+      // slide in minification and leaves nothing to snap at settle. Holding
+      // the old raster instead magnifies dense content mid-slide (text
+      // shimmer) and then visibly sharpens when the held raster releases.
       renderProjectedImageFrame({
         frame,
         onFrameRenderTiming,
         projectedFrame,
         renderFrameOverlay,
         renderQuality,
-        rasterScale,
+        rasterScale: scale,
         rotation,
         scale,
         source,
@@ -934,7 +927,6 @@ function createProjectedImageFrame(
     decodedPixels: 0,
     isLive: true,
     lastSeen: 0,
-    rasterScale: null,
     renderedPixels: 0,
     renderKey: "",
     root: createRoot(shell),
@@ -998,8 +990,6 @@ function renderProjectedImageFrame({
     getImageProjectionCallbackKey(onFrameRenderTiming),
     getImageDevicePixelRatio(),
   ].join("\u0000");
-
-  projectedFrame.rasterScale = rasterScale;
 
   if (projectedFrame.renderKey === renderKey) return;
   projectedFrame.renderKey = renderKey;
