@@ -91,6 +91,12 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
    PDF reference itself varies ±0.4 on ink-oscillation); prefer a
    deterministic DOM encoding of the same defect when one exists (the
    terminal-deceleration gate vs the shimmer scorer).
+9. **A fixed-delay snapshot is a phase lottery.** When a probe means to
+   read a SETTLED position, read to convergence (consecutive samples
+   within a pixel), not after a fixed wait — on a loaded runner the wait
+   lands mid-flight and a pptx re-fit once read 605px before settling to
+   exactly 0.0. In-flight corridors are different: those are sampled
+   every frame by design.
 
 ## Changing motion behavior intentionally
 
