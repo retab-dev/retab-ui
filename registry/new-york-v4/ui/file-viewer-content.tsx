@@ -35,23 +35,3 @@ export {
   type FileViewerSidebarSectionTitleProps,
   type FileViewerSidebarSeparatorProps,
 } from "./file-viewer-sidebar";
-export {
-  FileViewerFieldSource,
-  FileViewerFieldSourceLabel,
-  FileViewerFieldSourceStatus,
-  FileViewerFieldSourceValue,
-  FileViewerSourceAction,
-  FileViewerSourceBadge,
-  FileViewerSourceItem,
-  FileViewerSourceList,
-  FileViewerSourceTrigger,
-  type FileViewerFieldSourceLabelProps,
-  type FileViewerFieldSourceProps,
-  type FileViewerFieldSourceStatusProps,
-  type FileViewerFieldSourceValueProps,
-  type FileViewerSourceActionProps,
-  type FileViewerSourceBadgeProps,
-  type FileViewerSourceItemProps,
-  type FileViewerSourceListProps,
-  type FileViewerSourceTriggerProps,
-} from "./file-viewer-source-list";

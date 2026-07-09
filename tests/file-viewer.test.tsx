@@ -395,16 +395,11 @@ describe("FileViewer detection helpers", () => {
 
     expect(exports.sort()).toEqual(
       [
-        "detectCategory",
         "FileViewer",
         "FileViewerContent",
         "FileViewerDocument",
         "FileViewerEmptyState",
         "FileViewerErrorState",
-        "FileViewerFieldSource",
-        "FileViewerFieldSourceLabel",
-        "FileViewerFieldSourceStatus",
-        "FileViewerFieldSourceValue",
         "FileViewerHeader",
         "FileViewerInset",
         "FileViewerLegend",
@@ -424,11 +419,6 @@ describe("FileViewer detection helpers", () => {
         "FileViewerSidebarSectionTitle",
         "FileViewerSidebarSeparator",
         "FileViewerSidebarTrigger",
-        "FileViewerSourceAction",
-        "FileViewerSourceBadge",
-        "FileViewerSourceItem",
-        "FileViewerSourceList",
-        "FileViewerSourceTrigger",
         "FileViewerTitle",
         "FileViewerUnavailableState",
         "FileViewerUnsupportedState",

@@ -3,7 +3,7 @@ import * as React from "react";
 import type {
   FileCategory,
   ViewerSource,
-} from "@/registry/new-york-v4/ui/file-viewer";
+} from "@/registry/new-york-v4/ui/file-viewer-core";
 import {
   FileViewer as FileViewerFrame,
   FileViewerContent,

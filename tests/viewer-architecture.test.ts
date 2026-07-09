@@ -1026,9 +1026,6 @@ describe("viewer architecture", () => {
     const fileViewerSidebarController = fileContent(
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
     );
-    const fileViewerSourceList = fileContent(
-      "registry/new-york-v4/ui/file-viewer-source-list.tsx",
-    );
     const fileViewerSidebarOpenState = fileContent(
       "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
     );
@@ -1039,7 +1036,6 @@ describe("viewer architecture", () => {
       fileViewerContent,
       fileViewerLayout,
       fileViewerSidebar,
-      fileViewerSourceList,
     ].join("\n");
     const fileViewerAccessibility = fileContent(
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
@@ -1241,12 +1237,8 @@ describe("viewer architecture", () => {
     );
     expect(fileViewerContent).toContain('from "./file-viewer-layout"');
     expect(fileViewerContent).toContain('from "./file-viewer-sidebar"');
-    expect(fileViewerContent).toContain('from "./file-viewer-source-list"');
     expect(fileViewerLayout).toContain("export function FileViewerContent");
     expect(fileViewerSidebar).toContain("export function FileViewerSidebar");
-    expect(fileViewerSourceList).toContain(
-      "export function FileViewerSourceList",
-    );
     expect(viewerHeaderOutlet).toContain('"titleGroup" | "controls"');
     expect(viewerHeaderOutlet).toContain('["titleGroup", "controls"]');
     expect(fileViewerHeader).toContain('name="titleGroup"');
@@ -3894,7 +3886,6 @@ describe("viewer architecture", () => {
       "content/docs/components/file-viewer/navigation/index.mdx",
       "content/docs/components/file-viewer/navigation/file-viewer-sidebar-trigger.mdx",
       "content/docs/components/file-viewer/navigation/file-viewer-sidebar-content.mdx",
-      "content/docs/components/file-viewer/navigation/file-viewer-source-list.mdx",
     ]
       .map(fileContent)
       .join("\n");
@@ -3921,10 +3912,7 @@ describe("viewer architecture", () => {
       expect(headerMeta).toContain(`"${page}"`);
     }
 
-    for (const page of [
-      "file-viewer-sidebar-content",
-      "file-viewer-source-list",
-    ]) {
+    for (const page of ["file-viewer-sidebar-content"]) {
       expect(navigationMeta).toContain(`"${page}"`);
     }
 
@@ -3954,15 +3942,6 @@ describe("viewer architecture", () => {
       "FileViewerEmptyState",
       "FileViewerErrorState",
       "FileViewerUnsupportedState",
-      "FileViewerSourceList",
-      "FileViewerSourceItem",
-      "FileViewerSourceTrigger",
-      "FileViewerSourceBadge",
-      "FileViewerSourceAction",
-      "FileViewerFieldSource",
-      "FileViewerFieldSourceLabel",
-      "FileViewerFieldSourceValue",
-      "FileViewerFieldSourceStatus",
       "FileViewerSidebarTrigger",
     ]) {
       expect(docs, `${component} must be documented`).toContain(component);

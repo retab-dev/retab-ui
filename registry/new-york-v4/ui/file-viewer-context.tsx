@@ -77,9 +77,6 @@ export type FileViewerSidebarDynamicContextValue = {
   sidebarState: FileViewerSidebarState;
 };
 
-export type FileViewerShellContextValue = FileViewerShellStaticContextValue &
-  FileViewerSidebarDynamicContextValue;
-
 export const FileViewerContext = React.createContext<FileViewerContextValue>({
   headerMode: "inline",
   hasHeaderOutlets: false,

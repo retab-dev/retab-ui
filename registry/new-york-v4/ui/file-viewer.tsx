@@ -1,17 +1,8 @@
 "use client";
 
-export {
-  detectCategory,
-  type FileCategory,
-  type ViewerSource as FileViewerSource,
-  type ViewerSource,
-} from "./file-viewer-core";
+export type { ViewerSource } from "./file-viewer-core";
 export {
   FileViewerContent,
-  FileViewerFieldSource,
-  FileViewerFieldSourceLabel,
-  FileViewerFieldSourceStatus,
-  FileViewerFieldSourceValue,
   FileViewerInset,
   FileViewerLegend,
   FileViewerSidebar,
@@ -25,17 +16,8 @@ export {
   FileViewerSidebarSectionHeader,
   FileViewerSidebarSectionTitle,
   FileViewerSidebarSeparator,
-  FileViewerSourceAction,
-  FileViewerSourceBadge,
-  FileViewerSourceItem,
-  FileViewerSourceList,
-  FileViewerSourceTrigger,
   FileViewerViewport,
   type FileViewerContentProps,
-  type FileViewerFieldSourceLabelProps,
-  type FileViewerFieldSourceProps,
-  type FileViewerFieldSourceStatusProps,
-  type FileViewerFieldSourceValueProps,
   type FileViewerInsetProps,
   type FileViewerLegendProps,
   type FileViewerSidebarProps,
@@ -49,11 +31,6 @@ export {
   type FileViewerSidebarSectionProps,
   type FileViewerSidebarSectionTitleProps,
   type FileViewerSidebarSeparatorProps,
-  type FileViewerSourceActionProps,
-  type FileViewerSourceBadgeProps,
-  type FileViewerSourceItemProps,
-  type FileViewerSourceListProps,
-  type FileViewerSourceTriggerProps,
   type FileViewerViewportProps,
 } from "./file-viewer-content";
 export {

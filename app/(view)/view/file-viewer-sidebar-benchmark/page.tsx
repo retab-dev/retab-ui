@@ -19,7 +19,7 @@ import {
   FileViewerSidebarTrigger,
   FileViewerTitle,
   FileViewerViewport,
-  type FileViewerSource,
+  type ViewerSource,
 } from "@/components/ui/file-viewer";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +58,7 @@ type BenchmarkFixture = {
   fallbackSlideSize?: { width: number; height: number };
   id: BenchmarkFormatId;
   label: string;
-  source: FileViewerSource;
+  source: ViewerSource;
 };
 
 type FileViewerSidebarBenchmarkTelemetryApi = {
