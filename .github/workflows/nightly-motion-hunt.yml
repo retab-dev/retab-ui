@@ -1,0 +1,59 @@
+name: nightly-motion-hunt
+
+# Unattended anomaly hunting: everything CI's deterministic gates cannot
+# afford. Random monkey seeds (CI pins one seed for reproducibility — this
+# rolls a new one nightly and prints it, so a failure is replayable with
+# MONKEY_SEED=<seed>), a longer action budget, and a dense scroll sweep
+# hunting depth-specific anomalies like the PDF page-boundary anchor miss.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Remove flaky runner apt mirrors
+        run: |
+          sudo find /etc/apt/sources.list.d -type f \
+            \( -name '*azure-cli*' -o -name '*microsoft*' -o -name '*packages-microsoft-prod*' \) \
+            -print -delete
+      - run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Roll tonight's monkey seed
+        id: seed
+        run: echo "seed=$RANDOM$RANDOM" >> "$GITHUB_OUTPUT"
+
+      - name: Long monkey run (random seed, 160 actions)
+        run: MONKEY_SEED=${{ steps.seed.outputs.seed }} MONKEY_ACTIONS=160 pnpm verify:viewer-monkey-fuzz
+
+      - name: Dense scroll sweep (12 depths, survey to gate budgets)
+        run: MATRIX_SCROLL_STEPS=12 pnpm verify:benchmark-toggle-matrix
+
+      - name: WebKit trajectory matrix
+        run: pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=webkit --workers=2
+
+      - name: Motion baseline drift check
+        run: |
+          MOTION_METRICS_PATH="$RUNNER_TEMP/metrics.jsonl" pnpm verify:sources-viewer-toggle-matrix
+          node scripts/compare-motion-baseline.mjs "$RUNNER_TEMP/metrics.jsonl"
+
+      - name: Upload playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-hunt-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

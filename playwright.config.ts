@@ -22,5 +22,13 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    // Engine sweep: scrollable-overflow, compositing, and scroll-anchoring
+    // semantics differ per engine (the transform-inflated-scrollHeight bug
+    // was engine behavior). CI gates run chromium; run the matrices here
+    // with --project=webkit to hunt engine-specific anomalies.
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+    },
   ],
 });
