@@ -563,7 +563,14 @@ export function DocxViewerContent({
           viewportRef={scrollViewportRef}
           viewportProps={{ onScroll: handleViewportScroll }}
         >
-          <div ref={containerRef}>
+          {/* overflow-clip: the mid-flight counter-transform scales the
+              surface past its committed layout box; without the clip that
+              visual overflow inflates the scroller's scrollHeight, and a
+              scroll position clamped at max gets dragged down frame by
+              frame as the transform relaxes (a 300px in-flight swing at
+              the document end). The clipped strip is beyond the settled
+              document bottom, so nothing visible is lost. */}
+          <div ref={containerRef} className="overflow-clip">
             {!ready ? (
               <div className="p-4">
                 <DocxSkeleton />

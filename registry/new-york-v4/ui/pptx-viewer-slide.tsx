@@ -219,21 +219,27 @@ export function PptxSlideScroller({
         onScroll={handleScroll}
         style={{ overflowAnchor: "none" }}
       >
-        <div
-          ref={documentSurfaceRef}
-          className="relative mx-auto min-w-0"
-          data-slot="pptx-viewer-document-surface"
-          style={{
-            contain: "layout style",
-            minWidth: layout.slideWidth,
-            width: layout.slideWidth,
-          }}
-        >
+        {/* overflow-clip: keeps the mid-flight counter-transform's visual
+            overflow out of the scroller's scrollable area — an inflated
+            scrollHeight drags a max-clamped scroll position down frame by
+            frame as the transform relaxes. */}
+        <div className="overflow-clip">
           <div
-            ref={setCanvasRef}
-            className="relative h-full w-full"
-            data-slot="pptx-slide-virtual-canvas"
-          />
+            ref={documentSurfaceRef}
+            className="relative mx-auto min-w-0"
+            data-slot="pptx-viewer-document-surface"
+            style={{
+              contain: "layout style",
+              minWidth: layout.slideWidth,
+              width: layout.slideWidth,
+            }}
+          >
+            <div
+              ref={setCanvasRef}
+              className="relative h-full w-full"
+              data-slot="pptx-slide-virtual-canvas"
+            />
+          </div>
         </div>
       </div>
     </div>

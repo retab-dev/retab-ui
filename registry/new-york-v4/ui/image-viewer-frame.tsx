@@ -492,7 +492,7 @@ export function ImageFrameScroller({
     >
       <div
         ref={frameListRef}
-        className="relative min-h-full w-full"
+        className="relative min-h-full w-full overflow-clip"
         data-slot="image-viewer-fit-width-measure"
       >
         <div
