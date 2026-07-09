@@ -145,9 +145,14 @@ function ImageFrameCanvas({
     layoutScale,
     rotation,
   );
-  const rasterFrameRect = frameCssSize(
+  // One resample generation: the canvas backing never exceeds the bitmap's
+  // intrinsic resolution. Rastering past intrinsic only launders the same
+  // pixels through a second resample, and the compositor's in-flight rescale
+  // then beats against that pre-resampled texture (visible stroke shimmer).
+  const rasterDeviceScale = Math.min(rasterScale * dpr, 1);
+  const backingFrameRect = frameCssSize(
     descriptor.intrinsicSize,
-    rasterScale,
+    rasterDeviceScale,
     rotation,
   );
   const [drawError, setDrawError] = React.useState<Error | null>(null);
@@ -160,11 +165,8 @@ function ImageFrameCanvas({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const canvasWidth = Math.max(1, Math.floor(rasterFrameRect.width * dpr));
-      const canvasHeight = Math.max(
-        1,
-        Math.floor(rasterFrameRect.height * dpr),
-      );
+      const canvasWidth = Math.max(1, Math.floor(backingFrameRect.width));
+      const canvasHeight = Math.max(1, Math.floor(backingFrameRect.height));
       const cached = source.hasDecodedFrame(frameIndex);
       const previousCanvas = resizeImageCanvas(
         canvas,
@@ -180,7 +182,7 @@ function ImageFrameCanvas({
       let settled = false;
       let reported = false;
       const startedAt = now();
-      const renderScale = rasterScale * dpr;
+      const renderScale = rasterDeviceScale;
       const report = (status: ImageFrameRenderTiming["status"]) => {
         if (reported) return;
         reported = true;
@@ -200,11 +202,14 @@ function ImageFrameCanvas({
           if (cancelled) return;
           ctx.save();
           try {
-            ctx.scale(dpr, dpr);
-            ctx.translate(rasterFrameRect.width / 2, rasterFrameRect.height / 2);
+            ctx.translate(
+              backingFrameRect.width / 2,
+              backingFrameRect.height / 2,
+            );
             ctx.rotate((rotation * Math.PI) / 180);
-            const drawWidth = descriptor.intrinsicSize.width * rasterScale;
-            const drawHeight = descriptor.intrinsicSize.height * rasterScale;
+            const drawWidth = descriptor.intrinsicSize.width * rasterDeviceScale;
+            const drawHeight =
+              descriptor.intrinsicSize.height * rasterDeviceScale;
             ctx.imageSmoothingQuality = renderQuality;
             ctx.drawImage(
               bitmap,
@@ -242,14 +247,13 @@ function ImageFrameCanvas({
       };
     },
     [
+      backingFrameRect.height,
+      backingFrameRect.width,
       descriptor.intrinsicSize.height,
       descriptor.intrinsicSize.width,
-      dpr,
       frameIndex,
       onFrameRenderTiming,
-      rasterFrameRect.height,
-      rasterFrameRect.width,
-      rasterScale,
+      rasterDeviceScale,
       renderQuality,
       rotation,
       source,

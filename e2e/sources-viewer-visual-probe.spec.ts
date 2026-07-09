@@ -87,3 +87,51 @@ test.describe("Sources Viewer pixel probe", () => {
     });
   }
 });
+
+// The pixel probe sees shimmer; this DOM gate sees the jolt. The document's
+// far edge is where slide velocity peaks — under an eased motion its final
+// per-frame step approaches zero, while a hard stop arrives at full speed
+// (~28px/frame at this fixture's size before the kernel gained its ease-out).
+test("document far edge decelerates into settle", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/examples/sources-viewer");
+
+  await page.getByRole("tab", { name: "Image" }).click();
+  await expect(
+    page.locator('[data-slot="image-viewer-document"] canvas').first(),
+  ).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(1_500);
+
+  const steps = await page.evaluate(async () => {
+    const root = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-slot="file-viewer-root"]'),
+    ).find((candidate) => candidate.getBoundingClientRect().width > 0);
+    const trigger = root?.querySelector<HTMLButtonElement>(
+      '[data-slot="file-viewer-sidebar-trigger"]',
+    );
+    const frame = root?.querySelector('[data-slot="image-frame"]');
+    if (!root || !trigger || !frame) throw new Error("shell not found");
+
+    const bottoms: number[] = [];
+    trigger.click();
+    for (let index = 0; index < 40; index += 1) {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      bottoms.push(frame.getBoundingClientRect().bottom);
+    }
+    return bottoms;
+  });
+
+  const deltas = steps
+    .slice(1)
+    .map((bottom, index) => Math.abs(bottom - steps[index]));
+  const settleIndex = deltas.findLastIndex((delta) => delta > 0.5);
+  expect(settleIndex, "motion never moved the frame").toBeGreaterThan(3);
+  const terminalStep = deltas[settleIndex];
+  expect(
+    terminalStep,
+    `far edge hit the settle at ${terminalStep.toFixed(1)}px/frame — the slide must decelerate into rest`,
+  ).toBeLessThanOrEqual(10);
+});

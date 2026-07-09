@@ -494,16 +494,17 @@ describe("createViewerGeometryStore", () => {
 
     frames.advance(75);
 
+    // Half the clock is 87.5% of the eased slide: 1 - (1 - 0.5)^3.
     expect(store.getInteractiveSnapshot()).toMatchObject({
-      layoutInlineSize: 630,
+      layoutInlineSize: 787.5,
       open: false,
-      motionProgress: 0.5,
-      sidebarInlineSize: 210,
+      motionProgress: 0.875,
+      sidebarInlineSize: 52.5,
       fromInlineSize: 420,
       toInlineSize: 840,
     });
-    expect(sidebarGapElement.style.width).toBe("210px");
-    expect(sidebarGapElement.style.flexBasis).toBe("210px");
+    expect(sidebarGapElement.style.width).toBe("52.5px");
+    expect(sidebarGapElement.style.flexBasis).toBe("52.5px");
     expect(documentSurfaceElement.style.transform).toBe("");
     expect(listener).toHaveBeenCalledTimes(1);
 
@@ -621,9 +622,9 @@ describe("createViewerGeometryStore", () => {
     frames.advance(75);
 
     expect(store.getInteractiveSnapshot()).toMatchObject({
-      layoutInlineSize: 630,
-      motionProgress: 0.5,
-      sidebarInlineSize: 210,
+      layoutInlineSize: 787.5,
+      motionProgress: 0.875,
+      sidebarInlineSize: 52.5,
     });
     expect(listener).toHaveBeenCalledTimes(1);
 
@@ -872,11 +873,11 @@ describe("createViewerGeometryStore", () => {
     frames.advance(75);
 
     expect(store.getInteractiveSnapshot()).toMatchObject({
-      layoutInlineSize: 630,
-      motionProgress: 0.5,
-      sidebarInlineSize: 210,
+      layoutInlineSize: 787.5,
+      motionProgress: 0.875,
+      sidebarInlineSize: 52.5,
     });
-    expect(sidebarGapElement.style.width).toBe("210px");
+    expect(sidebarGapElement.style.width).toBe("52.5px");
     expect(documentSurfaceElement.style.transform).toBe("");
     expect(listener).toHaveBeenCalledTimes(1);
   });

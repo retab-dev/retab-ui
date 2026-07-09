@@ -13,6 +13,7 @@ export type ScreencastFrame = {
 export type ScreencastFrameStats = {
   changedRatio: number;
   elapsedMs: number;
+  hfEnergy: number;
   inkRatio: number;
   meanAbsDiff: number;
   meanLuminance: number;
@@ -82,6 +83,7 @@ export async function analyzeScreencastFrames(
       const stats: {
         changedRatio: number;
         elapsedMs: number;
+        hfEnergy: number;
         inkRatio: number;
         meanAbsDiff: number;
         meanLuminance: number;
@@ -140,11 +142,25 @@ export async function analyzeScreencastFrames(
           }
         }
 
+        // High-frequency energy: mean horizontal+vertical gradient magnitude.
+        // A rigid slide preserves stroke contrast almost exactly; raster
+        // checkpoints and sampling-phase beats swing it frame to frame.
+        let gradientSum = 0;
+        for (let y = 0; y < height - 1; y += 1) {
+          for (let x = 0; x < width - 1; x += 1) {
+            const index = y * width + x;
+            gradientSum +=
+              Math.abs(luminance[index] - luminance[index + 1]) +
+              Math.abs(luminance[index] - luminance[index + width]);
+          }
+        }
+
         stats.push({
           changedRatio: previousLuminance
             ? changedCount / (width * height)
             : 0,
           elapsedMs: Math.round(frame.elapsedMs),
+          hfEnergy: gradientSum / ((width - 1) * (height - 1)),
           inkRatio: inkCount / (width * height),
           meanAbsDiff: previousLuminance ? diffSum / (width * height) : 0,
           meanLuminance: luminanceSum / (width * height),
@@ -161,27 +177,39 @@ export async function analyzeScreencastFrames(
 export type ScreencastMotionVerdict = {
   failures: string[];
   inkEndpointFloor: number;
+  inkOscillationRatio: number;
+  maxMidInkRatio: number;
   minMidInkRatio: number;
   postMotionMaxDiff: number;
   whiteoutFrameCount: number;
 };
 
 // Scores one toggle capture. Content in transit between two states must stay
-// inside the visual interval spanned by those states:
+// inside the visual interval spanned by those states and move through it
+// steadily:
 // - whiteout: a frame with almost no ink while both endpoints have ink;
 // - ink dip: mid-motion ink falling well below BOTH endpoints (the
 //   settle-boundary wobble signature — content leaves the endpoint interval
 //   and comes back);
+// - ink spike: mid-motion ink rising well above BOTH endpoints (overshoot
+//   that returns — content transiently denser than either resting state);
+// - ink oscillation: total frame-to-frame ink variation far exceeding the
+//   net endpoint change (the shimmer signature — strokes pulsing bold/soft
+//   as a raster is resampled through sweeping fractional scales);
 // - post-motion churn: pixels still changing after the motion and its settle
 //   tail are over.
 export function scoreScreencastMotion(
   stats: readonly ScreencastFrameStats[],
   {
     inkDipRatioBudget = 0.8,
+    inkOscillationBudget = 2.5,
+    inkSpikeRatioBudget = 1.6,
     motionEndMs,
     postMotionMaxDiffBudget = 1.5,
   }: {
     inkDipRatioBudget?: number;
+    inkOscillationBudget?: number;
+    inkSpikeRatioBudget?: number;
     motionEndMs: number;
     postMotionMaxDiffBudget?: number;
   },
@@ -215,6 +243,34 @@ export function scoreScreencastMotion(
     );
   }
 
+  const inkEndpointCeil = Math.max(first, last);
+  const maxMidInkRatio = midInks.length > 0 ? Math.max(...midInks) : first;
+  if (
+    inkEndpointCeil > 0.005 &&
+    maxMidInkRatio > inkEndpointCeil * inkSpikeRatioBudget
+  ) {
+    failures.push(
+      `mid-motion ink ${maxMidInkRatio.toFixed(4)} spikes above ${(inkEndpointCeil * inkSpikeRatioBudget).toFixed(4)} (${inkSpikeRatioBudget} x endpoint ceiling ${inkEndpointCeil.toFixed(4)})`,
+    );
+  }
+
+  // Shimmer: sum of frame-to-frame ink movement beyond the legitimate net
+  // endpoint change, normalized by the endpoint span. A steady interpolation
+  // scores ~0; strokes pulsing bold/soft as a raster sweeps fractional
+  // scales rack up variation with no net progress.
+  let inkTotalVariation = 0;
+  for (let index = 1; index < inks.length; index += 1) {
+    inkTotalVariation += Math.abs(inks[index] - inks[index - 1]);
+  }
+  const inkNetChange = Math.abs(last - first);
+  const inkSpan = Math.max(first, last, 0.005);
+  const inkOscillationRatio = (inkTotalVariation - inkNetChange) / inkSpan;
+  if (inkEndpointFloor > 0.005 && inkOscillationRatio > inkOscillationBudget) {
+    failures.push(
+      `mid-motion ink oscillation ${inkOscillationRatio.toFixed(2)} exceeds ${inkOscillationBudget} (total variation ${inkTotalVariation.toFixed(4)} vs net change ${inkNetChange.toFixed(4)})`,
+    );
+  }
+
   let postMotionMaxDiff = 0;
   for (const sample of stats) {
     if (sample.elapsedMs <= motionEndMs) continue;
@@ -229,6 +285,8 @@ export function scoreScreencastMotion(
   return {
     failures,
     inkEndpointFloor,
+    inkOscillationRatio,
+    maxMidInkRatio,
     minMidInkRatio,
     postMotionMaxDiff,
     whiteoutFrameCount,

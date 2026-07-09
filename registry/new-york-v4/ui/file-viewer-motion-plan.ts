@@ -11,6 +11,15 @@ export const FILE_VIEWER_MOTION_EPSILON = 0.5;
 // motion targets, and the overlay panel's CSS transition all read this value.
 export const FILE_VIEWER_MOTION_DURATION_MS = 150;
 
+// The one easing for every sidebar motion timeline. Cubic ease-out: the slide
+// decelerates into rest. Linear progress ends at full velocity, and content
+// far from the reading anchor (the bottom of a tall fit-width document)
+// travels several pixels per millisecond straight into a hard stop — a
+// visible jolt the anchor line never shows.
+export function easeFileViewerMotion(timeProgress: number) {
+  return 1 - (1 - timeProgress) ** 3;
+}
+
 export type FileViewerMotionPhase = "idle" | "sliding" | "settling";
 
 export type FileViewerMotionTarget = {

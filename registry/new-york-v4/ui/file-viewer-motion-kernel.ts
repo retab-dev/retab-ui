@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
 import {
+  easeFileViewerMotion,
   FILE_VIEWER_MOTION_DURATION_MS,
   areFileViewerMotionFramesEqual,
   areFileViewerMotionRestFramesEqual,
@@ -256,10 +257,11 @@ export function createFileViewerMotionKernel({
     motion: FileViewerActiveMotion,
     now = readNow(),
   ): FileViewerMotionFrame => {
-    const rawMotionProgress =
+    const rawTimeProgress =
       motion.durationMs <= 0
         ? 1
         : clamp((now - motion.startedAt) / motion.durationMs, 0, 1);
+    const rawMotionProgress = easeFileViewerMotion(rawTimeProgress);
     const rawSidebarInlineSize = lerp(
       motion.from.sidebarInlineSize,
       motion.to.sidebarInlineSize,

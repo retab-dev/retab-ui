@@ -2344,17 +2344,19 @@ describe("ImageFrame rendering lifecycle", () => {
     });
     await waitFor(() => expect(context.drawImage).toHaveBeenCalledTimes(1));
 
-    expect(canvas.width).toBe(80);
-    expect(canvas.height).toBe(200);
-    expect(context.scale).toHaveBeenCalledWith(2, 2);
-    expect(context.translate).toHaveBeenCalledWith(20, 50);
+    // scale 2 x dpr 2 caps at the bitmap's intrinsic resolution (device
+    // scale 1); the compositor performs the single remaining upscale.
+    expect(canvas.width).toBe(20);
+    expect(canvas.height).toBe(50);
+    expect(context.scale).not.toHaveBeenCalled();
+    expect(context.translate).toHaveBeenCalledWith(10, 25);
     expect(context.rotate).toHaveBeenCalledWith(Math.PI / 2);
     expect(context.drawImage).toHaveBeenCalledWith(
       decodedBitmap,
-      -50,
-      -20,
-      100,
-      40,
+      -25,
+      -10,
+      50,
+      20,
     );
 
     unmount();
@@ -2443,12 +2445,12 @@ describe("ImageFrame rendering lifecycle", () => {
     const source = createImageSourceForTests("image", frameCount(1), decode);
 
     const view = render(
-      <ImageFrame source={source} frameIndex={0} scale={1} rotation={0} />,
+      <ImageFrame source={source} frameIndex={0} scale={0.5} rotation={0} />,
     );
     await waitFor(() => expect(decode).toHaveBeenCalledTimes(1));
 
     view.rerender(
-      <ImageFrame source={source} frameIndex={0} scale={2} rotation={0} />,
+      <ImageFrame source={source} frameIndex={0} scale={0.8} rotation={0} />,
     );
     await waitFor(() => expect(decode).toHaveBeenCalledTimes(2));
     firstPending.resolve(staleBitmap);
@@ -2457,10 +2459,10 @@ describe("ImageFrame rendering lifecycle", () => {
     await waitFor(() => expect(context.drawImage).toHaveBeenCalledTimes(1));
     expect(context.drawImage).toHaveBeenCalledWith(
       currentBitmap,
-      -10,
-      -10,
-      20,
-      20,
+      -4,
+      -4,
+      8,
+      8,
     );
     expect(staleBitmap.close).toHaveBeenCalledTimes(1);
     expect(currentBitmap.close).not.toHaveBeenCalled();

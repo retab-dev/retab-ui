@@ -95,7 +95,7 @@ export function FileViewerSidebar({
           sidebar.resolvedSide === "left"
             ? "right-0 border-r"
             : "left-0 border-l",
-          !sidebar.isInline && "shadow-lg transition-transform ease-linear",
+          !sidebar.isInline && "shadow-lg transition-transform ease-out",
           !sidebar.isInline &&
             !sidebar.isSidebarOpen &&
             sidebar.resolvedSide === "left" &&
