@@ -13,19 +13,72 @@ import {
 } from "./file-viewer-context";
 import type { FileViewerFallbackSize } from "./file-viewer-core";
 import {
-  FileViewerControlsProvider,
-  useFileViewerControlsController,
-} from "./file-viewer-controls-context";
-import {
   FileViewerResourceProvider,
   useFileViewerResourceState,
 } from "./file-viewer-resource-state";
-import { ViewerControlsRegistrationProvider } from "./viewer-controls";
+import {
+  ViewerControlsRegistrationProvider,
+  type ViewerControlsState,
+} from "./viewer-controls";
 import { warnViewerDevelopmentOnce } from "./viewer-diagnostics";
 import {
   useViewerHeaderOutletAvailable,
   useViewerHeaderOutletsAvailable,
 } from "./viewer-header-outlet";
+
+export type FileViewerControlsState = ViewerControlsState;
+
+type FileViewerControlsRegistration = {
+  descriptorKey: string;
+  state: FileViewerControlsState | null;
+};
+
+type FileViewerControlsValue = {
+  controlsState: FileViewerControlsState | null;
+};
+
+const FileViewerControlsContext =
+  React.createContext<FileViewerControlsValue | null>(null);
+
+function useFileViewerControlsController(descriptorKey: string): {
+  controlsValue: FileViewerControlsValue;
+  handleControlsChange: (state: FileViewerControlsState | null) => void;
+} {
+  const [controlsRegistration, setControlsRegistration] =
+    React.useState<FileViewerControlsRegistration>(() => ({
+      descriptorKey,
+      state: null,
+    }));
+  const controlsState =
+    controlsRegistration.descriptorKey === descriptorKey
+      ? controlsRegistration.state
+      : null;
+  const handleControlsChange = React.useCallback(
+    (state: FileViewerControlsState | null) => {
+      setControlsRegistration({ descriptorKey, state });
+    },
+    [descriptorKey],
+  );
+  const controlsValue = React.useMemo<FileViewerControlsValue>(
+    () => ({
+      controlsState,
+    }),
+    [controlsState],
+  );
+
+  return {
+    controlsValue,
+    handleControlsChange,
+  };
+}
+
+export function useFileViewerControlsState() {
+  const context = React.useContext(FileViewerControlsContext);
+  if (!context) {
+    throw new Error("File viewer controls must be used within FileViewer.");
+  }
+  return context.controlsState;
+}
 
 export type FileViewerProviderProps = {
   children: React.ReactNode;
@@ -116,7 +169,9 @@ export function FileViewerProvider({
 
   return (
     <FileViewerResourceProvider value={resourceState}>
-      <FileViewerControlsProvider value={controlsController.controlsValue}>
+      <FileViewerControlsContext.Provider
+        value={controlsController.controlsValue}
+      >
         <ViewerControlsRegistrationProvider
           onControlsChange={controlsController.handleControlsChange}
         >
@@ -124,7 +179,7 @@ export function FileViewerProvider({
             {children}
           </FileViewerContext.Provider>
         </ViewerControlsRegistrationProvider>
-      </FileViewerControlsProvider>
+      </FileViewerControlsContext.Provider>
     </FileViewerResourceProvider>
   );
 }

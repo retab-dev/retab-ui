@@ -3,7 +3,9 @@
 import * as React from "react";
 
 import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
+import { inferCsvDialect } from "@/lib/csv";
 import { joinEffectKey } from "@/lib/effect-key";
+import { cn } from "@/lib/utils";
 import { type ViewerResource } from "@/lib/viewer-resource";
 import {
   fileViewerDiagnostic,
@@ -17,7 +19,6 @@ import {
   type FileDescriptor,
   type FileViewerFallbackSize,
 } from "./file-viewer-core";
-import { CsvFileContent } from "./file-viewer-csv-viewer";
 import { UnsupportedCard } from "./file-viewer-fallback";
 import { HtmlFileContent } from "./file-viewer-html-viewer";
 import {
@@ -70,6 +71,49 @@ const EmailResourceContent = React.lazy(() =>
     default: m.EmailResourceContent,
   })),
 );
+const CsvResourceContent = React.lazy(() =>
+  import("@/components/ui/csv-viewer").then((m) => ({
+    default: m.CsvResourceContent,
+  })),
+);
+
+function CsvFileContent({
+  resource,
+  className,
+  bare,
+  controls = false,
+  isolateStyles,
+}: {
+  resource: ViewerResource;
+  className?: string;
+  bare?: boolean;
+  controls?: boolean;
+  isolateStyles?: boolean;
+}) {
+  const dialect = inferCsvDialect({
+    src: resource.content.directUrl ?? undefined,
+    fileName: resource.fileName,
+    mimeType: resource.mimeType,
+  });
+  return (
+    <div
+      data-slot="csv-file-viewer-content"
+      className={cn(
+        "bg-card flex min-h-0 flex-1 flex-col overflow-hidden",
+        bare ? "h-full" : "min-h-64",
+        className,
+      )}
+    >
+      <CsvResourceContent
+        resource={resource}
+        dialect={dialect}
+        fillHeight
+        controls={controls}
+        isolateStyles={isolateStyles}
+      />
+    </div>
+  );
+}
 
 export type FileViewerRouteProps = {
   className?: string;

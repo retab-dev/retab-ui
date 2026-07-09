@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { FileErrorBoundary, ViewerFallback } from "./file-viewer-fallback";
 import { useFileViewerRequiredResourceState } from "./file-viewer-resource-state";
 import { FileViewerRoute } from "./file-viewer-route";
-import { useIsInsideFileViewerViewport } from "./file-viewer-content";
+import { useIsInsideFileViewerViewport } from "./file-viewer-layout";
 
 export type FileViewerDocumentProps = {
   className?: string;

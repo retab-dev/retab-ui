@@ -2250,11 +2250,6 @@
           "target": "@ui/file-viewer-accessibility.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-content.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-content.tsx"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-layout.tsx",
           "type": "registry:ui",
           "target": "@ui/file-viewer-layout.tsx"
@@ -2265,19 +2260,9 @@
           "target": "@ui/file-viewer-context.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-controls-context.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-controls-context.ts"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-core.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-core.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-csv-viewer.tsx"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-document.tsx",
@@ -2315,16 +2300,6 @@
           "target": "@ui/file-viewer-sidebar-controller.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-sidebar-open-state.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-sidebar-registration.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-sidebar-registration.ts"
-        },
-        {
           "path": "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-motion-kernel.ts"
@@ -2348,11 +2323,6 @@
           "path": "registry/new-york-v4/ui/file-viewer-html-srcdoc-cache.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-html-srcdoc-cache.ts"
-        },
-        {
-          "path": "registry/new-york-v4/ui/file-viewer-keyboard.ts",
-          "type": "registry:ui",
-          "target": "@ui/file-viewer-keyboard.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-preview.tsx",

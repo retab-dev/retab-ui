@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { restoreFileViewerSidebarFocusOnClose } from "./file-viewer-accessibility";
 import {
+  DEFAULT_FILE_VIEWER_SIDEBAR_WIDTH,
   useFileViewerContext,
   type FileViewerContextValue,
   type FileViewerSetSidebarRequestedOpen,
@@ -11,6 +12,8 @@ import {
   type FileViewerSidebarCollapsible,
   type FileViewerSidebarDynamicContextValue,
   type FileViewerSidebarMode,
+  type FileViewerSidebarOpenProps,
+  type FileViewerSidebarRegistration,
   type FileViewerSidebarRequestedMode,
   type FileViewerSidebarSide,
   type FileViewerSidebarState,
@@ -26,14 +29,128 @@ import {
   FILE_VIEWER_MOTION_DURATION_MS,
   type FileViewerMotionTarget,
 } from "./file-viewer-motion-plan";
-import { useFileViewerSidebarOpenController } from "./file-viewer-sidebar-open-state";
-import { useFileViewerSidebarRegistration } from "./file-viewer-sidebar-registration";
 import {
   readElementRectSnapshot,
   useStableElementSize,
 } from "./viewer-measurement";
 
 export const FILE_VIEWER_INLINE_BREAKPOINT = 768;
+
+type FileViewerSidebarOpenController = {
+  getSidebarRequestedOpen: () => boolean;
+  isSidebarRequestedOpen: boolean;
+  setSidebarRequestedOpen: (isSidebarRequestedOpen: boolean) => void;
+};
+
+// Bridges the controlled/uncontrolled `open` prop pair to real React state, so
+// every toggle re-renders the tree and the declarative writers (data
+// attributes, inert/aria, overlay translate classes) stay current.
+function useFileViewerSidebarOpenController({
+  collapsible,
+  defaultOpen,
+  onOpenChange,
+  open,
+}: FileViewerSidebarOpenProps & {
+  collapsible: FileViewerSidebarCollapsible;
+}): FileViewerSidebarOpenController {
+  const isControlled = open !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
+    defaultOpen ?? false,
+  );
+  const isSidebarRequestedOpen =
+    collapsible === "none" ? true : (open ?? uncontrolledOpen);
+  const openRef = React.useRef(isSidebarRequestedOpen);
+
+  React.useLayoutEffect(() => {
+    openRef.current = isSidebarRequestedOpen;
+  }, [isSidebarRequestedOpen]);
+
+  const getSidebarRequestedOpen = React.useCallback(() => openRef.current, []);
+
+  const setSidebarRequestedOpen = React.useCallback(
+    (nextIsSidebarRequestedOpen: boolean) => {
+      openRef.current = nextIsSidebarRequestedOpen;
+      if (!isControlled) {
+        setUncontrolledOpen(nextIsSidebarRequestedOpen);
+      }
+      onOpenChange?.(nextIsSidebarRequestedOpen);
+    },
+    [isControlled, onOpenChange],
+  );
+
+  return React.useMemo(
+    () => ({
+      getSidebarRequestedOpen,
+      isSidebarRequestedOpen,
+      setSidebarRequestedOpen,
+    }),
+    [getSidebarRequestedOpen, isSidebarRequestedOpen, setSidebarRequestedOpen],
+  );
+}
+
+type FileViewerSidebarRegistrationController = {
+  canToggleSidebar: boolean;
+  effectiveCollapsible: FileViewerSidebarCollapsible;
+  registerSidebar: (registration: FileViewerSidebarRegistration) => () => void;
+  side: FileViewerSidebarSide;
+  sidebarId: string;
+  sidebarWidth: string;
+  sidebarWidthPixels: number;
+};
+
+// The mounted FileViewerSidebar is the single source of sidebar configuration
+// (collapsible, side, width); the shell only holds neutral defaults until one
+// registers. No sidebar registered means nothing to toggle and no motion, so
+// no fallback width measurement is needed.
+function useFileViewerSidebarRegistration({
+  fallbackSidebarId,
+}: {
+  fallbackSidebarId: string;
+}): FileViewerSidebarRegistrationController {
+  const [sidebarRegistration, setSidebarRegistration] =
+    React.useState<FileViewerSidebarRegistration | null>(null);
+  const effectiveCollapsible = sidebarRegistration?.collapsible ?? "offcanvas";
+  const side = sidebarRegistration?.side ?? "left";
+  const sidebarId = sidebarRegistration?.id ?? fallbackSidebarId;
+  const sidebarWidth =
+    sidebarRegistration?.width ?? DEFAULT_FILE_VIEWER_SIDEBAR_WIDTH;
+  const sidebarWidthPixels = sidebarRegistration?.widthPixels ?? 0;
+  const canToggleSidebar =
+    sidebarRegistration !== null && effectiveCollapsible !== "none";
+
+  const registerSidebar = React.useCallback(
+    (registration: FileViewerSidebarRegistration) => {
+      setSidebarRegistration(registration);
+      return () => {
+        setSidebarRegistration((current) =>
+          current?.id === registration.id ? null : current,
+        );
+      };
+    },
+    [],
+  );
+
+  return React.useMemo(
+    () => ({
+      canToggleSidebar,
+      effectiveCollapsible,
+      registerSidebar,
+      side,
+      sidebarId,
+      sidebarWidth,
+      sidebarWidthPixels,
+    }),
+    [
+      canToggleSidebar,
+      effectiveCollapsible,
+      registerSidebar,
+      side,
+      sidebarId,
+      sidebarWidth,
+      sidebarWidthPixels,
+    ],
+  );
+}
 
 type FileViewerFrameControllerOptions = {
   inlineBreakpoint: number;

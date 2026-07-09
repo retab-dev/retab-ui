@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
 import { Spinner } from "./spinner";
-import { useFileViewerControlsState } from "./file-viewer-controls-context";
+import { useFileViewerControlsState } from "./file-viewer-provider";
 import { useFileViewerRequiredResourceState } from "./file-viewer-resource-state";
 import {
   useFileViewerContext,

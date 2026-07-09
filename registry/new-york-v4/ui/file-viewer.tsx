@@ -5,6 +5,13 @@ export {
   FileViewerContent,
   FileViewerInset,
   FileViewerLegend,
+  FileViewerViewport,
+  type FileViewerContentProps,
+  type FileViewerInsetProps,
+  type FileViewerLegendProps,
+  type FileViewerViewportProps,
+} from "./file-viewer-layout";
+export {
   FileViewerSidebar,
   FileViewerSidebarContent,
   FileViewerSidebarFooter,
@@ -16,10 +23,6 @@ export {
   FileViewerSidebarSectionHeader,
   FileViewerSidebarSectionTitle,
   FileViewerSidebarSeparator,
-  FileViewerViewport,
-  type FileViewerContentProps,
-  type FileViewerInsetProps,
-  type FileViewerLegendProps,
   type FileViewerSidebarProps,
   type FileViewerSidebarContentProps,
   type FileViewerSidebarFooterProps,
@@ -31,8 +34,7 @@ export {
   type FileViewerSidebarSectionProps,
   type FileViewerSidebarSectionTitleProps,
   type FileViewerSidebarSeparatorProps,
-  type FileViewerViewportProps,
-} from "./file-viewer-content";
+} from "./file-viewer-sidebar";
 export {
   FileViewerDocument,
   type FileViewerDocumentProps,

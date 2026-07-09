@@ -6,7 +6,7 @@ import {
   FileViewerContent,
   FileViewerInset,
   FileViewerViewport,
-} from "./file-viewer-content";
+} from "./file-viewer-layout";
 import { FileViewerDocument } from "./file-viewer-document";
 import { FileViewer } from "./file-viewer-frame";
 import { FileViewerProvider } from "./file-viewer-provider";

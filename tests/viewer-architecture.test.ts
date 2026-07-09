@@ -803,7 +803,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/blocks/sources-viewer-block.tsx",
     );
     const fileViewerCsv = fileContent(
-      "registry/new-york-v4/ui/file-viewer-csv-viewer.tsx",
+      "registry/new-york-v4/ui/file-viewer-route.tsx",
     );
     const csvViewer = fileContent("registry/new-york-v4/ui/csv-viewer.tsx");
 
@@ -1014,9 +1014,6 @@ describe("viewer architecture", () => {
     const fileViewerFrameKeyboard = fileContent(
       "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
     );
-    const fileViewerContent = fileContent(
-      "registry/new-york-v4/ui/file-viewer-content.tsx",
-    );
     const fileViewerLayout = fileContent(
       "registry/new-york-v4/ui/file-viewer-layout.tsx",
     );
@@ -1026,17 +1023,7 @@ describe("viewer architecture", () => {
     const fileViewerSidebarController = fileContent(
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
     );
-    const fileViewerSidebarOpenState = fileContent(
-      "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
-    );
-    const fileViewerSidebarRegistration = fileContent(
-      "registry/new-york-v4/ui/file-viewer-sidebar-registration.ts",
-    );
-    const fileViewerBody = [
-      fileViewerContent,
-      fileViewerLayout,
-      fileViewerSidebar,
-    ].join("\n");
+    const fileViewerBody = [fileViewerLayout, fileViewerSidebar].join("\n");
     const fileViewerAccessibility = fileContent(
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
     );
@@ -1048,9 +1035,6 @@ describe("viewer architecture", () => {
     );
     const fileViewerMotionKernel = fileContent(
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
-    );
-    const fileViewerKeyboard = fileContent(
-      "registry/new-york-v4/ui/file-viewer-keyboard.ts",
     );
     const fileViewerRendererContract = fileContent(
       "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
@@ -1094,8 +1078,6 @@ describe("viewer architecture", () => {
       fileViewerRendererFrame,
       fileViewerSidebarController,
       fileViewerMotionPlan,
-      fileViewerSidebarOpenState,
-      fileViewerSidebarRegistration,
     ].join("\n");
     const viewerHeaderOutlet = fileContent(
       "registry/new-york-v4/ui/viewer-header-outlet.tsx",
@@ -1124,13 +1106,9 @@ describe("viewer architecture", () => {
       "shouldCloseFileViewerSidebarOnEscape",
     );
     expect(fileViewerFrameKeyboard).toContain("closeSidebar()");
-    expect(fileViewerKeyboard).toContain(
-      "shouldCloseFileViewerSidebarOnEscape",
-    );
-    expect(fileViewerKeyboard).toContain(
+    expect(fileViewerFrameKeyboard).toContain(
       "isFileViewerActiveElementInsideShell",
     );
-    expect(fileViewerKeyboard).not.toContain("React.");
     expect(fileViewerFrameController).toContain(
       "createFileViewerElementRegistry",
     );
@@ -1235,8 +1213,6 @@ describe("viewer architecture", () => {
         "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
       ].sort(),
     );
-    expect(fileViewerContent).toContain('from "./file-viewer-layout"');
-    expect(fileViewerContent).toContain('from "./file-viewer-sidebar"');
     expect(fileViewerLayout).toContain("export function FileViewerContent");
     expect(fileViewerSidebar).toContain("export function FileViewerSidebar");
     expect(viewerHeaderOutlet).toContain('"titleGroup" | "controls"');
@@ -1438,7 +1414,6 @@ describe("viewer architecture", () => {
     const allowedDomContractFiles = new Set([
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
       "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
-      "registry/new-york-v4/ui/file-viewer-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
     ]);
     const domContractPattern =
@@ -1605,7 +1580,6 @@ describe("viewer architecture", () => {
   it("keeps FileViewer DOM discovery and motion writes centralized", () => {
     const fileViewerRuntimeFiles = [
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
-      "registry/new-york-v4/ui/file-viewer-content.tsx",
       "registry/new-york-v4/ui/file-viewer-context.tsx",
       "registry/new-york-v4/ui/file-viewer-document.tsx",
       "registry/new-york-v4/ui/file-viewer-elements.ts",
@@ -1613,16 +1587,12 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
       "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-header.tsx",
-      "registry/new-york-v4/ui/file-viewer-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
       "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
-      "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
-      "registry/new-york-v4/ui/file-viewer-sidebar-registration.ts",
       "registry/new-york-v4/ui/file-viewer-motion-plan.ts",
     ];
     const filesWithoutLayoutReads = [
-      "registry/new-york-v4/ui/file-viewer-content.tsx",
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
       "registry/new-york-v4/ui/file-viewer-context.tsx",
       "registry/new-york-v4/ui/file-viewer-document.tsx",
@@ -1631,11 +1601,8 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
       "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-header.tsx",
-      "registry/new-york-v4/ui/file-viewer-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
-      "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
-      "registry/new-york-v4/ui/file-viewer-sidebar-registration.ts",
       "registry/new-york-v4/ui/file-viewer-motion-plan.ts",
     ];
     const elementRegistry = fileContent(
@@ -1647,7 +1614,10 @@ describe("viewer architecture", () => {
     const motionWriteOwner = fileContent(
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
     );
-    const body = fileContent("registry/new-york-v4/ui/file-viewer-content.tsx");
+    const body = [
+      fileContent("registry/new-york-v4/ui/file-viewer-layout.tsx"),
+      fileContent("registry/new-york-v4/ui/file-viewer-sidebar.tsx"),
+    ].join("\n");
     const pdfPagesLayer = fileContent(
       "registry/new-york-v4/ui/pdf-viewer-pages-layer.tsx",
     );
@@ -1696,9 +1666,6 @@ describe("viewer architecture", () => {
     const frame = fileContent(
       "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
     );
-    const openState = fileContent(
-      "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
-    );
     const header = fileContent(
       "registry/new-york-v4/ui/file-viewer-header.tsx",
     );
@@ -1710,7 +1677,7 @@ describe("viewer architecture", () => {
     expect(context).not.toContain("commandBus");
     expect(frame).toContain("setSidebarRequestedOpen");
     expect(frame).not.toContain("commandBus");
-    expect(openState).toContain("onOpenChange?.(nextIsSidebarRequestedOpen)");
+    expect(frame).toContain("onOpenChange?.(nextIsSidebarRequestedOpen)");
     expect(frame).toContain("motionKernel.syncTarget(motionTarget)");
     expect(frame).not.toContain("[context.sidebarOpenProps");
     expect(frame).not.toContain("const toggleSidebar = React.useCallback");
@@ -1787,13 +1754,11 @@ describe("viewer architecture", () => {
     const requiredSplitFiles = [
       "registry/new-york-v4/ui/file-viewer.tsx",
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
-      "registry/new-york-v4/ui/file-viewer-content.tsx",
       "registry/new-york-v4/ui/file-viewer-context.tsx",
       "registry/new-york-v4/ui/file-viewer-document.tsx",
       "registry/new-york-v4/ui/file-viewer-elements.ts",
       "registry/new-york-v4/ui/file-viewer-frame.tsx",
       "registry/new-york-v4/ui/file-viewer-header.tsx",
-      "registry/new-york-v4/ui/file-viewer-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
       "registry/new-york-v4/ui/file-viewer-preview.tsx",
       "registry/new-york-v4/ui/file-viewer-provider.tsx",
@@ -1802,8 +1767,6 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-route.tsx",
       "registry/new-york-v4/ui/file-viewer-state.tsx",
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
-      "registry/new-york-v4/ui/file-viewer-sidebar-open-state.ts",
-      "registry/new-york-v4/ui/file-viewer-sidebar-registration.ts",
       "registry/new-york-v4/ui/file-viewer-motion-plan.ts",
       "registry/new-york-v4/ui/viewer.tsx",
       "registry/new-york-v4/ui/viewer-root.tsx",
@@ -3709,8 +3672,6 @@ describe("viewer architecture", () => {
       for (const element of jsxOpeningElements(file)) {
         if (element.tag === "ViewerSidebar") {
           if (file === "registry/new-york-v4/ui/file-viewer.tsx") continue;
-          if (file === "registry/new-york-v4/ui/file-viewer-content.tsx")
-            continue;
           if (
             !element.attributes.includes("aria-label") &&
             !element.attributes.includes("aria-labelledby")

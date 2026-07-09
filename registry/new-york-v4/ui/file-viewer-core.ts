@@ -63,22 +63,3 @@ export function isProseTextDescriptor(descriptor: FileDescriptor): boolean {
 }
 
 export { detectCategory, extensionOf, extractName };
-
-export async function timed<T>(
-  label: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const on =
-    typeof globalThis !== "undefined" &&
-    (globalThis as { __FILE_VIEWER_PROFILE__?: boolean })
-      .__FILE_VIEWER_PROFILE__;
-  if (!on) return fn();
-  const t0 = performance.now();
-  try {
-    return await fn();
-  } finally {
-    console.log(
-      `[file-viewer] ${label} ${(performance.now() - t0).toFixed(1)}ms`,
-    );
-  }
-}
