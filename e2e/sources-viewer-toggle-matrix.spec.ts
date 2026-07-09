@@ -1,4 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+import {
+  setViewerScroll,
+  traceReadingLineThroughToggle,
+} from "./helpers/reading-line-trace";
 
 // Geometry-sweep matrix for the sources viewer sidebar toggle. Traces the
 // screen trajectory of the content at the format's pinned reading line
@@ -41,16 +46,15 @@ const VIEWPORTS = [
 
 const SCROLLS = ["zero", "quarter", "half", "max"] as const;
 
-// PDF is temporarily excluded: the matrix found a deterministic reading-
-// anchor miss at quarter scroll (+105px settle — the marker lands in a
-// page gap and the boundary anchor restores wrong). Tracked as its own
-// task; re-add the PDF entry when it lands:
-//   { name: "PDF",
-//     readySelector: '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
-//     frameSelector: '[data-slot="pdf-page"]',
-//     trackSelector: '[data-slot="pdf-page"]',
-//     markerRatio: 0.2 }
 const FORMATS = [
+  {
+    name: "PDF",
+    readySelector:
+      '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+    frameSelector: '[data-slot="pdf-page"]',
+    trackSelector: '[data-slot="pdf-page"]',
+    markerRatio: 0.2,
+  },
   {
     name: "Image",
     readySelector: '[data-slot="image-viewer-document"] canvas',
@@ -70,112 +74,6 @@ const FORMATS = [
   },
 ] as const;
 
-type ToggleTrace = {
-  scrollBefore: number;
-  scrollAfter: number;
-  settleDrift: number;
-  corridor: number;
-  excursion: number;
-  settleDriftX: number;
-  corridorX: number;
-  samples: number;
-};
-
-async function traceToggle(
-  page: Page,
-  frameSelector: string,
-  trackSelector: string,
-  markerRatio: number,
-  rapid = false,
-): Promise<ToggleTrace> {
-  return page.evaluate(
-    async ({ frameSelector, trackSelector, markerRatio, rapid }) => {
-      const root = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          '[data-slot="file-viewer-root"]',
-        ),
-      ).find((candidate) => candidate.getBoundingClientRect().width > 0)!;
-      const trigger = root.querySelector<HTMLButtonElement>(
-        '[data-slot="file-viewer-sidebar-trigger"]',
-      )!;
-      const frame = root.querySelector<HTMLElement>(frameSelector)!;
-      const scroller = Array.from(
-        root.querySelectorAll<HTMLElement>("*"),
-      ).find(
-        (el) =>
-          el.scrollHeight > el.clientHeight + 4 &&
-          /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-          el.contains(frame),
-      );
-
-      const scrollerRect = scroller?.getBoundingClientRect();
-      const markerY = scrollerRect
-        ? scrollerRect.top + (scroller?.clientHeight ?? 0) * markerRatio
-        : frame.getBoundingClientRect().top;
-      // Track the page/frame whose box contains the reading line — it stays
-      // mounted (it is visible) while virtualization windows churn around it.
-      const candidates = Array.from(
-        root.querySelectorAll<HTMLElement>(trackSelector),
-      );
-      const tracked =
-        candidates.find((el) => {
-          const r = el.getBoundingClientRect();
-          return r.top <= markerY && r.bottom >= markerY;
-        }) ??
-        candidates[0] ??
-        frame;
-      const rect0 = tracked.getBoundingClientRect();
-      // The content coordinate (as a fraction of the frame) sitting at the
-      // reading line before the toggle. Its screen position is the tracked
-      // trajectory: rigid content ⇒ this stays at markerY the whole flight.
-      const contentAtMarker = (markerY - rect0.top) / rect0.height;
-      const scrollBefore = scroller?.scrollTop ?? 0;
-
-      const positions: number[] = [];
-      // Horizontal: content is centered, so the frame CENTER is the pinned
-      // x-line; its trajectory is the horizontal back-and-forth number.
-      const centerX0 = rect0.left + rect0.width / 2;
-      const centersX: number[] = [];
-      trigger.click();
-      if (rapid) {
-        // Interrupt the slide mid-flight: the retarget must carry the
-        // reading line straight back home.
-        await new Promise((resolve) => setTimeout(resolve, 60));
-        trigger.click();
-      }
-      for (let index = 0; index < 90; index += 1) {
-        await new Promise<void>((resolve) =>
-          requestAnimationFrame(() => resolve()),
-        );
-        const rect = tracked.getBoundingClientRect();
-        positions.push(rect.top + contentAtMarker * rect.height - markerY);
-        centersX.push(rect.left + rect.width / 2 - centerX0);
-      }
-
-      const settleDrift = positions.at(-1) ?? 0;
-      let corridor = 0;
-      for (const position of positions) {
-        corridor = Math.max(corridor, Math.abs(position));
-      }
-      let corridorX = 0;
-      for (const centerX of centersX) {
-        corridorX = Math.max(corridorX, Math.abs(centerX));
-      }
-      return {
-        scrollBefore,
-        scrollAfter: scroller?.scrollTop ?? 0,
-        settleDrift,
-        corridor,
-        excursion: corridor - Math.abs(settleDrift),
-        settleDriftX: centersX.at(-1) ?? 0,
-        corridorX,
-        samples: positions.length,
-      };
-    },
-    { frameSelector, trackSelector, markerRatio, rapid },
-  );
-}
-
 for (const viewport of VIEWPORTS) {
   for (const format of FORMATS) {
     test(`${format.name} toggle trajectory at ${viewport.width}x${viewport.height}`, async ({
@@ -192,39 +90,10 @@ for (const viewport of VIEWPORTS) {
 
       const failures: string[] = [];
       for (const scroll of SCROLLS) {
-        const scrolled = await page.evaluate(
-          ({ frameSelector, scroll }) => {
-            const root = Array.from(
-              document.querySelectorAll<HTMLElement>(
-                '[data-slot="file-viewer-root"]',
-              ),
-            ).find(
-              (candidate) => candidate.getBoundingClientRect().width > 0,
-            )!;
-            const frame = root.querySelector<HTMLElement>(frameSelector);
-            const scroller = Array.from(
-              root.querySelectorAll<HTMLElement>("*"),
-            ).find(
-              (el) =>
-                el.scrollHeight > el.clientHeight + 4 &&
-                /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-                frame != null &&
-                el.contains(frame),
-            );
-            if (!scroller) return scroll === "zero";
-            const range = scroller.scrollHeight - scroller.clientHeight;
-            scroller.scrollTop =
-              scroll === "zero"
-                ? 0
-                : scroll === "quarter"
-                  ? range * 0.25
-                  : scroll === "half"
-                    ? range * 0.5
-                    : range;
-            scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
-            return true;
-          },
-          { frameSelector: format.frameSelector, scroll },
+        const scrolled = await setViewerScroll(
+          page,
+          format.frameSelector,
+          scroll,
         );
         if (!scrolled) continue;
         await page.waitForTimeout(600);
@@ -233,12 +102,15 @@ for (const viewport of VIEWPORTS) {
           // At scroll 0 every format pins the document TOP (the clamp
           // permits nothing else), so that is the line to probe there;
           // deeper, each format pins its own reading line.
-          const trace = await traceToggle(
+          const trace = await traceReadingLineThroughToggle(
             page,
-            format.frameSelector,
-            format.trackSelector,
-            scroll === "zero" ? 0 : format.markerRatio,
-            action === "rapid",
+            {
+              frameSelector: format.frameSelector,
+              trackSelector: format.trackSelector,
+              align: "center",
+              markerRatio: scroll === "zero" ? 0 : format.markerRatio,
+            },
+            { rapid: action === "rapid" },
           );
           await page.waitForTimeout(500);
           const line = `${format.name} ${viewport.width}x${viewport.height} scroll=${scroll} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;

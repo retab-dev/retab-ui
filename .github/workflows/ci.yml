@@ -75,6 +75,11 @@ jobs:
       # depths, and rapid retargets on the sources viewer.
       - name: Sources viewer toggle matrix gate
         run: pnpm verify:sources-viewer-toggle-matrix
+      # Same trajectory scoring over the benchmark page's full format roster
+      # (image, tiff, pptx, docx, xlsx, csv, markdown, code, text) at its
+      # real scroll ranges.
+      - name: Benchmark toggle matrix gate
+        run: pnpm verify:benchmark-toggle-matrix
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
