@@ -84,6 +84,10 @@ jobs:
       # inline<->overlay breakpoint crossing, explicit zoom, reduced motion.
       - name: Mode and state matrix gate
         run: pnpm verify:mode-state-matrix
+      # Two-writer conflicts (user wheel during the flight) and resource
+      # round trips (DOM/canvas populations after toggle cycles).
+      - name: Motion conflict and leak gate
+        run: pnpm verify:motion-conflict-and-leak
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
