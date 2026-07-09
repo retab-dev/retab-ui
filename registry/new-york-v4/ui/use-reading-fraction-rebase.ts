@@ -10,10 +10,10 @@ import { joinEffectKey } from "@/lib/effect-key";
 // When the sidebar toggles, a document that fits its width re-fits to the new
 // inset: a wider page is a taller document, so its absolute scroll size changes
 // and a frozen scrollTop would drop the reader to a different place. The fix is
-// format-agnostic: continuously record the *fraction* of the document at the
-// viewport (0 = top, 1 = bottom), and the moment the layout changes, restore
-// scrollTop to that fraction of the new scroll range — synchronously, before
-// paint, so the reading position never visibly jumps.
+// format-agnostic: continuously record the document fraction at the viewport
+// top, and the moment the layout changes, restore the viewport top to that
+// fraction of the new document — synchronously, before paint, so the visible
+// content never jumps.
 //
 // Renderers that already carry a richer per-page reading anchor (PDF, DOCX)
 // keep theirs; this is for the ones whose content simply scales with width
@@ -35,8 +35,16 @@ export function useReadingFractionRebase({
   const captureReadingFraction = React.useCallback(() => {
     const viewport = scrollerRef.current;
     if (!viewport) return;
-    const range = viewport.scrollHeight - viewport.clientHeight;
-    fractionRef.current = range > 0 ? viewport.scrollTop / range : 0;
+    // The DOCUMENT fraction at the viewport top — never the fraction of the
+    // scroll range. Range fraction breaks down when the document barely
+    // overflows: 28px into a 28px range reads as "scrolled to the bottom",
+    // and restoring that bottom against a grown document teleports the
+    // camera to its middle. Content height is the linear coordinate the
+    // re-fit actually scales, so its fraction IS the reading position.
+    fractionRef.current =
+      viewport.scrollHeight > 0
+        ? viewport.scrollTop / viewport.scrollHeight
+        : 0;
   }, [scrollerRef]);
 
   useKeyedLayoutEffect(
@@ -50,7 +58,10 @@ export function useReadingFractionRebase({
       const viewport = scrollerRef.current;
       if (!viewport) return;
       const range = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
-      viewport.scrollTop = fractionRef.current * range;
+      viewport.scrollTop = Math.min(
+        fractionRef.current * viewport.scrollHeight,
+        range,
+      );
     },
   );
 

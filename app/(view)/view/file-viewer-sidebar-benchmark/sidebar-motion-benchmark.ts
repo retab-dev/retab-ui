@@ -1568,8 +1568,8 @@ function scrollDriftPx(
 // place in the document, so this fraction is. It is the resize-era replacement
 // for the old absolute scroll-geometry/scroll-drift invariants.
 function readingFraction(sample: BenchmarkSample) {
-  const range = Math.max(1, sample.scrollHeight - sample.clientHeight);
-  return Math.min(1, Math.max(0, sample.scrollTop / range));
+  const height = Math.max(1, sample.scrollHeight);
+  return Math.min(1, Math.max(0, sample.scrollTop / height));
 }
 
 function readingFractionDrift(run: BenchmarkMotionRun) {

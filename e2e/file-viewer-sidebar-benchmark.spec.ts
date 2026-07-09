@@ -2297,8 +2297,12 @@ function collectStateSyncFailures(
 }
 
 function readingFraction(sample: BenchmarkSample) {
-  const range = Math.max(1, sample.scrollHeight - sample.clientHeight);
-  return Math.min(1, Math.max(0, sample.scrollTop / range));
+  // The DOCUMENT fraction at the viewport top — the invariant the fit-width
+  // rebase preserves. Range fraction is NOT invariant across a re-fit: the
+  // viewport height stays constant while the content scales, so the same
+  // reading position maps to a different fraction of the shrunken range.
+  const height = Math.max(1, sample.scrollHeight);
+  return Math.min(1, Math.max(0, sample.scrollTop / height));
 }
 
 function readingAnchorYRatioDrift(
