@@ -94,6 +94,10 @@ jobs:
       # attached, and bounded-resource invariants.
       - name: Viewer monkey fuzz gate
         run: pnpm verify:viewer-monkey-fuzz
+      # Timing-robustness: 4x CPU-throttled settles, cold-start toggles
+      # (before document readiness), and an RTL trajectory survey.
+      - name: Robustness matrix gate
+        run: pnpm verify:robustness-matrix
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
