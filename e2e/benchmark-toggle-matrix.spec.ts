@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   setViewerScroll,
+  traceReadingLineThroughResize,
   traceReadingLineThroughToggle,
   type ReadingLineTarget,
 } from "./helpers/reading-line-trace";
@@ -13,13 +14,15 @@ import {
 
 const SURVEY = process.env.MATRIX_SURVEY === "1";
 const SETTLE_DRIFT_BUDGET_PX = 14;
-// At exactly max scroll the fraction-hook formats settle 14-23px off their
-// pinned line (boundary residual between the ideal fraction restore and the
-// range clamp) — a real, small, tracked anomaly; the budget holds the line
-// against the 100px+ classes without flapping on it.
-const SETTLE_DRIFT_MAX_SCROLL_BUDGET_PX = 26;
+// Resize budgets calibrated by survey; the sweep exercises the same re-fit
+// capture/restore as a toggle, ten times in a row.
+const RESIZE_SETTLE_BUDGET_PX = 14;
+const RESIZE_CORRIDOR_BUDGET_PX = 40;
 const EXCURSION_BUDGET_PX = 16;
 const RAPID_EXCURSION_BUDGET_PX = 220;
+// Cycles legitimately traverse the full toggle repeatedly; the vertical
+// excursion at the pinned line stays single-digit when nothing accumulates.
+const CYCLE_EXCURSION_BUDGET_PX = 40;
 // Centered documents recenter by half the sidebar delta; start-aligned
 // grids and text should not move horizontally at all.
 const X_CORRIDOR_BUDGET_CENTERED_PX = 218;
@@ -34,16 +37,19 @@ type MatrixFormat = ReadingLineTarget & {
   align: "center" | "start";
 };
 
+// PDF stays parked on THIS page even though the quarter-scroll boundary-
+// anchor fix landed (sources-viewer matrix now gates PDF): the spacex
+// prospectus is 355 pages, and a deep-scroll toggle leaves no mounted
+// [data-slot="pdf-page"] for the whole flight (motion shows the raster
+// layer while every page re-renders at the new scale), so the reading-line
+// probe has zero samples to score — it now throws rather than false-passing.
+//   { id: "pdf",
+//     ready: '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+//     frameSelector: '[data-slot="pdf-page"]',
+//     trackSelector: '[data-slot="pdf-page"]',
+//     markerRatio: 0.2,
+//     align: "center" }
 const FORMATS: readonly MatrixFormat[] = [
-  {
-    id: "pdf",
-    ready:
-      '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
-    frameSelector: '[data-slot="pdf-page"]',
-    trackSelector: '[data-slot="pdf-page"]',
-    markerRatio: 0.2,
-    align: "center",
-  },
   {
     id: "image",
     ready:
@@ -120,7 +126,16 @@ const FORMATS: readonly MatrixFormat[] = [
   },
 ] as const;
 
-const SCROLLS = ["zero", "quarter", "half", "max"] as const;
+type ScrollDepth = "zero" | "quarter" | "half" | "max" | number;
+
+// Hunt mode: MATRIX_SCROLL_STEPS=12 sweeps N evenly spaced depths instead of
+// the four structural ones — for finding depth-specific anomalies like the
+// PDF page-boundary anchor miss (survey mode recommended).
+const SCROLL_STEPS = Number(process.env.MATRIX_SCROLL_STEPS ?? 0);
+const SCROLLS: readonly ScrollDepth[] =
+  SCROLL_STEPS > 1
+    ? Array.from({ length: SCROLL_STEPS }, (_, i) => i / (SCROLL_STEPS - 1))
+    : (["zero", "quarter", "half", "max"] as const);
 
 for (const format of FORMATS) {
   test(`${format.id} toggle trajectory on the benchmark page`, async ({
@@ -145,38 +160,45 @@ for (const format of FORMATS) {
         format.frameSelector,
         scroll,
       );
+      const scrollLabel =
+        typeof scroll === "number" ? scroll.toFixed(2) : scroll;
       if (!scrolled) continue;
       await page.waitForTimeout(600);
 
-      for (const action of ["close", "open", "rapid"] as const) {
+      const actions =
+        scroll === "quarter"
+          ? (["close", "open", "rapid", "cycle"] as const)
+          : (["close", "open", "rapid"] as const);
+      for (const action of actions) {
         const trace = await traceReadingLineThroughToggle(
           page,
           {
             frameSelector: format.frameSelector,
             trackSelector: format.trackSelector,
             align: format.align,
-            markerRatio: scroll === "zero" ? 0 : format.markerRatio,
+            markerRatio:
+              scroll === "zero" || scroll === 0 ? 0 : format.markerRatio,
           },
-          { rapid: action === "rapid" },
+          { rapid: action === "rapid", cycles: action === "cycle" ? 4 : 0 },
         );
         await page.waitForTimeout(500);
-        const line = `${format.id} scroll=${scroll} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
+        const line = `${format.id} scroll=${scrollLabel} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
         console.log(`BMATRIX ${line}`);
 
         const excursionBudget =
-          action === "rapid" ? RAPID_EXCURSION_BUDGET_PX : EXCURSION_BUDGET_PX;
-        const xBudget =
           action === "rapid"
+            ? RAPID_EXCURSION_BUDGET_PX
+            : action === "cycle"
+              ? CYCLE_EXCURSION_BUDGET_PX
+              : EXCURSION_BUDGET_PX;
+        const xBudget =
+          action === "rapid" || action === "cycle"
             ? RAPID_X_CORRIDOR_BUDGET_PX
             : format.align === "center"
               ? X_CORRIDOR_BUDGET_CENTERED_PX
               : X_CORRIDOR_BUDGET_START_PX;
-        const settleBudget =
-          scroll === "max"
-            ? SETTLE_DRIFT_MAX_SCROLL_BUDGET_PX
-            : SETTLE_DRIFT_BUDGET_PX;
         if (
-          Math.abs(trace.settleDrift) > settleBudget ||
+          Math.abs(trace.settleDrift) > SETTLE_DRIFT_BUDGET_PX ||
           trace.excursion > excursionBudget ||
           trace.corridorX > xBudget
         ) {
@@ -187,6 +209,47 @@ for (const format of FORMATS) {
 
     if (!SURVEY) {
       expect(failures, failures.join("\n")).toEqual([]);
+    }
+  });
+
+  test(`${format.id} reading line survives a resize sweep`, async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await page
+      .locator(`[data-benchmark-format-option="${format.id}"]`)
+      .click();
+    await expect(page.locator(format.ready).first()).toBeVisible({
+      timeout: 60_000,
+    });
+    await page.waitForTimeout(1_500);
+    await setViewerScroll(page, format.frameSelector, "quarter");
+    await page.waitForTimeout(600);
+
+    const sweep = await traceReadingLineThroughResize(page, {
+      frameSelector: format.frameSelector,
+      trackSelector: format.trackSelector,
+      markerRatio: format.markerRatio,
+      align: format.align,
+    });
+    const settle = sweep.positions.at(-1) ?? 0;
+    let corridor = 0;
+    for (const position of sweep.positions) {
+      corridor = Math.max(corridor, Math.abs(position));
+    }
+    console.log(
+      `BRESIZE ${format.id}: settle=${settle.toFixed(1)} corridor=${corridor.toFixed(1)} steps=${sweep.positions.map((v: number) => v.toFixed(1)).join(",")}`,
+    );
+    if (!SURVEY) {
+      expect(
+        Math.abs(settle),
+        `reading line drifted ${settle.toFixed(1)}px across a resize round trip`,
+      ).toBeLessThanOrEqual(RESIZE_SETTLE_BUDGET_PX);
+      expect(
+        corridor,
+        `reading line strayed ${corridor.toFixed(1)}px during the resize sweep`,
+      ).toBeLessThanOrEqual(RESIZE_CORRIDOR_BUDGET_PX);
     }
   });
 }

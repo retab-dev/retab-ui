@@ -2319,10 +2319,16 @@ function readingAnchorYRatioDrift(
     before.readingAnchor.kind === "boundary" &&
     after.readingAnchor.kind === "boundary"
   ) {
-    return (
+    // The pixel term alone once blessed a real reading-anchor miss: an edge
+    // pinned in viewport pixels across a re-fit keeps topInViewport identical
+    // while the content under the marker drifts by markerOffset*(scale-1).
+    // Gate the marker's page fraction too, so edge stability can never stand
+    // in for reading identity.
+    return Math.max(
       Math.abs(
         before.readingAnchor.topInViewport - after.readingAnchor.topInViewport,
-      ) / 1000
+      ) / 1000,
+      Math.abs(before.readingAnchor.yRatio - after.readingAnchor.yRatio),
     );
   }
 
