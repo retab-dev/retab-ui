@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  recordMotionMetric,
   setViewerScroll,
   traceReadingLineThroughToggle,
 } from "./helpers/reading-line-trace";
@@ -128,6 +129,16 @@ for (const viewport of VIEWPORTS) {
           await page.waitForTimeout(500);
           const line = `${format.name} ${viewport.width}x${viewport.height} scroll=${scroll} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
           console.log(`MATRIX ${line}`);
+          recordMotionMetric(
+            `smatrix:${format.name}:${viewport.width}x${viewport.height}:${scroll}:${action}`,
+            {
+              settle: trace.settleDrift,
+              corridor: trace.corridor,
+              excursion: trace.excursion,
+              settleX: trace.settleDriftX,
+              corridorX: trace.corridorX,
+            },
+          );
           // A rapid retarget legitimately travels toward the target before
           // reversing home, so its corridor is motion, not error: gate its
           // DESTINATION strictly and its excursion loosely (it must come

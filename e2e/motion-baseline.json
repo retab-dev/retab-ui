@@ -1,0 +1,1179 @@
+{
+  "bmatrix:code:half:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:half:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:half:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:max:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:max:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:max:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:quarter:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:quarter:cycle": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:quarter:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:zero:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:zero:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:code:zero:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:csv:zero:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:csv:zero:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:csv:zero:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:docx:half:close": {
+    "settle": -0.3451287758807666,
+    "corridor": 2.060736660601151,
+    "excursion": 1.7156078847203844,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:half:open": {
+    "settle": 0.2747952804945726,
+    "corridor": 2.8438843034099364,
+    "excursion": 2.569089022915364,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:half:rapid": {
+    "settle": 0,
+    "corridor": 2.530569764638585,
+    "excursion": 2.530569764638585,
+    "settleX": 0,
+    "corridorX": 93.03110122680664
+  },
+  "bmatrix:docx:max:close": {
+    "settle": -0.4365490285074429,
+    "corridor": 3.592357238737236,
+    "excursion": 3.155808210229793,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:max:open": {
+    "settle": 0.347585078735392,
+    "corridor": 4.416500151857576,
+    "excursion": 4.068915073122184,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:max:rapid": {
+    "settle": 0,
+    "corridor": 4.13761271079818,
+    "excursion": 4.13761271079818,
+    "settleX": 0,
+    "corridorX": 92.32782745361328
+  },
+  "bmatrix:docx:quarter:close": {
+    "settle": 0.41719594986091124,
+    "corridor": 1.3897235615060026,
+    "excursion": 0.9725276116450914,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:quarter:cycle": {
+    "settle": 0,
+    "corridor": 1.5078520828562318,
+    "excursion": 1.5078520828562318,
+    "settleX": 0,
+    "corridorX": 140
+  },
+  "bmatrix:docx:quarter:open": {
+    "settle": -0.33217594728427,
+    "corridor": 1.6635632404777425,
+    "excursion": 1.3313872931934725,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:quarter:rapid": {
+    "settle": 0,
+    "corridor": 1.169816708720532,
+    "excursion": 1.169816708720532,
+    "settleX": 0,
+    "corridorX": 89.93742370605469
+  },
+  "bmatrix:docx:zero:close": {
+    "settle": -4.095179233621764,
+    "corridor": 4.095179233621764,
+    "excursion": 0,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:zero:open": {
+    "settle": 3.2606261917943016,
+    "corridor": 3.2606261917943016,
+    "excursion": 0,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:docx:zero:rapid": {
+    "settle": 0,
+    "corridor": 2.6659538892812975,
+    "excursion": 2.6659538892812975,
+    "settleX": 0,
+    "corridorX": 93.81272888183594
+  },
+  "bmatrix:image:half:close": {
+    "settle": -0.5637397153121242,
+    "corridor": 1.2726171844822147,
+    "excursion": 0.7088774691700905,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:image:half:open": {
+    "settle": 0.44885568524324526,
+    "corridor": 1.7757435259462682,
+    "excursion": 1.326887840703023,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:image:half:rapid": {
+    "settle": 0,
+    "corridor": 1.9210451312354166,
+    "excursion": 1.9210451312354166,
+    "settleX": 0,
+    "corridorX": 95.03105545043945
+  },
+  "bmatrix:image:max:close": {
+    "settle": -0.12446283026883975,
+    "corridor": 2.866109405792372,
+    "excursion": 2.741646575523532,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:image:max:open": {
+    "settle": 0.09909865750137214,
+    "corridor": 3.7053092132118763,
+    "excursion": 3.606210555710504,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:image:max:rapid": {
+    "settle": 0,
+    "corridor": 3.281709670010059,
+    "excursion": 3.281709670010059,
+    "settleX": 0,
+    "corridorX": 96.42190551757812
+  },
+  "bmatrix:image:quarter:close": {
+    "settle": -0.283378157833738,
+    "corridor": 0.6302158113884104,
+    "excursion": 0.34683765355467244,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:image:quarter:cycle": {
+    "settle": 0,
+    "corridor": 1.1201754136702675,
+    "excursion": 1.1201754136702675,
+    "settleX": 0,
+    "corridorX": 140
+  },
+  "bmatrix:image:quarter:open": {
+    "settle": 0.22562876760781592,
+    "corridor": 0.8553407894649183,
+    "excursion": 0.6297120218571024,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:image:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0.8927714509339353,
+    "excursion": 0.8927714509339353,
+    "settleX": 0,
+    "corridorX": 91.6875
+  },
+  "bmatrix:image:zero:close": {
+    "settle": -0.0030166003553802057,
+    "corridor": 0.06357988872525766,
+    "excursion": 0.060563288369877455,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:image:zero:open": {
+    "settle": 0.002401849972329728,
+    "corridor": 0.07900698198227474,
+    "excursion": 0.07660513200994501,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:image:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.07497555144826151,
+    "excursion": 0.07497555144826151,
+    "settleX": 0,
+    "corridorX": 100.90655517578125
+  },
+  "bmatrix:markdown:half:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:half:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:half:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:max:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:max:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:max:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:quarter:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:quarter:cycle": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:quarter:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:zero:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:zero:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:markdown:zero:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:pptx:half:close": {
+    "settle": 0.0028363826550048543,
+    "corridor": 0.0047351160066000375,
+    "excursion": 0.0018987333515951832,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:half:open": {
+    "settle": -0.0022583718575788225,
+    "corridor": 0.00457349364160109,
+    "excursion": 0.002315121784022267,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:half:rapid": {
+    "settle": 0,
+    "corridor": 0.0025179814180091853,
+    "excursion": 0.0025179814180091853,
+    "settleX": 0,
+    "corridorX": 91.85969543457031
+  },
+  "bmatrix:pptx:max:close": {
+    "settle": -0.24875296360835364,
+    "corridor": 0.25510061985835364,
+    "excursion": 0.00634765625,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:max:open": {
+    "settle": 0.1980609477347457,
+    "corridor": 0.1991595805472457,
+    "excursion": 0.0010986328125,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:max:rapid": {
+    "settle": -5.684341886080802e-14,
+    "corridor": 0.17525592597064588,
+    "excursion": 0.17525592597058903,
+    "settleX": 0,
+    "corridorX": 92.96842193603516
+  },
+  "bmatrix:pptx:quarter:close": {
+    "settle": 0.012577035963204253,
+    "corridor": 0.012577035963204253,
+    "excursion": 0,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:quarter:cycle": {
+    "settle": 0,
+    "corridor": 0.006610557167562092,
+    "excursion": 0.006610557167562092,
+    "settleX": 0,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:quarter:open": {
+    "settle": -0.010014030090076176,
+    "corridor": 0.012149665032893608,
+    "excursion": 0.0021356349428174326,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0.0010815491018547618,
+    "excursion": 0.0010815491018547618,
+    "settleX": 0,
+    "corridorX": 86.32830810546875
+  },
+  "bmatrix:pptx:zero:close": {
+    "settle": 0.008940813528340641,
+    "corridor": 0.008940813528340641,
+    "excursion": 0,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:zero:open": {
+    "settle": -0.007118813682666314,
+    "corridor": 0.008422322206172339,
+    "excursion": 0.001303508523506025,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:pptx:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.000008520497885911027,
+    "excursion": 0.000008520497885911027,
+    "settleX": 0,
+    "corridorX": 93.18749237060547
+  },
+  "bmatrix:text:zero:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:text:zero:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:text:zero:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:tiff:half:close": {
+    "settle": -0.08329752201802876,
+    "corridor": 4.828882739124083,
+    "excursion": 4.745585217106054,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:half:open": {
+    "settle": 0.06632239189275424,
+    "corridor": 5.767146897641396,
+    "excursion": 5.700824505748642,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:half:rapid": {
+    "settle": 0,
+    "corridor": 4.939752125053701,
+    "excursion": 4.939752125053701,
+    "settleX": 0,
+    "corridorX": 91.51605987548828
+  },
+  "bmatrix:tiff:max:close": {
+    "settle": 0.40673008407929956,
+    "corridor": 2.6227249291405315,
+    "excursion": 2.215994845061232,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:max:open": {
+    "settle": -0.3238429055676306,
+    "corridor": 3.16422892451385,
+    "excursion": 2.8403860189462193,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:max:rapid": {
+    "settle": 0,
+    "corridor": 2.574252016951732,
+    "excursion": 2.574252016951732,
+    "settleX": 0,
+    "corridorX": 94.43745422363281
+  },
+  "bmatrix:tiff:quarter:close": {
+    "settle": 0.08832518927670208,
+    "corridor": 5.283407791625223,
+    "excursion": 5.195082602348521,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:quarter:cycle": {
+    "settle": 0,
+    "corridor": 7.311336271463688,
+    "excursion": 7.311336271463688,
+    "settleX": 0,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:quarter:open": {
+    "settle": -0.07032547517997045,
+    "corridor": 6.514619635947383,
+    "excursion": 6.444294160767413,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:quarter:rapid": {
+    "settle": 0,
+    "corridor": 5.774733505505083,
+    "excursion": 5.774733505505083,
+    "settleX": 0,
+    "corridorX": 91.84331512451172
+  },
+  "bmatrix:tiff:zero:close": {
+    "settle": 0.004328743046983163,
+    "corridor": 0.058213096698125355,
+    "excursion": 0.05388435365114219,
+    "settleX": 140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:zero:open": {
+    "settle": -0.0034465922371964552,
+    "corridor": 0.07263677403611268,
+    "excursion": 0.06919018179891623,
+    "settleX": -140,
+    "corridorX": 140
+  },
+  "bmatrix:tiff:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.06922450495886778,
+    "excursion": 0.06922450495886778,
+    "settleX": 0,
+    "corridorX": 97.06243515014648
+  },
+  "bmatrix:xlsx:zero:close": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:xlsx:zero:open": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bmatrix:xlsx:zero:rapid": {
+    "settle": 0,
+    "corridor": 0,
+    "excursion": 0,
+    "settleX": 0,
+    "corridorX": 0
+  },
+  "bresize:code": {
+    "settle": 0,
+    "corridor": 0
+  },
+  "bresize:csv": {
+    "settle": 0,
+    "corridor": 0
+  },
+  "bresize:docx": {
+    "settle": 0,
+    "corridor": 1.0765857112506865
+  },
+  "bresize:image": {
+    "settle": 0,
+    "corridor": 0.7621596947841454
+  },
+  "bresize:markdown": {
+    "settle": 0,
+    "corridor": 0
+  },
+  "bresize:pptx": {
+    "settle": 0,
+    "corridor": 1.1086515046560521
+  },
+  "bresize:text": {
+    "settle": 0,
+    "corridor": 0
+  },
+  "bresize:tiff": {
+    "settle": 0,
+    "corridor": 0.351176781092704
+  },
+  "bresize:xlsx": {
+    "settle": 0,
+    "corridor": 0
+  },
+  "smatrix:DOCX:1440x1000:half:close": {
+    "settle": 0.21016572014889334,
+    "corridor": 1.9493420669979287,
+    "excursion": 1.7391763468490353,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:half:open": {
+    "settle": -0.11484112186087714,
+    "corridor": 4.8508158742046135,
+    "excursion": 4.735974752343736,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:half:rapid": {
+    "settle": 0,
+    "corridor": 3.941722139120202,
+    "excursion": 3.941722139120202,
+    "settleX": 0,
+    "corridorX": 125.3037109375
+  },
+  "smatrix:DOCX:1440x1000:max:close": {
+    "settle": 0.5122448279564651,
+    "corridor": 2.566208085270091,
+    "excursion": 2.053963257313626,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:max:open": {
+    "settle": -0.2799065930842062,
+    "corridor": 6.287092261536145,
+    "excursion": 6.007185668451939,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:max:rapid": {
+    "settle": 0,
+    "corridor": 4.618365652702096,
+    "excursion": 4.618365652702096,
+    "settleX": 0,
+    "corridorX": 130.5543212890625
+  },
+  "smatrix:DOCX:1440x1000:quarter:close": {
+    "settle": 0.2303975374629772,
+    "corridor": 1.7947279979359791,
+    "excursion": 1.564330460473002,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:quarter:cycle": {
+    "settle": 0,
+    "corridor": 4.5732794598994815,
+    "excursion": 4.5732794598994815,
+    "settleX": 0,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:quarter:open": {
+    "settle": -0.12589641953741193,
+    "corridor": 4.5249812356726125,
+    "excursion": 4.3990848161352005,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:quarter:rapid": {
+    "settle": 0,
+    "corridor": 3.407891546848191,
+    "excursion": 3.407891546848191,
+    "settleX": 0,
+    "corridorX": 119.75100708007812
+  },
+  "smatrix:DOCX:1440x1000:zero:close": {
+    "settle": -13.280901021284762,
+    "corridor": 13.280901021284762,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:zero:open": {
+    "settle": 7.25709964273608,
+    "corridor": 7.25709964273608,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:1440x1000:zero:rapid": {
+    "settle": 0,
+    "corridor": 8.096079507492618,
+    "excursion": 8.096079507492618,
+    "settleX": 0,
+    "corridorX": 136.1153564453125
+  },
+  "smatrix:DOCX:2000x1250:half:close": {
+    "settle": 0.21016572014889334,
+    "corridor": 1.9012218729120605,
+    "excursion": 1.6910561527631671,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:half:open": {
+    "settle": -0.11484112186087714,
+    "corridor": 5.0565771371049095,
+    "excursion": 4.941736015244032,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:half:rapid": {
+    "settle": 0,
+    "corridor": 3.651200714213246,
+    "excursion": 3.651200714213246,
+    "settleX": 0,
+    "corridorX": 116.04766845703125
+  },
+  "smatrix:DOCX:2000x1250:max:close": {
+    "settle": 0.5122448279564651,
+    "corridor": 2.3874853100840028,
+    "excursion": 1.8752404821275377,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:max:open": {
+    "settle": -0.2799065930842062,
+    "corridor": 6.107651531573538,
+    "excursion": 5.827744938489332,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:max:rapid": {
+    "settle": 0,
+    "corridor": 4.68813429491388,
+    "excursion": 4.68813429491388,
+    "settleX": 0,
+    "corridorX": 132.50857543945312
+  },
+  "smatrix:DOCX:2000x1250:quarter:close": {
+    "settle": 0.2303975374629772,
+    "corridor": 2.148195060459784,
+    "excursion": 1.917797522996807,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:quarter:cycle": {
+    "settle": 0,
+    "corridor": 4.385894457893642,
+    "excursion": 4.385894457893642,
+    "settleX": 0,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:quarter:open": {
+    "settle": -0.12589641953741193,
+    "corridor": 4.1150156212563616,
+    "excursion": 3.9891192017189496,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:quarter:rapid": {
+    "settle": 0,
+    "corridor": 3.47909334136682,
+    "excursion": 3.47909334136682,
+    "settleX": 0,
+    "corridorX": 122.2432861328125
+  },
+  "smatrix:DOCX:2000x1250:zero:close": {
+    "settle": -13.280901021284762,
+    "corridor": 13.280901021284762,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:zero:open": {
+    "settle": 7.25709964273608,
+    "corridor": 7.25709964273608,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:DOCX:2000x1250:zero:rapid": {
+    "settle": 0,
+    "corridor": 8.208080796029435,
+    "excursion": 8.208080796029435,
+    "settleX": 0,
+    "corridorX": 137.99832153320312
+  },
+  "smatrix:Image:1440x1000:half:close": {
+    "settle": -0.3809900555979766,
+    "corridor": 0.3809900555979766,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:half:open": {
+    "settle": 0.20818488082511521,
+    "corridor": 0.20818488082511521,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:half:rapid": {
+    "settle": 0,
+    "corridor": 0.462329071851741,
+    "excursion": 0.462329071851741,
+    "settleX": 0,
+    "corridorX": 260.9749450683594
+  },
+  "smatrix:Image:1440x1000:max:close": {
+    "settle": 0.23979833802616213,
+    "corridor": 0.43793128180095664,
+    "excursion": 0.1981329437747945,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:max:open": {
+    "settle": -0.13103331094998794,
+    "corridor": 0.692835797230714,
+    "excursion": 0.561802486280726,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:max:rapid": {
+    "settle": 0,
+    "corridor": 0.48690777693332166,
+    "excursion": 0.48690777693332166,
+    "settleX": 0,
+    "corridorX": 250.99929809570312
+  },
+  "smatrix:Image:1440x1000:quarter:close": {
+    "settle": -0.19138425240998913,
+    "corridor": 0.19138425240998913,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:quarter:cycle": {
+    "settle": 0,
+    "corridor": 0.19138425240998913,
+    "excursion": 0.19138425240998913,
+    "settleX": 0,
+    "corridorX": 285.5653991699219
+  },
+  "smatrix:Image:1440x1000:quarter:open": {
+    "settle": 0.10457834054818704,
+    "corridor": 0.10457834054818704,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0.1293391906499437,
+    "excursion": 0.1293391906499437,
+    "settleX": 0,
+    "corridorX": 260.1608581542969
+  },
+  "smatrix:Image:1440x1000:zero:close": {
+    "settle": -0.0017784492221153414,
+    "corridor": 0.10823814812260935,
+    "excursion": 0.106459698900494,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:zero:open": {
+    "settle": 0.0009718002712588714,
+    "corridor": 0.2067383315462621,
+    "excursion": 0.20576653127500322,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:1440x1000:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.18056114978139703,
+    "excursion": 0.18056114978139703,
+    "settleX": 0,
+    "corridorX": 232.19061279296875
+  },
+  "smatrix:Image:2000x1250:half:close": {
+    "settle": -0.3809900555979766,
+    "corridor": 0.3809900555979766,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:half:open": {
+    "settle": 0.20818488082511521,
+    "corridor": 0.20818488082511521,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:half:rapid": {
+    "settle": 0,
+    "corridor": 0.4717070621491075,
+    "excursion": 0.4717070621491075,
+    "settleX": 0,
+    "corridorX": 266.2466125488281
+  },
+  "smatrix:Image:2000x1250:max:close": {
+    "settle": 0.23979833802616213,
+    "corridor": 0.45168738088909777,
+    "excursion": 0.21188904286293564,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:max:open": {
+    "settle": -0.13103331094998794,
+    "corridor": 0.7432464783445312,
+    "excursion": 0.6122131673945432,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:max:rapid": {
+    "settle": 0,
+    "corridor": 0.5196350190866497,
+    "excursion": 0.5196350190866497,
+    "settleX": 0,
+    "corridorX": 267.8820495605469
+  },
+  "smatrix:Image:2000x1250:quarter:close": {
+    "settle": -0.19138425240998913,
+    "corridor": 0.19138425240998913,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:quarter:cycle": {
+    "settle": 0,
+    "corridor": 0.19138425240998913,
+    "excursion": 0.19138425240998913,
+    "settleX": 0,
+    "corridorX": 284.9128723144531
+  },
+  "smatrix:Image:2000x1250:quarter:open": {
+    "settle": 0.10457834054818704,
+    "corridor": 0.10457834054818704,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0.13041817360260666,
+    "excursion": 0.13041817360260666,
+    "settleX": 0,
+    "corridorX": 262.37664794921875
+  },
+  "smatrix:Image:2000x1250:zero:close": {
+    "settle": -0.0017784492221153414,
+    "corridor": 0.10145473889838286,
+    "excursion": 0.09967628967626752,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:zero:open": {
+    "settle": 0.0009718002712588714,
+    "corridor": 0.21549592067992762,
+    "excursion": 0.21452412040866875,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:Image:2000x1250:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.1769382367211847,
+    "excursion": 0.1769382367211847,
+    "settleX": 0,
+    "corridorX": 227.55889892578125
+  },
+  "smatrix:PDF:1440x1000:half:close": {
+    "settle": -0.06896551724139499,
+    "corridor": 0.06896551724139499,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:half:open": {
+    "settle": 0.03870967741931963,
+    "corridor": 0.06834323021678301,
+    "excursion": 0.02963355279746338,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:half:rapid": {
+    "settle": 0,
+    "corridor": 0.11618989089436127,
+    "excursion": 0.11618989089436127,
+    "settleX": 0,
+    "corridorX": 113.14382934570312
+  },
+  "smatrix:PDF:1440x1000:max:close": {
+    "settle": -0.24137931034488247,
+    "corridor": 0.24137931034488247,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:max:open": {
+    "settle": 0.1354838709677324,
+    "corridor": 0.1354838709677324,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:max:rapid": {
+    "settle": 0,
+    "corridor": 0.23118433459057997,
+    "excursion": 0.23118433459057997,
+    "settleX": 0,
+    "corridorX": 113.5556640625
+  },
+  "smatrix:PDF:1440x1000:quarter:close": {
+    "settle": -0.48275862068965125,
+    "corridor": 0.48275862068965125,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:quarter:open": {
+    "settle": 0.2709677419354648,
+    "corridor": 0.2709677419354648,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0.34947151973324253,
+    "excursion": 0.34947151973324253,
+    "settleX": 0,
+    "corridorX": 120.36190795898438
+  },
+  "smatrix:PDF:1440x1000:zero:close": {
+    "settle": 0.057471264367791264,
+    "corridor": 0.057471264367791264,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:zero:open": {
+    "settle": -0.032258064516099694,
+    "corridor": 0.032258064516099694,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:1440x1000:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.04598472858299374,
+    "excursion": 0.04598472858299374,
+    "settleX": 0,
+    "corridorX": 136.6807861328125
+  },
+  "smatrix:PDF:2000x1250:half:close": {
+    "settle": -0.06896551724139499,
+    "corridor": 0.06896551724139499,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:half:open": {
+    "settle": 0.03870967741931963,
+    "corridor": 0.053368943737382324,
+    "excursion": 0.014659266318062691,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:half:rapid": {
+    "settle": 0,
+    "corridor": 0.11959944100215125,
+    "excursion": 0.11959944100215125,
+    "settleX": 0,
+    "corridorX": 116.58245849609375
+  },
+  "smatrix:PDF:2000x1250:max:close": {
+    "settle": -0.24137931034488247,
+    "corridor": 0.24137931034488247,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:max:open": {
+    "settle": 0.1354838709677324,
+    "corridor": 0.1354838709677324,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:max:rapid": {
+    "settle": 0,
+    "corridor": 0.25058509563575626,
+    "excursion": 0.25058509563575626,
+    "settleX": 0,
+    "corridorX": 123.0811767578125
+  },
+  "smatrix:PDF:2000x1250:quarter:close": {
+    "settle": -0.48275862068965125,
+    "corridor": 0.48275862068965125,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:quarter:open": {
+    "settle": 0.2709677419354648,
+    "corridor": 0.2709677419354648,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:quarter:rapid": {
+    "settle": 0,
+    "corridor": 0.3535858680461388,
+    "excursion": 0.3535858680461388,
+    "settleX": 0,
+    "corridorX": 121.77630615234375
+  },
+  "smatrix:PDF:2000x1250:zero:close": {
+    "settle": 0.057471264367791264,
+    "corridor": 0.057471264367791264,
+    "excursion": 0,
+    "settleX": 210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:zero:open": {
+    "settle": -0.032258064516099694,
+    "corridor": 0.032258064516099694,
+    "excursion": 0,
+    "settleX": -210,
+    "corridorX": 210
+  },
+  "smatrix:PDF:2000x1250:zero:rapid": {
+    "settle": 0,
+    "corridor": 0.04692481029996998,
+    "excursion": 0.04692481029996998,
+    "settleX": 0,
+    "corridorX": 139.54541015625
+  }
+}

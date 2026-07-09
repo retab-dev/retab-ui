@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  recordMotionMetric,
   setViewerScroll,
   traceReadingLineThroughResize,
   traceReadingLineThroughToggle,
@@ -184,6 +185,16 @@ for (const format of FORMATS) {
         await page.waitForTimeout(500);
         const line = `${format.id} scroll=${scrollLabel} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
         console.log(`BMATRIX ${line}`);
+        recordMotionMetric(
+          `bmatrix:${format.id}:${scrollLabel}:${action}`,
+          {
+            settle: trace.settleDrift,
+            corridor: trace.corridor,
+            excursion: trace.excursion,
+            settleX: trace.settleDriftX,
+            corridorX: trace.corridorX,
+          },
+        );
 
         const excursionBudget =
           action === "rapid"
@@ -241,6 +252,7 @@ for (const format of FORMATS) {
     console.log(
       `BRESIZE ${format.id}: settle=${settle.toFixed(1)} corridor=${corridor.toFixed(1)} steps=${sweep.positions.map((v: number) => v.toFixed(1)).join(",")}`,
     );
+    recordMotionMetric(`bresize:${format.id}`, { settle, corridor });
     if (!SURVEY) {
       expect(
         Math.abs(settle),

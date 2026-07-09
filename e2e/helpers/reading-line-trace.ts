@@ -1,3 +1,5 @@
+import { appendFileSync } from "node:fs";
+
 import type { Page } from "@playwright/test";
 
 // Shared reading-line trajectory probe for sidebar-toggle gates.
@@ -466,4 +468,21 @@ export function installConsoleSentinel(
     errors,
     assertClean: () => expect(errors),
   };
+}
+
+
+// Metrology: when MOTION_METRICS_PATH is set, every matrix measurement is
+// appended as JSONL. scripts/compare-motion-baseline.mjs diffs a run
+// against the committed golden baseline (e2e/motion-baseline.json) with
+// per-metric drift tolerances — static budgets catch breakage, the
+// baseline catches CREEP: a settle drifting 0.5 -> 8px across weeks of
+// commits passes every ceiling until the commit that finally breaks it is
+// unfindable. Regenerate with scripts/update-motion-baseline.mjs.
+export function recordMotionMetric(
+  key: string,
+  values: Record<string, number>,
+): void {
+  const path = process.env.MOTION_METRICS_PATH;
+  if (!path) return;
+  appendFileSync(path, `${JSON.stringify({ key, ...values })}\n`);
 }

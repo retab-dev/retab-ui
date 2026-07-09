@@ -75,11 +75,15 @@ jobs:
       # depths, and rapid retargets on the sources viewer.
       - name: Sources viewer toggle matrix gate
         run: pnpm verify:sources-viewer-toggle-matrix
+        env:
+          MOTION_METRICS_PATH: ${{ runner.temp }}/motion-metrics.jsonl
       # Same trajectory scoring over the benchmark page's full format roster
       # (image, tiff, pptx, docx, xlsx, csv, markdown, code, text) at its
       # real scroll ranges.
       - name: Benchmark toggle matrix gate
         run: pnpm verify:benchmark-toggle-matrix
+        env:
+          MOTION_METRICS_PATH: ${{ runner.temp }}/motion-metrics.jsonl
       # State branches the geometry matrices never enter: overlay mode,
       # inline<->overlay breakpoint crossing, explicit zoom, reduced motion.
       - name: Mode and state matrix gate
@@ -98,6 +102,12 @@ jobs:
       # (before document readiness), and an RTL trajectory survey.
       - name: Robustness matrix gate
         run: pnpm verify:robustness-matrix
+      # Golden-baseline drift check: static budgets catch breakage, this
+      # catches creep — any commit that MOVES a motion metric beyond the
+      # run-to-run noise band owns that move explicitly (regenerate the
+      # baseline with the change if intentional).
+      - name: Motion metric drift check
+        run: node scripts/compare-motion-baseline.mjs ${{ runner.temp }}/motion-metrics.jsonl
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
