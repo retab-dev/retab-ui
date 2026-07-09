@@ -152,6 +152,7 @@ export function ImageViewerContent({
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
+          direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: frameLayout.maxFrameWidth + frameLayout.padding * 2,
         }),
@@ -160,6 +161,7 @@ export function ImageViewerContent({
         frameLayout.padding,
         isFitWidth,
         rendererFrame.align,
+        rendererFrame.direction,
       ],
     );
   const imageStageInlineSize =

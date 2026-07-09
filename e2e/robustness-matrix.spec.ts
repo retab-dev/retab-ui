@@ -15,14 +15,21 @@ import {
 // - COLD-START TOGGLES: every other probe waits for document readiness
 //   before acting; users toggle while the document is still decoding. The
 //   transient must not error, and the viewer must still converge.
-// - RTL SURVEY (report-only): dir="rtl" flips every X computation in the
-//   fit-width motion. Prints trajectories to establish the current state;
-//   gating is a product decision once support is declared.
+// - RTL TRAJECTORY: dir="rtl" flips every X computation in the fit-width
+//   motion. The margin model is direction-aware (overflow pins to the
+//   direction's start edge), so both legs must fly straight to the settle —
+//   the gate is the X excursion BEYOND the settled center, which is
+//   sidebar-width-agnostic. Direction is sampled when the document frame
+//   mounts, so dir is set before load.
 //
 // Survey mode (MATRIX_SURVEY=1) prints without failing where budgets exist.
 
 const SURVEY = process.env.MATRIX_SURVEY === "1";
 const THROTTLED_SETTLE_BUDGET_PX = 20;
+const RTL_SETTLE_BUDGET_PX = 20;
+// The defect this gates was a ~100px mid-flight overshoot past the settled
+// center; a straight flight's excursion is frame-sampling jitter only.
+const RTL_X_EXCURSION_BUDGET_PX = 24;
 
 test.use({ deviceScaleFactor: 2, viewport: { width: 1440, height: 1000 } });
 
@@ -138,8 +145,18 @@ for (const format of FORMATS) {
   });
 }
 
-test("rtl trajectory survey (report-only)", async ({ page }) => {
+test("rtl trajectory flies straight on both legs", async ({ page }) => {
   test.setTimeout(240_000);
+  // Direction is sampled when the document frame mounts, so it must be set
+  // before the app loads — which is also how real RTL apps ship (dir on the
+  // html element at render time, not flipped under a mounted viewer).
+  await page.addInitScript(() => {
+    const applyRtl = () => {
+      document.documentElement?.setAttribute("dir", "rtl");
+    };
+    applyRtl();
+    document.addEventListener("DOMContentLoaded", applyRtl);
+  });
   await page.goto("/view/file-viewer-sidebar-benchmark");
   await page.locator('[data-benchmark-format-option="image"]').click();
   await expect(
@@ -149,9 +166,6 @@ test("rtl trajectory survey (report-only)", async ({ page }) => {
       )
       .first(),
   ).toBeVisible({ timeout: 60_000 });
-  await page.evaluate(() => {
-    document.documentElement.dir = "rtl";
-  });
   await page.waitForTimeout(1_000);
   await setViewerScroll(page, '[data-slot="image-frame"]', "half");
   await page.waitForTimeout(600);
@@ -164,10 +178,21 @@ test("rtl trajectory survey (report-only)", async ({ page }) => {
       align: "center",
     });
     await page.waitForTimeout(600);
+    // The settled X legitimately moves (the container widens on one side);
+    // the invariant is the flight never leaving the [start, settle] corridor.
+    const excursionX = trace.corridorX - Math.abs(trace.settleDriftX);
     console.log(
-      `RTL image ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)}`,
+      `RTL image ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} excursionX=${excursionX.toFixed(1)}`,
     );
+    if (!SURVEY) {
+      expect(
+        Math.abs(trace.settleDrift),
+        `${action} in RTL settled ${trace.settleDrift.toFixed(1)}px off the reading line`,
+      ).toBeLessThanOrEqual(RTL_SETTLE_BUDGET_PX);
+      expect(
+        excursionX,
+        `${action} in RTL overshot the settled center by ${excursionX.toFixed(1)}px mid-flight (the LTR-margin-model failure mode)`,
+      ).toBeLessThanOrEqual(RTL_X_EXCURSION_BUDGET_PX);
+    }
   }
-  // Report-only: no assertions until RTL support is a declared product goal.
-  expect(true).toBe(true);
 });

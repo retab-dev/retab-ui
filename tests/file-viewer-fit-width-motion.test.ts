@@ -111,6 +111,65 @@ describe("file viewer fit-width motion", () => {
     expect(midStyle?.transform).toContain("scale(1.168269)");
   });
 
+  // RTL: the margin model must speak physical-left. The only branch where
+  // direction changes the answer for a centered stage is the over-constrained
+  // one — the settled stage (laid out for the wider target) overflowing the
+  // still-narrow live container on the close leg. CSS pins that box to the
+  // direction's start edge: left edge 0 in LTR, at the negative free space in
+  // RTL. The old unconditional max(0, …) clamp made the RTL close leg
+  // overshoot by exactly that overflow.
+  it("compensates the RTL overflow pinning on the close leg's first frame", () => {
+    // stage 1200 laid out for target 1246 inside live 966: free = −234.
+    const makeResolver = (direction: "ltr" | "rtl") =>
+      createFileViewerFitWidthSurfaceMotionResolver({
+        align: "center",
+        direction,
+        isFitWidth: true,
+        stageInlineSize: 1200,
+      });
+    const frame = {
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 966,
+      layoutInlineSize: 966,
+      phase: "sliding" as const,
+      toInlineSize: 1246,
+    };
+
+    // visual stage = 1200 + (966 − 1246) = 920; visual free = 46.
+    // LTR: settled left 0 (pinned left), visual left 23 → +23.
+    expect(makeResolver("ltr")(frame)?.transform).toContain(
+      "translate3d(23px,",
+    );
+    // RTL: settled left −234 (pinned right, overflowing left), visual left 23
+    // → +257. The uncorrected LTR math shipped +23 here — a ~234px flight
+    // displacement that vanished mid-flight once the live width passed the
+    // stage, which read as an overshoot-and-return.
+    expect(makeResolver("rtl")(frame)?.transform).toContain(
+      "translate3d(257px,",
+    );
+  });
+
+  it("matches LTR in RTL once nothing overflows (centered stage)", () => {
+    const makeResolver = (direction: "ltr" | "rtl") =>
+      createFileViewerFitWidthSurfaceMotionResolver({
+        align: "center",
+        direction,
+        isFitWidth: true,
+        stageInlineSize: 1200,
+      });
+    const frame = {
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 966,
+      layoutInlineSize: 1230,
+      phase: "sliding" as const,
+      toInlineSize: 1246,
+    };
+
+    // settled left (1230 − 1200)/2 = 15; visual stage 1184, left 23 → +8.
+    expect(makeResolver("ltr")(frame)?.transform).toContain("translate3d(8px,");
+    expect(makeResolver("rtl")(frame)?.transform).toContain("translate3d(8px,");
+  });
+
   it("returns identity while not fit-width", () => {
     const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
       align: "center",

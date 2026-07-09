@@ -212,10 +212,11 @@ export function DocxViewerContent({
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
+          direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: stageInlineSize ?? 0,
         }),
-      [isFitWidth, rendererFrame.align, stageInlineSize],
+      [isFitWidth, rendererFrame.align, rendererFrame.direction, stageInlineSize],
     );
   const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [documentSurfaceElement, setDocumentSurfaceElementState] =

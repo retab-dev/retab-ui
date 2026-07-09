@@ -1507,6 +1507,11 @@
           "path": "registry/new-york-v4/ui/viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-measurement.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-measurement.ts"
         }
       ]
     },
@@ -1684,6 +1689,11 @@
           "path": "registry/new-york-v4/ui/file-viewer-fit-width-motion.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-fit-width-motion.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-measurement.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-measurement.ts"
         }
       ]
     },
@@ -1935,6 +1945,11 @@
           "path": "registry/new-york-v4/ui/file-viewer-fit-width-motion.ts",
           "type": "registry:ui",
           "target": "@ui/file-viewer-fit-width-motion.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-measurement.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-measurement.ts"
         }
       ]
     },
@@ -2911,7 +2926,7 @@
       "name": "schema-builder",
       "type": "registry:ui",
       "title": "Schema Builder",
-      "description": "Controlled JSON Schema editor for building Retab extraction schemas \u2014 fields, types, nested objects, arrays, enums, and required flags.",
+      "description": "Controlled JSON Schema editor for building Retab extraction schemas — fields, types, nested objects, arrays, enums, and required flags.",
       "registryDependencies": [
         "@retab/utils",
         "@retab/alert-dialog",
@@ -4176,7 +4191,7 @@
       "name": "edit-viewer-block",
       "type": "registry:block",
       "title": "Edit Viewer",
-      "description": "Detected form fields beside a PDF source document, linked by their bbox \u2014 hover or select a field to highlight its region on the page; Preview stamps values over the source, and Filled renders a supplied output file.",
+      "description": "Detected form fields beside a PDF source document, linked by their bbox — hover or select a field to highlight its region on the page; Preview stamps values over the source, and Filled renders a supplied output file.",
       "dependencies": [
         "lucide-react"
       ],
@@ -4288,7 +4303,7 @@
       "name": "extract-viewer-block",
       "type": "registry:block",
       "title": "Extract Viewer",
-      "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources \u2014 hover or select a field to highlight where its value came from and scroll the page to it.",
+      "description": "Extracted data beside the source PDF, rendered as a JSON form and linked by sources — hover or select a field to highlight where its value came from and scroll the page to it.",
       "registryDependencies": [
         "@retab/file-viewer",
         "@retab/pdf-viewer",
@@ -4500,7 +4515,7 @@
       "name": "sources-viewer-block",
       "type": "registry:block",
       "title": "Sources Viewer",
-      "description": "Every source-backed format in one viewer \u2014 PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use segmented source links with format-specific target adapters.",
+      "description": "Every source-backed format in one viewer — PDF/image bbox sources use segmented-document anchors; text, CSV, Excel, and Word use segmented source links with format-specific target adapters.",
       "dependencies": [
         "react-hook-form",
         "json-schema",
@@ -4749,7 +4764,7 @@
       "name": "json-form-sources-block",
       "type": "registry:block",
       "title": "JSON Form Sources",
-      "description": "Extraction rendered as a JSON form beside the source PDF \u2014 hover a form field to highlight where its value came from through segmented-document state.",
+      "description": "Extraction rendered as a JSON form beside the source PDF — hover a form field to highlight where its value came from through segmented-document state.",
       "dependencies": [
         "react-hook-form",
         "@radix-ui/react-checkbox@^1.1.3",
@@ -5221,7 +5236,7 @@
       "name": "primitive-run-cards",
       "type": "registry:ui",
       "title": "Primitive Run Card Components",
-      "description": "Prop-driven run cards for each Retab primitive \u2014 classify, split, partition, parse, and extract \u2014 each framing the source document with that primitive's result over the shared RunCard shell. Presentational: pass the resolved result (category, segments, markdown, or extract fields), so the same cards render a static demo or a live workflow run's per-block result.",
+      "description": "Prop-driven run cards for each Retab primitive — classify, split, partition, parse, and extract — each framing the source document with that primitive's result over the shared RunCard shell. Presentational: pass the resolved result (category, segments, markdown, or extract fields), so the same cards render a static demo or a live workflow run's per-block result.",
       "dependencies": [
         "react-markdown@^10.1.0",
         "remark-gfm@^4.0.1"
@@ -5248,7 +5263,7 @@
       "name": "primitive-cards-block",
       "type": "registry:block",
       "title": "Primitive Run Cards",
-      "description": "Each Retab primitive's result framed as a run card \u2014 a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes the primitive-run-cards components over sample results.",
+      "description": "Each Retab primitive's result framed as a run card — a document thumbnail with a status pill and the primitive's output in the card body. Classification shows the page with its category and reasoning; split a mini page rail of color-keyed subdocuments; partition a keyed-chunk legend with an overlap ribbon; parse the page rendered as markdown; extract the page with each field's source box drawn over it. Composes the primitive-run-cards components over sample results.",
       "registryDependencies": [
         "@retab/primitive-run-cards"
       ],
@@ -6027,6 +6042,11 @@
           "path": "registry/new-york-v4/ui/markdown-greenfield-renderer-frame.ts",
           "type": "registry:ui",
           "target": "@ui/markdown-greenfield-renderer-frame.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-measurement.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-measurement.ts"
         }
       ],
       "devDependencies": [
@@ -6333,6 +6353,11 @@
           "path": "registry/new-york-v4/ui/viewer-types.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-types.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/viewer-measurement.ts",
+          "type": "registry:ui",
+          "target": "@ui/viewer-measurement.ts"
         }
       ],
       "devDependencies": [
@@ -6415,7 +6440,7 @@
       "name": "image-sources-block",
       "type": "registry:block",
       "title": "Image Sources",
-      "description": "Extracted fields linked to a scanned page image \u2014 hover to highlight the image_bbox region.",
+      "description": "Extracted fields linked to a scanned page image — hover to highlight the image_bbox region.",
       "registryDependencies": [
         "@retab/image-viewer",
         "@retab/image-source",
@@ -6446,7 +6471,7 @@
       "name": "text-sources-block",
       "type": "registry:block",
       "title": "Text Sources",
-      "description": "Values extracted from a log file linked to the lines they came from \u2014 hover to highlight a line range.",
+      "description": "Values extracted from a log file linked to the lines they came from — hover to highlight a line range.",
       "registryDependencies": [
         "@retab/text-viewer",
         "@retab/text-source",
@@ -6477,7 +6502,7 @@
       "name": "docx-sources-block",
       "type": "registry:block",
       "title": "DOCX Sources",
-      "description": "Values extracted from a Word document linked back to where they came from \u2014 hover to highlight the text and scroll to it.",
+      "description": "Values extracted from a Word document linked back to where they came from — hover to highlight the text and scroll to it.",
       "registryDependencies": [
         "@retab/docx-viewer",
         "@retab/docx-source",
@@ -6508,7 +6533,7 @@
       "name": "csv-sources-block",
       "type": "registry:block",
       "title": "CSV Sources",
-      "description": "Extracted values linked to spreadsheet cells \u2014 hover to highlight a cell and scroll to it.",
+      "description": "Extracted values linked to spreadsheet cells — hover to highlight a cell and scroll to it.",
       "registryDependencies": [
         "@retab/csv-viewer",
         "@retab/csv-source",
@@ -6539,7 +6564,7 @@
       "name": "xlsx-sources-block",
       "type": "registry:block",
       "title": "Excel Sources",
-      "description": "Extracted values linked to spreadsheet cells across sheets \u2014 hover to switch sheet, highlight the cell, and scroll to it.",
+      "description": "Extracted values linked to spreadsheet cells across sheets — hover to switch sheet, highlight the cell, and scroll to it.",
       "registryDependencies": [
         "@retab/xlsx-viewer",
         "@retab/xlsx-source",

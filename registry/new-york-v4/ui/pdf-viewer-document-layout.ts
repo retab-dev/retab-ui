@@ -135,10 +135,16 @@ export function usePdfDocumentLayout({
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
+          direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: pageLayout.maxPageWidth,
         }),
-      [isFitWidth, pageLayout.maxPageWidth, rendererFrame.align],
+      [
+        isFitWidth,
+        pageLayout.maxPageWidth,
+        rendererFrame.align,
+        rendererFrame.direction,
+      ],
     );
 
   return {

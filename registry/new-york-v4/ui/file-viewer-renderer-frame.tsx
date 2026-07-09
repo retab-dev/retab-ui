@@ -14,6 +14,7 @@ import {
   type FileViewerRendererFrame,
 } from "./file-viewer-renderer-contract";
 import { useFileViewerMotionFrame } from "./file-viewer-motion-kernel";
+import { useViewerInlineDirection } from "./viewer-measurement";
 
 export type FileViewerRendererEnvironment = {
   registerDocumentSurface: (surface: FileViewerDocumentSurface) => () => void;
@@ -135,11 +136,16 @@ function useResolvedFileViewerRendererFrame({
       ? fallbackInlineSize
       : null;
 
+  // The fit-width motion transform is a physical-X computation, so renderers
+  // need the frame's computed CSS `direction` alongside its logical align.
+  const direction = useViewerInlineDirection(documentFrame?.element ?? null);
+
   return React.useMemo(
     () =>
       createFileViewerRendererFrame({
         align: documentFrame?.align ?? "center",
         canToggleSidebar: shell?.canToggleSidebar ?? false,
+        direction,
         element: documentFrame?.element ?? null,
         fallbackInlineSize: documentFrame?.inlineSize ?? fallbackSize,
         motionFrame,
@@ -147,6 +153,7 @@ function useResolvedFileViewerRendererFrame({
         usesShellGeometry,
       }),
     [
+      direction,
       documentFrame?.align,
       documentFrame?.element,
       documentFrame?.inlineSize,

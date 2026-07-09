@@ -10,6 +10,7 @@ import { DEFAULT_FILE_VIEWER_MOTION_FRAME } from "@/registry/new-york-v4/ui/file
 const STABLE_FRAME: FileViewerRendererFrame = {
   align: "start",
   canToggleSidebar: false,
+  direction: "ltr",
   documentTransition: {
     layoutPolicy: "live",
     scrollPolicy: "preserve",

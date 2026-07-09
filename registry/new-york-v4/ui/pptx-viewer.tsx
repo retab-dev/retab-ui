@@ -204,10 +204,16 @@ function PptxViewerContent({
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
           align: rendererFrame.align,
+          direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: slideLayout.slideWidth,
         }),
-      [isFitWidth, rendererFrame.align, slideLayout.slideWidth],
+      [
+        isFitWidth,
+        rendererFrame.align,
+        rendererFrame.direction,
+        slideLayout.slideWidth,
+      ],
     );
   const preMotionAnchorRef = React.useRef<{
     screenRelTop: number;

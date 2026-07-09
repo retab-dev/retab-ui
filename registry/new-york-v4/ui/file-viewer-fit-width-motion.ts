@@ -2,7 +2,10 @@
 
 import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
 import type { FileViewerMotionFrame } from "./file-viewer-motion-plan";
-import type { FileViewerDocumentAlign } from "./file-viewer-renderer-contract";
+import type {
+  FileViewerDocumentAlign,
+  FileViewerInlineDirection,
+} from "./file-viewer-renderer-contract";
 
 export const FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY =
   "--file-viewer-fit-width-anchor-block";
@@ -19,11 +22,13 @@ export const FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY =
 export function createFileViewerFitWidthSurfaceMotionResolver({
   align,
   anchorBlockProperty = FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  direction = "ltr",
   isFitWidth,
   stageInlineSize,
 }: {
   align: FileViewerDocumentAlign;
   anchorBlockProperty?: string;
+  direction?: FileViewerInlineDirection;
   isFitWidth: boolean;
   stageInlineSize: number;
 }): FileViewerDocumentSurfaceMotionResolver {
@@ -40,6 +45,7 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
       transform: getFileViewerFitWidthSurfaceMotionTransform({
         align,
         anchorBlockProperty,
+        direction,
         frame,
         stageInlineSize,
       }),
@@ -172,11 +178,13 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
 function getFileViewerFitWidthSurfaceMotionTransform({
   align,
   anchorBlockProperty,
+  direction,
   frame,
   stageInlineSize,
 }: {
   align: FileViewerDocumentAlign;
   anchorBlockProperty: string;
+  direction: FileViewerInlineDirection;
   frame: FileViewerMotionFrame;
   stageInlineSize: number;
 }) {
@@ -202,11 +210,13 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   const settledMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,
+    direction,
     stageInlineSize,
   });
   const visualMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,
+    direction,
     stageInlineSize: visualStageInlineSize,
   });
   const translateX = visualMargin - settledMargin;
@@ -224,22 +234,39 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   return `translate3d(${formattedTranslateX}px, ${translateY}, 0) scale(${formattedScale})`;
 }
 
+// Physical LEFT offset of the stage box inside the available inline size —
+// translateX shifts along the physical X axis, so the model must speak
+// physical-left in both directions. Stages align with physical auto margins
+// (mx-auto for center, ml-auto for end, plain flow for start), so:
+// - free space ≥ 0: center splits it; end pins right in both directions
+//   (ml-auto is physical); start follows flow (left in LTR, right in RTL).
+// - free space < 0 (the settled stage overflows the live container — the
+//   close leg's early frames): auto margins collapse to 0 and CSS resolves
+//   the over-constraint against the direction's end edge, pinning the box to
+//   the start edge — left edge at 0 in LTR, at the negative free space in
+//   RTL. The old unconditional max(0, …) clamp encoded only the LTR half and
+//   made the RTL close leg overshoot by the overflow amount.
 function getFileViewerStageInlineMargin({
   align,
   availableInlineSize,
+  direction,
   stageInlineSize,
 }: {
   align: FileViewerDocumentAlign;
   availableInlineSize: number;
+  direction: FileViewerInlineDirection;
   stageInlineSize: number;
 }) {
+  const freeInlineSize = availableInlineSize - stageInlineSize;
+  if (freeInlineSize < 0) return direction === "rtl" ? freeInlineSize : 0;
+
   switch (align) {
     case "start":
-      return 0;
+      return direction === "rtl" ? freeInlineSize : 0;
     case "end":
-      return Math.max(0, availableInlineSize - stageInlineSize);
+      return freeInlineSize;
     case "center":
-      return Math.max(0, (availableInlineSize - stageInlineSize) / 2);
+      return freeInlineSize / 2;
   }
 }
 

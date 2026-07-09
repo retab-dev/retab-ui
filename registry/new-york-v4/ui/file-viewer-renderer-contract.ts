@@ -9,6 +9,11 @@ import type { ViewerDocumentTransition } from "./viewer-types";
 
 export type FileViewerDocumentAlign = "start" | "center" | "end";
 
+// Physical inline direction of the document frame (computed CSS `direction`).
+// The fit-width motion transform works on the physical X axis, so it needs
+// the direction to model where auto-margin alignment actually puts the stage.
+export type FileViewerInlineDirection = "ltr" | "rtl";
+
 // `phase` is the motion clock's state; `documentTransition` is the single
 // spelling of the policies derived from it. Renderers read layout/scroll/
 // visual decisions from the transition, never from duplicated top-level
@@ -16,6 +21,7 @@ export type FileViewerDocumentAlign = "start" | "center" | "end";
 export type FileViewerRendererFrame = {
   align: FileViewerDocumentAlign;
   canToggleSidebar: boolean;
+  direction: FileViewerInlineDirection;
   documentTransition: ViewerDocumentTransition;
   element: HTMLDivElement | null;
   fromInlineSize: number | null;
@@ -56,6 +62,7 @@ export function resolveFileViewerRendererLayoutInlineSize({
 export function createFileViewerRendererFrame({
   align,
   canToggleSidebar,
+  direction = "ltr",
   element,
   fallbackInlineSize,
   motionFrame,
@@ -64,6 +71,7 @@ export function createFileViewerRendererFrame({
 }: {
   align: FileViewerDocumentAlign;
   canToggleSidebar: boolean;
+  direction?: FileViewerInlineDirection;
   element: HTMLDivElement | null;
   fallbackInlineSize: number | null;
   motionFrame: FileViewerMotionFrame;
@@ -99,6 +107,7 @@ export function createFileViewerRendererFrame({
   return {
     align,
     canToggleSidebar,
+    direction,
     documentTransition,
     element,
     fromInlineSize,

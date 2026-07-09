@@ -46,6 +46,23 @@ export function readElementRectSnapshot(
   return [rect.left, rect.top, rect.width, rect.height];
 }
 
+// Computed CSS inline direction of an element, sampled when it attaches (a
+// runtime `dir` flip is picked up on the next mount). The fit-width motion
+// transform works on the physical X axis, so the renderer frame needs to
+// know which edge auto-margin alignment pins the stage to.
+export function useViewerInlineDirection(
+  element: HTMLElement | null,
+): "ltr" | "rtl" {
+  const [direction, setDirection] = React.useState<"ltr" | "rtl">("ltr");
+
+  useKeyedLayoutEffect(element ? joinEffectKey([element]) : null, () => {
+    if (!element) return;
+    setDirection(getComputedStyle(element).direction === "rtl" ? "rtl" : "ltr");
+  });
+
+  return direction;
+}
+
 function readElementSize(element: HTMLElement): RawMeasuredSize {
   const rect =
     typeof element.getBoundingClientRect === "function"
