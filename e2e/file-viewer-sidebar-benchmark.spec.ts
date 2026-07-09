@@ -499,6 +499,13 @@ test.describe("FileViewer sidebar motion benchmark", () => {
         window,
         "__fileViewerSidebarBenchmarkTelemetry",
       ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      // Discarded warm-up run (module compile / first raster of the deep
+      // pages), then the asserted steady-state run — same policy as the tiff
+      // and pptx telemetry gates.
+      await telemetry?.run({
+        actionOrder: "close-open",
+        scrollTargetId: "deep",
+      });
       return (
         (await telemetry?.run({
           actionOrder: "close-open",
@@ -519,10 +526,8 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       ),
     ).toEqual([]);
     expect(
-      telemetryConsoleMessages.some((message) =>
-        message.startsWith("[file-viewer:sidebar-benchmark] failures "),
-      ),
-    ).toBe(false);
+      collectBlockingFailureConsoleLines(telemetryConsoleMessages),
+    ).toEqual([]);
   });
 
   test("PPTX deep telemetry keeps the reading line continuous through a retarget", async ({
@@ -595,10 +600,8 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       ),
     ).toEqual([]);
     expect(
-      telemetryConsoleMessages.some((message) =>
-        message.startsWith("[file-viewer:sidebar-benchmark] failures "),
-      ),
-    ).toBe(false);
+      collectBlockingFailureConsoleLines(telemetryConsoleMessages),
+    ).toEqual([]);
   });
 
   test("production PDF telemetry reports no sidebar motion regressions", async ({
@@ -2780,6 +2783,33 @@ function collectBlockingTelemetryMetrics<
       !metric.passed &&
       !(process.env.CI && CI_TOLERATED_TIMING_METRIC_IDS.has(metric.id)),
   );
+}
+
+const BENCHMARK_FAILURES_CONSOLE_PREFIX =
+  "[file-viewer:sidebar-benchmark] failures ";
+
+// The in-page runtime logs a "failures" line for EVERY failed metric,
+// including the timing metrics collectBlockingTelemetryMetrics tolerates on
+// loaded CI runners. Apply the same tolerance here: a line is blocking only
+// if it names a metric outside CI_TOLERATED_TIMING_METRIC_IDS (or cannot be
+// parsed). Off CI every failures line blocks, matching the local strict
+// status assertion.
+function collectBlockingFailureConsoleLines(messages: readonly string[]) {
+  return messages.filter((message) => {
+    if (!message.startsWith(BENCHMARK_FAILURES_CONSOLE_PREFIX)) return false;
+    if (!process.env.CI) return true;
+    try {
+      const failedMetrics = JSON.parse(
+        message.slice(BENCHMARK_FAILURES_CONSOLE_PREFIX.length),
+      ) as { id?: string }[];
+      return !failedMetrics.every(
+        (metric) =>
+          metric.id != null && CI_TOLERATED_TIMING_METRIC_IDS.has(metric.id),
+      );
+    } catch {
+      return true;
+    }
+  });
 }
 
 function formatValues(values: number[]) {
