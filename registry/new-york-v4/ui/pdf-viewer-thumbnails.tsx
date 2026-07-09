@@ -230,46 +230,49 @@ function usePdfThumbnailRenderSuspension(
   const [isOpenSettling, setIsOpenSettling] = React.useState(false);
   const [isClosedWarmReleased, setIsClosedWarmReleased] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!isMotionManaged) {
-      setIsOpenSettling(false);
-      setIsClosedWarmReleased(false);
-      return;
-    }
+  useKeyedMountEffect(
+    joinEffectKey([
+      isMotionManaged,
+      isOpenSettling,
+      isSidebarInteractive,
+      isSidebarOpen,
+      isSidebarTransitioning,
+    ]),
+    () => {
+      if (!isMotionManaged) {
+        setIsOpenSettling(false);
+        setIsClosedWarmReleased(false);
+        return;
+      }
 
-    if (!isSidebarOpen) {
-      setIsOpenSettling(false);
+      if (!isSidebarOpen) {
+        setIsOpenSettling(false);
+        setIsClosedWarmReleased(false);
+        if (isSidebarTransitioning) return;
+
+        const timer = window.setTimeout(() => {
+          setIsClosedWarmReleased(true);
+        }, PDF_THUMBNAIL_CLOSED_WARM_DELAY_MS);
+
+        return () => window.clearTimeout(timer);
+      }
+
       setIsClosedWarmReleased(false);
-      if (isSidebarTransitioning) return;
+
+      if (isSidebarTransitioning || !isSidebarInteractive) {
+        setIsOpenSettling(true);
+        return;
+      }
+
+      if (!isOpenSettling) return;
 
       const timer = window.setTimeout(() => {
-        setIsClosedWarmReleased(true);
-      }, PDF_THUMBNAIL_CLOSED_WARM_DELAY_MS);
+        setIsOpenSettling(false);
+      }, PDF_THUMBNAIL_RENDER_RESUME_DELAY_MS);
 
       return () => window.clearTimeout(timer);
-    }
-
-    setIsClosedWarmReleased(false);
-
-    if (isSidebarTransitioning || !isSidebarInteractive) {
-      setIsOpenSettling(true);
-      return;
-    }
-
-    if (!isOpenSettling) return;
-
-    const timer = window.setTimeout(() => {
-      setIsOpenSettling(false);
-    }, PDF_THUMBNAIL_RENDER_RESUME_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    isMotionManaged,
-    isOpenSettling,
-    isSidebarInteractive,
-    isSidebarOpen,
-    isSidebarTransitioning,
-  ]);
+    },
+  );
 
   if (!isMotionManaged) return false;
   if (!isSidebarOpen) return !isClosedWarmReleased;

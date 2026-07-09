@@ -2,6 +2,9 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
+
 import { restoreFileViewerSidebarFocusOnClose } from "./file-viewer-accessibility";
 import {
   DEFAULT_FILE_VIEWER_SIDEBAR_WIDTH,
@@ -60,10 +63,7 @@ function useFileViewerSidebarOpenController({
   const isSidebarOpen =
     collapsible === "none" ? true : (open ?? uncontrolledOpen);
   const openRef = React.useRef(isSidebarOpen);
-
-  React.useLayoutEffect(() => {
-    openRef.current = isSidebarOpen;
-  }, [isSidebarOpen]);
+  openRef.current = isSidebarOpen;
 
   const getSidebarOpen = React.useCallback(() => openRef.current, []);
 
@@ -246,6 +246,7 @@ export function useFileViewerShellController({
     [isSidebarOpen, mode, side, sidebarWidthPixels, size.width],
   );
   const motionTargetRef = React.useRef(motionTarget);
+  motionTargetRef.current = motionTarget;
 
   const setRootElement = React.useCallback(
     (element: HTMLDivElement | null) => {
@@ -254,36 +255,48 @@ export function useFileViewerShellController({
     [elementRegistry],
   );
 
-  React.useLayoutEffect(() => {
-    motionTargetRef.current = motionTarget;
-  }, [motionTarget]);
-
   // Adopt idle geometry (mount, resizes, mode flips) without animating. While
   // a motion is in flight the kernel owns the target — EXCEPT on a mode flip:
   // React renders the new mode immediately, so the kernel must be told (it
   // snaps the motion) or an inline slide keeps writing gap widths against
   // overlay DOM until settle.
-  React.useLayoutEffect(() => {
-    if (
-      motionFrame.phase !== "idle" &&
-      motionFrame.mode === motionTarget.mode
-    ) {
-      return;
-    }
-    motionKernel.syncTarget(motionTarget);
-  }, [motionFrame.mode, motionFrame.phase, motionKernel, motionTarget]);
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "file-viewer-sync-target",
+      motionFrame.mode,
+      motionFrame.phase,
+      motionKernel,
+      motionTarget,
+    ]),
+    () => {
+      if (
+        motionFrame.phase !== "idle" &&
+        motionFrame.mode === motionTarget.mode
+      ) {
+        return;
+      }
+      motionKernel.syncTarget(motionTarget);
+    },
+  );
 
   // Single owner of focus restoration: when the sidebar stops being
   // interactive while focus is inside it, hand focus back to the trigger.
   const previousIsSidebarInteractiveRef = React.useRef(isSidebarInteractive);
-  React.useLayoutEffect(() => {
-    restoreFileViewerSidebarFocusOnClose({
-      elements: elementRegistry.getElements(),
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "file-viewer-sidebar-focus-restore",
+      elementRegistry,
       isSidebarInteractive,
-      previousIsSidebarInteractive: previousIsSidebarInteractiveRef.current,
-    });
-    previousIsSidebarInteractiveRef.current = isSidebarInteractive;
-  }, [elementRegistry, isSidebarInteractive]);
+    ]),
+    () => {
+      restoreFileViewerSidebarFocusOnClose({
+        elements: elementRegistry.getElements(),
+        isSidebarInteractive,
+        previousIsSidebarInteractive: previousIsSidebarInteractiveRef.current,
+      });
+      previousIsSidebarInteractiveRef.current = isSidebarInteractive;
+    },
+  );
 
   const setSidebarOpen = React.useCallback<FileViewerSetSidebarOpen>(
     (value) => {

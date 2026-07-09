@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
@@ -54,43 +52,48 @@ export function useFileViewerShellKeyboard({
   isSidebarOverlayDismissible: boolean;
   viewerShellElement: HTMLDivElement | null;
 }) {
-  React.useLayoutEffect(() => {
-    const ownerDocument = viewerShellElement?.ownerDocument;
-    if (!ownerDocument) return;
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "file-viewer-escape-close",
+      canToggleSidebar,
+      closeSidebar,
+      elementRegistry,
+      isSidebarInteractive,
+      viewerShellElement,
+    ]),
+    () => {
+      const ownerDocument = viewerShellElement?.ownerDocument;
+      if (!ownerDocument) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        !shouldCloseFileViewerSidebarOnEscape({
-          canToggleSidebar,
-          event,
-          isSidebarInteractive,
-        })
-      ) {
-        return;
-      }
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (
+          !shouldCloseFileViewerSidebarOnEscape({
+            canToggleSidebar,
+            event,
+            isSidebarInteractive,
+          })
+        ) {
+          return;
+        }
 
-      if (
-        !isFileViewerActiveElementInsideShell({
-          activeElement: ownerDocument.activeElement,
-          viewerShellElement: elementRegistry.getElements().viewerShellElement,
-        })
-      ) {
-        return;
-      }
+        if (
+          !isFileViewerActiveElementInsideShell({
+            activeElement: ownerDocument.activeElement,
+            viewerShellElement:
+              elementRegistry.getElements().viewerShellElement,
+          })
+        ) {
+          return;
+        }
 
-      event.preventDefault();
-      closeSidebar();
-    };
+        event.preventDefault();
+        closeSidebar();
+      };
 
-    ownerDocument.addEventListener("keydown", handleKeyDown);
-    return () => ownerDocument.removeEventListener("keydown", handleKeyDown);
-  }, [
-    canToggleSidebar,
-    closeSidebar,
-    elementRegistry,
-    isSidebarInteractive,
-    viewerShellElement,
-  ]);
+      ownerDocument.addEventListener("keydown", handleKeyDown);
+      return () => ownerDocument.removeEventListener("keydown", handleKeyDown);
+    },
+  );
 
   // An overlay sidebar floats above the document, so a pointer press anywhere
   // outside the panel (and its trigger, whose own click handles the toggle)

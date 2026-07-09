@@ -2,6 +2,9 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
+
 import { resolveFileViewerSidebarAccessibilityProps } from "./file-viewer-accessibility";
 import {
   type FileViewerSidebarCollapsible,
@@ -75,12 +78,13 @@ export function useFileViewerSidebarController({
     },
     [shell.elementRegistry],
   );
+  const setSidebarSizeElement = sidebarSize.setElement;
   const setSidebarPanelElement = React.useCallback(
     (element: HTMLElement | null) => {
-      sidebarSize.setElement(element);
+      setSidebarSizeElement(element);
       shell.elementRegistry.registerSidebarElement(element);
     },
-    [shell.elementRegistry, sidebarSize.setElement],
+    [setSidebarSizeElement, shell.elementRegistry],
   );
 
   if (process.env.NODE_ENV !== "production" && !isInsideContent) {
@@ -89,7 +93,16 @@ export function useFileViewerSidebarController({
     );
   }
 
-  React.useLayoutEffect(
+  useKeyedLayoutEffect(
+    joinEffectKey([
+      "file-viewer-sidebar-registration",
+      registerSidebar,
+      resolvedCollapsible,
+      resolvedSide,
+      sidebarId,
+      width,
+      widthPixels,
+    ]),
     () =>
       registerSidebar({
         collapsible: resolvedCollapsible,
@@ -98,14 +111,6 @@ export function useFileViewerSidebarController({
         width,
         widthPixels,
       }),
-    [
-      registerSidebar,
-      resolvedCollapsible,
-      resolvedSide,
-      sidebarId,
-      width,
-      widthPixels,
-    ],
   );
 
   const accessibilityProps = resolveFileViewerSidebarAccessibilityProps({
