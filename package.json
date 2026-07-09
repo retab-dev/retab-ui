@@ -40,6 +40,7 @@
     "verify:sources-viewer-visual-blink": "playwright test e2e/sources-viewer-visual-probe.spec.ts e2e/sources-viewer-reading-anchor.spec.ts --project=chromium",
     "verify:sources-viewer-toggle-matrix": "playwright test e2e/sources-viewer-toggle-matrix.spec.ts --project=chromium",
     "verify:benchmark-toggle-matrix": "playwright test e2e/benchmark-toggle-matrix.spec.ts --project=chromium",
+    "verify:mode-state-matrix": "playwright test e2e/mode-and-state-matrix.spec.ts --project=chromium",
     "verify:file-viewer-sidebar-motion": "playwright test e2e/file-viewer-sidebar-benchmark.spec.ts --project=chromium",
     "verify:file-viewer-sidebar-motion:strict": "FILE_VIEWER_ASSERT_RENDERER_CONTINUITY=1 playwright test e2e/file-viewer-sidebar-benchmark.spec.ts --project=chromium",
     "verify:file-viewer-sidebar-motion:visual": "FILE_VIEWER_ASSERT_VISUAL_SMOOTHNESS=1 playwright test e2e/file-viewer-sidebar-benchmark.spec.ts --project=chromium --grep \"PDF sidebar\"",

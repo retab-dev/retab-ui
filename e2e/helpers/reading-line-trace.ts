@@ -314,6 +314,7 @@ export async function traceReadingLineThroughResize(
           tracked.getAttribute("data-page") ??
           tracked.getAttribute("data-page-number") ??
           tracked.getAttribute("data-slide") ??
+          tracked.getAttribute("data-frame") ??
           null,
         trackedIndex: candidates.indexOf(tracked),
         root,
@@ -363,6 +364,16 @@ export async function traceReadingLineThroughResize(
       // Re-resolve across keyed remounts (slides, grids, and text canvases
       // remount on width change); a detached node's zero rect at the origin
       // otherwise reads as a constant phantom offset of exactly -markerY.
+      // A mode flip (inline<->overlay across the breakpoint) can remount the
+      // whole shell — re-resolve the ROOT first, then scroller, then node.
+      if (!state.root.isConnected) {
+        const nextRoot = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '[data-slot="file-viewer-root"]',
+          ),
+        ).find((candidate) => candidate.getBoundingClientRect().width > 0);
+        if (nextRoot) state.root = nextRoot;
+      }
       // The SCROLLER remounts too on some formats — a detached scroller's
       // zero rect collapses markerY to 0, which reads as +rect.top.
       if (state.scroller && !state.scroller.isConnected) {
@@ -385,7 +396,8 @@ export async function traceReadingLineThroughResize(
                 (el) =>
                   (el.getAttribute("data-page") ??
                     el.getAttribute("data-page-number") ??
-                    el.getAttribute("data-slide")) === state.trackedKey,
+                    el.getAttribute("data-slide") ??
+                    el.getAttribute("data-frame")) === state.trackedKey,
               )
             : undefined) ?? candidates[state.trackedIndex];
         if (rehomed) state.tracked = rehomed;

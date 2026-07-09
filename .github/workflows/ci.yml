@@ -80,6 +80,10 @@ jobs:
       # real scroll ranges.
       - name: Benchmark toggle matrix gate
         run: pnpm verify:benchmark-toggle-matrix
+      # State branches the geometry matrices never enter: overlay mode,
+      # inline<->overlay breakpoint crossing, explicit zoom, reduced motion.
+      - name: Mode and state matrix gate
+        run: pnpm verify:mode-state-matrix
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
