@@ -430,3 +430,40 @@ export async function traceReadingLineThroughResize(
   await page.waitForTimeout(settleMs);
   return { positions, positionsX };
 }
+
+
+// Console sentinel: geometry probes are blind to React warnings, kernel
+// development diagnostics, and uncaught rejections. Install before the
+// actions under test; assert clean at the end. Filters browser noise that
+// is not ours (extensions, favicon 404s, devtools chatter).
+export type ConsoleSentinel = {
+  errors: string[];
+  assertClean: () => void;
+};
+
+const CONSOLE_IGNORE = [
+  /Download the React DevTools/,
+  /favicon/i,
+  /third-party cookie/i,
+  /Slow network is detected/i,
+];
+
+export function installConsoleSentinel(
+  page: Page,
+  { expect }: { expect: (errors: string[]) => void },
+): ConsoleSentinel {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() !== "error" && message.type() !== "warning") return;
+    const text = message.text();
+    if (CONSOLE_IGNORE.some((pattern) => pattern.test(text))) return;
+    errors.push(`console.${message.type()}: ${text}`);
+  });
+  page.on("pageerror", (error) => {
+    errors.push(`pageerror: ${error.message}`);
+  });
+  return {
+    errors,
+    assertClean: () => expect(errors),
+  };
+}

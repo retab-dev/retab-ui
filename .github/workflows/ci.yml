@@ -88,6 +88,12 @@ jobs:
       # round trips (DOM/canvas populations after toggle cycles).
       - name: Motion conflict and leak gate
         run: pnpm verify:motion-conflict-and-leak
+      # Seeded monkey run (fixed seed in CI for determinism; hunt locally
+      # with MONKEY_SEED=$RANDOM): random toggles/wheels/zooms/scroll jumps
+      # and mid-flight format switches under zero-console-error, document-
+      # attached, and bounded-resource invariants.
+      - name: Viewer monkey fuzz gate
+        run: pnpm verify:viewer-monkey-fuzz
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
