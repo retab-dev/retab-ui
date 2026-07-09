@@ -187,15 +187,9 @@ function getExpectedPreservedPdfScrollTop({
   }
 
   const readingMarkerOffset = viewportHeight * 0.2;
-  const pageTopInViewport = previousPage.offsetTop - scrollTop;
 
-  // Mirrors capturePdfReadingAnchor: the page-boundary anchor only applies
-  // inside the PDF_READING_BOUNDARY_SNAP_PX (24px) band around a page top.
-  const boundarySnap = Math.min(readingMarkerOffset, 24);
-  if (Math.abs(pageTopInViewport) <= boundarySnap) {
-    return nextPage.offsetTop - Math.round(pageTopInViewport);
-  }
-
+  // Mirrors capturePdfReadingAnchor: the marker's page-relative fraction is
+  // the sole reading identity — scale-invariant, so it survives re-fits.
   const pageAnchorRatio =
     (scrollTop + readingMarkerOffset - previousPage.offsetTop) /
     previousPage.height;

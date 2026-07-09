@@ -26,17 +26,11 @@ import { joinEffectKey } from "@/lib/effect-key";
 const PDF_SCROLL_TARGET_HEADROOM = 48;
 const PDF_SCROLL_TARGET_INLINE_HEADROOM = 32;
 export const PDF_READING_MARKER_RATIO = 0.2;
-const PDF_READING_BOUNDARY_SNAP_PX = 24;
 const PDF_SCROLL_IDLE_MS = 120;
 
 type PdfReadingAnchor =
   | {
       kind: "top";
-    }
-  | {
-      kind: "page-boundary";
-      pageNumber: number;
-      topInViewport: number;
     }
   | {
       kind: "page";
@@ -485,25 +479,16 @@ function capturePdfReadingAnchor(
   const pageLayout = getPdfPageLayout(layout, pageNumber);
   if (!pageLayout || pageLayout.height <= 0) return null;
 
-  const markerOffset = getPdfReadingAnchorOffset(viewportBlockSize);
-  const pageTopInViewport = pageLayout.offsetTop - scrollTop;
-  const boundarySnap = Math.min(markerOffset, PDF_READING_BOUNDARY_SNAP_PX);
-  if (Math.abs(pageTopInViewport) <= boundarySnap) {
-    return {
-      kind: "page-boundary",
-      pageNumber,
-      topInViewport: snapPdfReadingBoundaryOffset(pageTopInViewport),
-    };
-  }
-
+  // yPercent is deliberately unclamped: the layout is a single linear
+  // function of scale (gaps and padding included), so a marker sitting in the
+  // top padding (< 0) or an inter-page gap (> 1) restores exactly by the same
+  // page-relative fraction. Clamping — or pinning a nearby page edge in
+  // viewport pixels — breaks the reading marker across a re-fit, because the
+  // marker offset is viewport-relative and does not scale with the document.
   return {
     kind: "page",
     pageNumber,
-    yPercent: clamp(
-      (anchorOffset - pageLayout.offsetTop) / pageLayout.height,
-      0,
-      1,
-    ),
+    yPercent: (anchorOffset - pageLayout.offsetTop) / pageLayout.height,
   };
 }
 
@@ -525,10 +510,6 @@ function getPdfReadingAnchorScrollTop(
   if (!pageLayout) return null;
 
   const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
-  if (anchor.kind === "page-boundary") {
-    return clamp(pageLayout.offsetTop - anchor.topInViewport, 0, maxScrollTop);
-  }
-
   const targetTop =
     pageLayout.offsetTop +
     pageLayout.height * anchor.yPercent -
@@ -538,10 +519,6 @@ function getPdfReadingAnchorScrollTop(
 
 function getPdfReadingAnchorOffset(viewportBlockSize: number) {
   return Math.max(0, viewportBlockSize * PDF_READING_MARKER_RATIO);
-}
-
-function snapPdfReadingBoundaryOffset(offset: number) {
-  return Number.isFinite(offset) ? Math.round(offset) : 0;
 }
 
 function toPdfScrollMetrics(

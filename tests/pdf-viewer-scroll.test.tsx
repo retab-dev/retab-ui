@@ -283,6 +283,129 @@ describe("usePdfScroll", () => {
     expect(viewport.scrollTop).not.toBe(boundaryScrollTop);
   });
 
+  it("preserves the reading marker, not the page edge, when a page top sits at the viewport top across a scale change", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 598 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 598 },
+      pageSizeByNumber: new Map(),
+      scale: 2,
+      rotation: 0,
+    });
+    const initialPage = getPdfPageLayout(initialLayout, 4)!;
+    const nextPage = getPdfPageLayout(nextLayout, 4)!;
+    const viewportHeight = 640;
+    const readingMarkerOffset = viewportHeight * 0.2;
+    const viewport = {
+      // Page 4's top is exactly at the viewport top: the marker content sits
+      // readingMarkerOffset into the page at the OLD scale. Pinning the page
+      // edge in viewport pixels would drag that content down by
+      // readingMarkerOffset * (scale - 1) — the sources-viewer quarter-scroll
+      // miss the toggle matrix caught.
+      scrollTop: initialPage.offsetTop,
+      clientHeight: viewportHeight,
+      scrollHeight: 10_000,
+      getBoundingClientRect: () =>
+        ({ top: 0, height: viewportHeight }) as DOMRect,
+    } as HTMLDivElement;
+    const yPercent = readingMarkerOffset / initialPage.height;
+    const semanticScrollTop =
+      nextPage.offsetTop + nextPage.height * yPercent - readingMarkerOffset;
+    const edgePinnedScrollTop = nextPage.offsetTop;
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      });
+
+      useMountEffect(() => {
+        result.setViewportElement(viewport);
+        return () => result.setViewportElement(null);
+      });
+
+      return <output data-testid="page">{result.currentPage}</output>;
+    }
+
+    const view = render(<Harness layout={initialLayout} />);
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy());
+
+    view.rerender(<Harness layout={nextLayout} />);
+
+    await waitFor(() => expect(viewport.scrollTop).toBe(semanticScrollTop));
+    expect(viewport.scrollTop).not.toBe(edgePinnedScrollTop);
+  });
+
+  it("restores a marker resting in an inter-page gap by the linear layout fraction", async () => {
+    const initialLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 598 },
+      pageSizeByNumber: new Map(),
+      scale: 1,
+      rotation: 0,
+    });
+    const nextLayout = createPdfPageLayout({
+      pageCount: 20,
+      defaultPageSize: { width: 100, height: 598 },
+      pageSizeByNumber: new Map(),
+      scale: 2,
+      rotation: 0,
+    });
+    const initialPage = getPdfPageLayout(initialLayout, 3)!;
+    const nextPage = getPdfPageLayout(nextLayout, 3)!;
+    const viewportHeight = 640;
+    const readingMarkerOffset = viewportHeight * 0.2;
+    // Park the marker 8px past page 3's bottom, inside the 16px gap. The
+    // whole layout is linear in scale (gaps included), so the same page
+    // fraction — greater than 1 here — restores the gap position exactly.
+    const anchorOffset = initialPage.offsetTop + initialPage.height + 8;
+    const viewport = {
+      scrollTop: anchorOffset - readingMarkerOffset,
+      clientHeight: viewportHeight,
+      scrollHeight: 10_000,
+      getBoundingClientRect: () =>
+        ({ top: 0, height: viewportHeight }) as DOMRect,
+    } as HTMLDivElement;
+    const yPercent =
+      (anchorOffset - initialPage.offsetTop) / initialPage.height;
+    const semanticScrollTop =
+      nextPage.offsetTop + nextPage.height * yPercent - readingMarkerOffset;
+    const clampedScrollTop =
+      nextPage.offsetTop + nextPage.height - readingMarkerOffset;
+
+    function Harness({ layout }: { layout: typeof initialLayout }) {
+      const result = usePdfScroll({
+        pageCount: 20,
+        layout,
+        resetKey: "same-document",
+      });
+
+      useMountEffect(() => {
+        result.setViewportElement(viewport);
+        return () => result.setViewportElement(null);
+      });
+
+      return <output data-testid="page">{result.currentPage}</output>;
+    }
+
+    const view = render(<Harness layout={initialLayout} />);
+
+    await waitFor(() => expect(screen.getByTestId("page")).toBeTruthy());
+
+    view.rerender(<Harness layout={nextLayout} />);
+
+    await waitFor(() => expect(viewport.scrollTop).toBe(semanticScrollTop));
+    expect(viewport.scrollTop).not.toBe(clampedScrollTop);
+  });
+
   it("keeps the viewport at the document top across layout changes", async () => {
     const initialLayout = createPdfPageLayout({
       pageCount: 20,
