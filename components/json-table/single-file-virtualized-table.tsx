@@ -152,6 +152,10 @@ const SingleFileTableHeader = React.memo(
 
               if (cell.isContinuation) {
                 return (
+                  // Presentational continuation cell; aria-colindex is kept so
+                  // the grid's column numbering stays contiguous for AT that
+                  // read it, even though the role drops it from the a11y tree.
+                  // eslint-disable-next-line jsx-a11y/role-supports-aria-props
                   <th
                     key={cellIdx}
                     aria-colindex={ariaColumnIndex}

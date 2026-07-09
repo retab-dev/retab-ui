@@ -188,7 +188,7 @@ export default function FilesPage() {
               title="Virtualize without blanking"
               description={
                 <>
-                  FileViewer follows Pierre's{" "}
+                  FileViewer follows Pierre&apos;s{" "}
                   <Link
                     href="https://pierre.computer/writing/on-rendering-diffs"
                     target="_blank"

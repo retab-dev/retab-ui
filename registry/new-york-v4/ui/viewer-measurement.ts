@@ -102,10 +102,9 @@ export function useStableElementSize<Element extends HTMLElement = HTMLElement>(
     setElementState(nextElement);
   }, []);
 
-  React.useLayoutEffect(() => {
-    if (enabled) return;
+  useKeyedLayoutEffect(enabled ? null : "reset", () => {
     setSize({ height: null, width: null });
-  }, [enabled]);
+  });
 
   useKeyedLayoutEffect(
     enabled && element

@@ -21,6 +21,6 @@ export function useKeyedMountEffect(
     // The effect closure is intentionally captured at each key change;
     // eslint's exhaustive-deps would demand we include `effect`, but
     // the semantics are key-driven, not effect-identity-driven.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [key]);
 }

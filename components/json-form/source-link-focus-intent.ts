@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { useMountEffect } from "@/hooks/use-mount-effect";
+
 type SourceLinkFocusModality = "none" | "keyboard" | "pointer";
 type SourceLinkFocusIntentState = {
   modality: SourceLinkFocusModality;
@@ -13,7 +15,12 @@ const sourceLinkFocusIntentByDocument = new WeakMap<
 >();
 
 function isKeyboardFocusNavigation(event: KeyboardEvent): boolean {
-  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+  if (
+    event.defaultPrevented ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
     return false;
   }
   return (
@@ -71,9 +78,9 @@ function getSourceLinkFocusIntentState(
 }
 
 export function useSourceLinkFocusPreviewIntent() {
-  React.useEffect(() => {
+  useMountEffect(() => {
     getSourceLinkFocusIntentState(document).modality = "none";
-  }, []);
+  });
 
   return React.useCallback((event: React.FocusEvent<HTMLElement>): boolean => {
     if (event.defaultPrevented) return false;

@@ -63,7 +63,16 @@ function useFileViewerSidebarOpenController({
   const isSidebarOpen =
     collapsible === "none" ? true : (open ?? uncontrolledOpen);
   const openRef = React.useRef(isSidebarOpen);
-  openRef.current = isSidebarOpen;
+  // Not an inline render-time mirror: setSidebarOpen writes this ref eagerly
+  // before a controlled parent applies the prop, and the kernel's flushSync
+  // re-renders mid-click with the stale prop value. Assign only when the
+  // committed value actually changes so the eager write survives that window.
+  useKeyedLayoutEffect(
+    joinEffectKey(["file-viewer-open-mirror", isSidebarOpen]),
+    () => {
+      openRef.current = isSidebarOpen;
+    },
+  );
 
   const getSidebarOpen = React.useCallback(() => openRef.current, []);
 
@@ -246,7 +255,15 @@ export function useFileViewerShellController({
     [isSidebarOpen, mode, side, sidebarWidthPixels, size.width],
   );
   const motionTargetRef = React.useRef(motionTarget);
-  motionTargetRef.current = motionTarget;
+  // Same two-writer shape as openRef above: setSidebarOpen stores the eager
+  // nextTarget before React commits, so only adopt the rendered target when
+  // it is a genuinely new object.
+  useKeyedLayoutEffect(
+    joinEffectKey(["file-viewer-motion-target-mirror", motionTarget]),
+    () => {
+      motionTargetRef.current = motionTarget;
+    },
+  );
 
   const setRootElement = React.useCallback(
     (element: HTMLDivElement | null) => {

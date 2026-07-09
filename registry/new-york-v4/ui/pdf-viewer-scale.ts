@@ -1,5 +1,8 @@
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
+
 export const MIN_PDF_SCALE = 0.25;
 export const MAX_PDF_SCALE = 5;
 export const PDF_ZOOM_STEP = 1.2;
@@ -61,36 +64,40 @@ export function useMeasuredElementWidth({
     setElement(nextElement);
   }, []);
 
-  React.useLayoutEffect(() => {
-    if (!enabled || !element) {
-      if (!enabled) setWidth(null);
-      return;
-    }
+  useKeyedLayoutEffect(enabled ? null : "reset", () => {
+    setWidth(null);
+  });
 
-    let frame = 0;
-    const measure = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        setWidth(element.clientWidth);
-      });
-    };
+  useKeyedLayoutEffect(
+    enabled && element ? joinEffectKey([element]) : null,
+    () => {
+      if (!element) return;
 
-    measure();
-    if (typeof ResizeObserver === "undefined") {
+      let frame = 0;
+      const measure = () => {
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          setWidth(element.clientWidth);
+        });
+      };
+
+      measure();
+      if (typeof ResizeObserver === "undefined") {
+        return () => {
+          if (frame) cancelAnimationFrame(frame);
+        };
+      }
+
+      const observer = new ResizeObserver(measure);
+
+      observer.observe(element);
       return () => {
         if (frame) cancelAnimationFrame(frame);
+        observer.disconnect();
       };
-    }
-
-    const observer = new ResizeObserver(measure);
-
-    observer.observe(element);
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [element, enabled]);
+    },
+  );
 
   return { ref, width };
 }

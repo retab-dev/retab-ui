@@ -14,6 +14,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 
+import { KeyedRunner } from "@/hooks/KeyedRunner";
 import { cn } from "@/lib/utils";
 
 type DiagramKind =
@@ -188,32 +189,35 @@ function StaticDiagramFlow({
   const nodesInitialized = useNodesInitialized();
   const { fitView } = useReactFlow<DiagramNode, DiagramEdge>();
 
-  React.useEffect(() => {
-    if (!nodesInitialized) return;
-    const element = containerRef.current;
-    if (!element) return;
-
-    let animationFrame = 0;
-    const runFitView = () => {
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(() => {
-        void fitView({ duration: 0, padding: fitViewPadding });
-      });
-    };
-
-    runFitView();
-
-    const observer = new ResizeObserver(runFitView);
-    observer.observe(element);
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-      observer.disconnect();
-    };
-  }, [fitView, fitViewPadding, nodesInitialized]);
-
   return (
     <div ref={containerRef} className="h-full w-full">
+      {nodesInitialized ? (
+        <KeyedRunner
+          key={`fit-view:${fitViewPadding}`}
+          effect={() => {
+            const element = containerRef.current;
+            if (!element) return;
+
+            let animationFrame = 0;
+            const runFitView = () => {
+              window.cancelAnimationFrame(animationFrame);
+              animationFrame = window.requestAnimationFrame(() => {
+                void fitView({ duration: 0, padding: fitViewPadding });
+              });
+            };
+
+            runFitView();
+
+            const observer = new ResizeObserver(runFitView);
+            observer.observe(element);
+
+            return () => {
+              window.cancelAnimationFrame(animationFrame);
+              observer.disconnect();
+            };
+          }}
+        />
+      ) : null}
       <ReactFlow
         aria-label={diagram.ariaLabel}
         nodes={diagram.nodes}

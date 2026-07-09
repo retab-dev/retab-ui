@@ -24,6 +24,7 @@ const eslintConfig = tseslint.config(
       "next-env.d.ts",
       ".source/**",
       "**/__index__.tsx",
+      "public/**",
     ],
   },
   {
@@ -34,6 +35,10 @@ const eslintConfig = tseslint.config(
       "react-hooks/refs": "off",
       "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/set-state-in-effect": "off",
+      // Dependency lists are curated by hand in this codebase (fine-grained
+      // property deps, kernel-owned stable singletons); the heuristic's
+      // suggestions would over-invalidate memoization.
+      "react-hooks/exhaustive-deps": "off",
       "@next/next/no-html-link-for-pages": "off",
       "@next/next/no-img-element": "off",
       "no-var": "off",

@@ -1205,6 +1205,49 @@ describe("createViewerGeometryStore", () => {
     expect(sidebar.hasAttribute("inert")).toBe(true);
     expect(sidebar.style.pointerEvents).toBe("none");
   });
+
+  it("closes a deferred-controlled sidebar on the second trigger click", () => {
+    const openChangeCalls: boolean[] = [];
+
+    render(
+      <FileViewerProvider
+        source={{
+          kind: "url",
+          url: "/files/report.pdf",
+          fileName: "report.pdf",
+        }}
+        sidebarOpen={false}
+        onSidebarOpenChange={(nextOpen) => openChangeCalls.push(nextOpen)}
+      >
+        <FileViewer sidebarMode="inline">
+          <FileViewerHeader>
+            <FileViewerSidebarTrigger data-testid="file-trigger" />
+          </FileViewerHeader>
+          <FileViewerContent>
+            <FileViewerInset>Document</FileViewerInset>
+            <FileViewerSidebar
+              data-testid="file-sidebar"
+              side="right"
+              width="420px"
+            >
+              Sidebar
+            </FileViewerSidebar>
+          </FileViewerContent>
+        </FileViewer>
+      </FileViewerProvider>,
+    );
+
+    const trigger = screen.getByTestId("file-trigger");
+
+    // The parent never applies onSidebarOpenChange within the click task, so
+    // the controlled prop is still false when the kernel's flushSync
+    // re-renders the shell mid-click. The second click must read the eager
+    // requested value — not the stale committed prop — and toggle closed.
+    fireEvent.click(trigger);
+    fireEvent.click(trigger);
+
+    expect(openChangeCalls).toEqual([true, false]);
+  });
 });
 
 function FileViewerContractSnapshot({

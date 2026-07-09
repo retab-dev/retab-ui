@@ -57,11 +57,11 @@ import {
 } from "@/registry/new-york-v4/ui/pdf-viewer-thumbnails";
 import {
   PDF_PAGE_METRIC_CONCURRENCY,
-  usePdfPageMetrics,
+  type usePdfPageMetrics,
 } from "@/registry/new-york-v4/ui/use-pdf-page-metrics";
 import {
   PDF_THUMBNAIL_PAGE_METRIC_CONCURRENCY,
-  usePdfThumbnailPageMetrics,
+  type usePdfThumbnailPageMetrics,
 } from "@/registry/new-york-v4/ui/use-pdf-thumbnail-page-metrics";
 import {
   ViewerBody,
