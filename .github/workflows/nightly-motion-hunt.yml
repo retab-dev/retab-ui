@@ -28,7 +28,7 @@ jobs:
           sudo find /etc/apt/sources.list.d -type f \
             \( -name '*azure-cli*' -o -name '*microsoft*' -o -name '*packages-microsoft-prod*' \) \
             -print -delete
-      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm exec playwright install --with-deps chromium webkit firefox
 
       - name: Roll tonight's monkey seed
         id: seed
@@ -42,6 +42,9 @@ jobs:
 
       - name: WebKit trajectory matrix
         run: pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=webkit --workers=2
+
+      - name: Firefox trajectory matrix
+        run: pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=firefox --workers=2
 
       - name: Motion baseline drift check
         run: |

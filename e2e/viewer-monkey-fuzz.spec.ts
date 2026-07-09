@@ -12,7 +12,10 @@ import {
 // suite already trusts:
 //   1. zero page errors and zero console errors/warnings;
 //   2. the active document stays attached and visible at the end;
-//   3. the shell's resource census stays bounded vs its baseline.
+//   3. the shell's resource census stays bounded vs its baseline;
+//   4. the GC'd JS heap returns near its baseline (chromium only) —
+//      retained closures, listeners, and detached subtrees are invisible
+//      to the DOM census but survive a forced garbage collection.
 //
 // The seed prints on every run — a failure line carries everything needed
 // to replay it exactly: MONKEY_SEED=<n> pnpm verify:viewer-monkey-fuzz.
@@ -21,6 +24,14 @@ const SEED = Number(process.env.MONKEY_SEED ?? 20260709);
 const ACTION_COUNT = Number(process.env.MONKEY_ACTIONS ?? 40);
 const NODE_GROWTH_BUDGET = 120;
 const CANVAS_PIXEL_GROWTH_RATIO = 1.6;
+// Post-GC heap vs post-GC baseline. Renderer caches (pdf.js, raster
+// stores, docx-preview stylesheets) legitimately survive GC, so the
+// budget bounds growth, not equality. Survey: 14MB baseline plateaus at
+// ~28MB whether the run is 40 actions or 120 — a one-time warm-up step,
+// not per-action retention. A leak scales with the action count and
+// walks through this ceiling.
+const HEAP_GROWTH_RATIO = 1.8;
+const HEAP_GROWTH_FLOOR_BYTES = 64 * 1024 * 1024;
 
 test.use({ deviceScaleFactor: 2, viewport: { width: 1440, height: 1000 } });
 
@@ -55,7 +66,10 @@ const FRAME: Record<(typeof FORMATS)[number], string> = {
   text: '[data-slot="text-virtual-canvas"]',
 };
 
-test("seeded monkey run stays error-free and bounded", async ({ page }) => {
+test("seeded monkey run stays error-free and bounded", async ({
+  page,
+  browserName,
+}) => {
   test.setTimeout(420_000);
   const sentinel = installConsoleSentinel(page, {
     expect: (errors) =>
@@ -95,6 +109,24 @@ test("seeded monkey run stays error-free and bounded", async ({ page }) => {
   });
   await page.waitForTimeout(800);
   const baseline = await census();
+
+  // GC'd-heap reading: force a real collection first, or the number is
+  // dominated by whatever garbage happens to be pending. CDP-only.
+  const cdp =
+    browserName === "chromium"
+      ? await page.context().newCDPSession(page)
+      : null;
+  const heapAfterGC = async () => {
+    if (!cdp) return null;
+    await cdp.send("HeapProfiler.collectGarbage");
+    await page.waitForTimeout(300);
+    await cdp.send("HeapProfiler.collectGarbage");
+    const { usedSize } = (await cdp.send("Runtime.getHeapUsage")) as {
+      usedSize: number;
+    };
+    return usedSize;
+  };
+  const heapBaseline = await heapAfterGC();
 
   const viewerRoot = page
     .locator('[data-slot="file-viewer-root"]:visible')
@@ -197,6 +229,22 @@ test("seeded monkey run stays error-free and bounded", async ({ page }) => {
   if (baseline.canvasPixels > 0) {
     expect(after.canvasPixels).toBeLessThanOrEqual(
       Math.max(baseline.canvasPixels * CANVAS_PIXEL_GROWTH_RATIO, 40_000_000),
+    );
+  }
+
+  const heapAfter = await heapAfterGC();
+  if (heapBaseline != null && heapAfter != null) {
+    console.log(
+      `MONKEY heap ${(heapBaseline / 1e6).toFixed(1)}MB->${(heapAfter / 1e6).toFixed(1)}MB (gc'd)`,
+    );
+    expect(
+      heapAfter,
+      `GC'd heap grew ${((heapAfter - heapBaseline) / 1e6).toFixed(1)}MB over the run — retained closures/listeners the DOM census cannot see`,
+    ).toBeLessThanOrEqual(
+      Math.max(
+        heapBaseline * HEAP_GROWTH_RATIO,
+        heapBaseline + HEAP_GROWTH_FLOOR_BYTES,
+      ),
     );
   }
 

@@ -342,10 +342,45 @@ export async function traceReadingLineThroughResize(
       (_, index) => viewport.width - (steps - 1 - index) * stepPx,
     ),
   ];
+  // Each step records the position the step SETTLES at, read to convergence
+  // (two consecutive reads within a pixel). A single fixed-delay snapshot is
+  // a phase lottery: on a loaded runner the first pptx re-fit once read
+  // 605px because the sample landed before the restore — then settled to
+  // 0.0. Convergence makes the reading deterministic under load; a real
+  // per-step displacement converges to itself and still fails.
+  const readStep = async () => {
+    let previous: { y: number; x: number } | null = null;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      if (attempt > 0) await page.waitForTimeout(250);
+      const reading = await sampleResizePosition(page);
+      if (reading == null) continue;
+      if (previous && Math.abs(reading.y - previous.y) < 1) return reading;
+      previous = reading;
+    }
+    return previous;
+  };
+
   for (const width of widths) {
     await page.setViewportSize({ width, height: viewport.height });
     await page.waitForTimeout(settleMs);
-    const sample = await page.evaluate(() => {
+    const sample = await readStep();
+    if (sample) {
+      positions.push(sample.y);
+      positionsX.push(sample.x);
+    }
+  }
+  if (positions.length === 0) {
+    throw new Error(
+      "reading-line resize trace: tracked element never resolvable",
+    );
+  }
+  await page.setViewportSize(viewport);
+  await page.waitForTimeout(settleMs);
+  return { positions, positionsX };
+}
+
+async function sampleResizePosition(page: Page) {
+  return page.evaluate(() => {
       const state = (
         window as unknown as {
           __rlResize?: {
@@ -418,19 +453,6 @@ export async function traceReadingLineThroughResize(
         x: x - state.x0,
       };
     });
-    if (sample) {
-      positions.push(sample.y);
-      positionsX.push(sample.x);
-    }
-  }
-  if (positions.length === 0) {
-    throw new Error(
-      "reading-line resize trace: tracked element never resolvable",
-    );
-  }
-  await page.setViewportSize(viewport);
-  await page.waitForTimeout(settleMs);
-  return { positions, positionsX };
 }
 
 

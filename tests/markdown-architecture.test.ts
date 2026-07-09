@@ -113,6 +113,7 @@ const markdownViewerSupportFiles = [
   "registry/new-york-v4/lib/viewer-download-actions.ts",
   "registry/new-york-v4/lib/viewer-errors.ts",
   "registry/new-york-v4/ui/use-is-client.ts",
+  "registry/new-york-v4/ui/viewer-measurement.ts",
   "registry/new-york-v4/ui/viewer-types.ts",
 ];
 const markdownViewerRegistryFiles = [

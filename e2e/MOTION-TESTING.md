@@ -27,7 +27,7 @@ Gate both, always.
 | `verify:benchmark-toggle-matrix` | Same trajectory scoring over the full format roster at real scroll ranges, plus resize sweeps |
 | `verify:mode-state-matrix` | Overlay mode (document must not move at all), breakpoint-crossing resizes, explicit-zoom toggles, reduced-motion snaps |
 | `verify:motion-conflict-and-leak` | Wheel-during-flight (binary contract: cleanly ignored or cleanly applied) and resource round trips (DOM/canvas census returns to baseline) |
-| `verify:viewer-monkey-fuzz` | Seeded random interleavings incl. mid-flight format switches, under zero-console-error + bounded-resource invariants |
+| `verify:viewer-monkey-fuzz` | Seeded random interleavings incl. mid-flight format switches, under zero-console-error + bounded-resource + bounded-GC'd-heap invariants |
 | `verify:robustness-matrix` | 4x CPU-throttled settles, cold-start toggles (before readiness), RTL trajectory |
 | `verify:sources-viewer-visual-blink` | Screencast pixel probes + reading-anchor destination + terminal deceleration on the sources page |
 | `verify:file-viewer-visual-blink` | Screencast pixel gate on the benchmark page (whiteout, ink dip, post-motion churn) |
@@ -44,12 +44,13 @@ Gate both, always.
   anchor miss lived at exactly one depth) hide between structural points.
 - `MONKEY_SEED=$RANDOM [MONKEY_ACTIONS=160]` — random fuzzing; every run
   prints its seed and action log, so any find replays exactly.
-- `--project=webkit` — the trajectory matrices are engine-portable; the
+- `--project=webkit` / `--project=firefox` — the trajectory matrices are
+  engine-portable (18/18 clean on all three engines as of 2026-07-10); the
   scrollable-overflow-includes-transforms bug was engine behavior, so
   sweep engines when touching scroll/compositing code.
 - `.github/workflows/nightly-motion-hunt.yml` runs the random-seed monkey,
-  the dense scroll sweep, the WebKit matrix, and the baseline compare
-  every night.
+  the dense scroll sweep, the WebKit and Firefox matrices, and the
+  baseline compare every night.
 
 ## The probe rulebook
 
