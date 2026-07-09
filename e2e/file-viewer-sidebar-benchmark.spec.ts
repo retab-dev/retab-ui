@@ -494,18 +494,29 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       );
     });
 
+    // Discarded warm-up run (module compile / first raster of the deep
+    // pages) — same policy as the tiff and pptx telemetry gates. It runs in
+    // its own evaluate so its console output can be dropped below: the
+    // warm-up exists to absorb cold-start timing costs, so its failures
+    // lines must not reach the measured run's console gate.
+    await page.evaluate(async () => {
+      const telemetry = Reflect.get(
+        window,
+        "__fileViewerSidebarBenchmarkTelemetry",
+      ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      await telemetry?.run({
+        actionOrder: "close-open",
+        scrollTargetId: "deep",
+      });
+    });
+    await page.waitForTimeout(250);
+    telemetryConsoleMessages.length = 0;
+
     const result = (await page.evaluate(async () => {
       const telemetry = Reflect.get(
         window,
         "__fileViewerSidebarBenchmarkTelemetry",
       ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
-      // Discarded warm-up run (module compile / first raster of the deep
-      // pages), then the asserted steady-state run — same policy as the tiff
-      // and pptx telemetry gates.
-      await telemetry?.run({
-        actionOrder: "close-open",
-        scrollTargetId: "deep",
-      });
       return (
         (await telemetry?.run({
           actionOrder: "close-open",
@@ -563,17 +574,27 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       );
     });
 
+    // Discarded warm-up run (module compile / first raster) in its own
+    // evaluate; its console output is dropped below so cold-start timing
+    // failures never reach the measured run's console gate.
+    await page.evaluate(async () => {
+      const telemetry = Reflect.get(
+        window,
+        "__fileViewerSidebarBenchmarkTelemetry",
+      ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
+      await telemetry?.run({
+        actionOrder: "close-open",
+        scrollTargetId: "deep",
+      });
+    });
+    await page.waitForTimeout(250);
+    telemetryConsoleMessages.length = 0;
+
     const result = (await page.evaluate(async () => {
       const telemetry = Reflect.get(
         window,
         "__fileViewerSidebarBenchmarkTelemetry",
       ) as FileViewerSidebarBenchmarkTelemetryRuntime | undefined;
-      // Discarded warm-up run (module compile / first raster), then the
-      // asserted steady-state run.
-      await telemetry?.run({
-        actionOrder: "close-open",
-        scrollTargetId: "deep",
-      });
       return (
         (await telemetry?.run({
           actionOrder: "close-open",
