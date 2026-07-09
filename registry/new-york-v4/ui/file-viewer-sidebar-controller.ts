@@ -19,7 +19,7 @@ export type FileViewerSidebarController = {
   >;
   customProperties: React.CSSProperties;
   isInline: boolean;
-  isSidebarRequestedOpen: boolean;
+  isSidebarOpen: boolean;
   mode: FileViewerSidebarMode;
   panelStyle: React.CSSProperties;
   resolvedCollapsible: FileViewerSidebarCollapsible;
@@ -57,11 +57,11 @@ export function useFileViewerSidebarController({
   const sidebarId = id ?? `${reactId}-file-viewer-sidebar`;
   const resolvedCollapsible = collapsible ?? shell.collapsible;
   const resolvedSide = side ?? shell.side;
-  const isSidebarRequestedOpen =
-    resolvedCollapsible === "none" ? true : shell.isSidebarRequestedOpen;
+  const isSidebarOpen =
+    resolvedCollapsible === "none" ? true : shell.isSidebarOpen;
   const isSidebarInteractive =
     resolvedCollapsible === "none" ? true : shell.isSidebarInteractive;
-  const sidebarState = isSidebarRequestedOpen ? "expanded" : "collapsed";
+  const sidebarState = isSidebarOpen ? "expanded" : "collapsed";
   const isInline = shell.mode === "inline";
   const declaredWidthPixels = useStableCssLength({
     element: sidebarSize.element,
@@ -111,9 +111,7 @@ export function useFileViewerSidebarController({
   const accessibilityProps = resolveFileViewerSidebarAccessibilityProps({
     collapsible: resolvedCollapsible,
     deferInert:
-      !isSidebarRequestedOpen &&
-      !isSidebarInteractive &&
-      shell.isSidebarTransitioning,
+      !isSidebarOpen && !isSidebarInteractive && shell.isSidebarTransitioning,
     isSidebarInteractive,
   });
   const customProperties = pickCssCustomProperties(style);
@@ -134,7 +132,7 @@ export function useFileViewerSidebarController({
     accessibilityProps,
     customProperties,
     isInline,
-    isSidebarRequestedOpen,
+    isSidebarOpen,
     mode: shell.mode,
     panelStyle,
     resolvedCollapsible,

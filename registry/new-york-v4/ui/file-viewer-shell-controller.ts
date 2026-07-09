@@ -7,7 +7,7 @@ import {
   DEFAULT_FILE_VIEWER_SIDEBAR_WIDTH,
   useFileViewerContext,
   type FileViewerContextValue,
-  type FileViewerSetSidebarRequestedOpen,
+  type FileViewerSetSidebarOpen,
   type FileViewerShellStaticContextValue,
   type FileViewerSidebarCollapsible,
   type FileViewerSidebarDynamicContextValue,
@@ -19,7 +19,7 @@ import {
   type FileViewerSidebarState,
 } from "./file-viewer-context";
 import { createFileViewerElementRegistry } from "./file-viewer-elements";
-import { useFileViewerFrameKeyboard } from "./file-viewer-frame-keyboard";
+import { useFileViewerShellKeyboard } from "./file-viewer-shell-keyboard";
 import {
   createFileViewerMotionKernel,
   useFileViewerMotionFrame,
@@ -37,9 +37,9 @@ import {
 export const FILE_VIEWER_INLINE_BREAKPOINT = 768;
 
 type FileViewerSidebarOpenController = {
-  getSidebarRequestedOpen: () => boolean;
-  isSidebarRequestedOpen: boolean;
-  setSidebarRequestedOpen: (isSidebarRequestedOpen: boolean) => void;
+  getSidebarOpen: () => boolean;
+  isSidebarOpen: boolean;
+  setSidebarOpen: (isSidebarOpen: boolean) => void;
 };
 
 // Bridges the controlled/uncontrolled `open` prop pair to real React state, so
@@ -57,34 +57,34 @@ function useFileViewerSidebarOpenController({
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
     defaultOpen ?? false,
   );
-  const isSidebarRequestedOpen =
+  const isSidebarOpen =
     collapsible === "none" ? true : (open ?? uncontrolledOpen);
-  const openRef = React.useRef(isSidebarRequestedOpen);
+  const openRef = React.useRef(isSidebarOpen);
 
   React.useLayoutEffect(() => {
-    openRef.current = isSidebarRequestedOpen;
-  }, [isSidebarRequestedOpen]);
+    openRef.current = isSidebarOpen;
+  }, [isSidebarOpen]);
 
-  const getSidebarRequestedOpen = React.useCallback(() => openRef.current, []);
+  const getSidebarOpen = React.useCallback(() => openRef.current, []);
 
-  const setSidebarRequestedOpen = React.useCallback(
-    (nextIsSidebarRequestedOpen: boolean) => {
-      openRef.current = nextIsSidebarRequestedOpen;
+  const setSidebarOpen = React.useCallback(
+    (nextIsSidebarOpen: boolean) => {
+      openRef.current = nextIsSidebarOpen;
       if (!isControlled) {
-        setUncontrolledOpen(nextIsSidebarRequestedOpen);
+        setUncontrolledOpen(nextIsSidebarOpen);
       }
-      onOpenChange?.(nextIsSidebarRequestedOpen);
+      onOpenChange?.(nextIsSidebarOpen);
     },
     [isControlled, onOpenChange],
   );
 
   return React.useMemo(
     () => ({
-      getSidebarRequestedOpen,
-      isSidebarRequestedOpen,
-      setSidebarRequestedOpen,
+      getSidebarOpen,
+      isSidebarOpen,
+      setSidebarOpen,
     }),
-    [getSidebarRequestedOpen, isSidebarRequestedOpen, setSidebarRequestedOpen],
+    [getSidebarOpen, isSidebarOpen, setSidebarOpen],
   );
 }
 
@@ -152,15 +152,15 @@ function useFileViewerSidebarRegistration({
   );
 }
 
-type FileViewerFrameControllerOptions = {
+type FileViewerShellControllerOptions = {
   inlineBreakpoint: number;
   sidebarMode: FileViewerSidebarRequestedMode;
 };
 
-export type FileViewerFrameController = {
+export type FileViewerShellController = {
   effectiveCollapsible: FileViewerSidebarCollapsible;
   headerMode: FileViewerContextValue["headerMode"];
-  isSidebarRequestedOpen: boolean;
+  isSidebarOpen: boolean;
   mode: FileViewerSidebarMode;
   resourceCategory: FileViewerContextValue["resourceCategory"];
   rootId: string;
@@ -171,10 +171,10 @@ export type FileViewerFrameController = {
   sidebarState: FileViewerSidebarState;
 };
 
-export function useFileViewerFrameController({
+export function useFileViewerShellController({
   inlineBreakpoint,
   sidebarMode,
-}: FileViewerFrameControllerOptions): FileViewerFrameController {
+}: FileViewerShellControllerOptions): FileViewerShellController {
   const context = useFileViewerContext();
 
   if (!context.isInsideFileViewer) {
@@ -216,7 +216,7 @@ export function useFileViewerFrameController({
     ...context.sidebarOpenProps,
     collapsible: effectiveCollapsible,
   });
-  const isSidebarRequestedOpen = openController.isSidebarRequestedOpen;
+  const isSidebarOpen = openController.isSidebarOpen;
   const motionFrame = useFileViewerMotionFrame(motionKernel);
   const isSidebarTransitioning = motionFrame.phase === "sliding";
   const mode = resolveFileViewerSidebarMode({
@@ -227,11 +227,11 @@ export function useFileViewerFrameController({
   const isSidebarInteractive = resolveFileViewerSidebarInteractive({
     canToggleSidebar,
     collapsible: effectiveCollapsible,
-    isSidebarRequestedOpen,
+    isSidebarOpen,
     isSidebarTransitioning,
     mode,
   });
-  const sidebarState: FileViewerSidebarState = isSidebarRequestedOpen
+  const sidebarState: FileViewerSidebarState = isSidebarOpen
     ? "expanded"
     : "collapsed";
   const motionTarget = React.useMemo<FileViewerMotionTarget>(
@@ -239,11 +239,11 @@ export function useFileViewerFrameController({
       shellInlineSize: size.width ?? 0,
       durationMs: FILE_VIEWER_MOTION_DURATION_MS,
       mode,
-      open: isSidebarRequestedOpen,
+      open: isSidebarOpen,
       side,
       sidebarWidth: sidebarWidthPixels,
     }),
-    [isSidebarRequestedOpen, mode, side, sidebarWidthPixels, size.width],
+    [isSidebarOpen, mode, side, sidebarWidthPixels, size.width],
   );
   const motionTargetRef = React.useRef(motionTarget);
 
@@ -264,7 +264,10 @@ export function useFileViewerFrameController({
   // snaps the motion) or an inline slide keeps writing gap widths against
   // overlay DOM until settle.
   React.useLayoutEffect(() => {
-    if (motionFrame.phase !== "idle" && motionFrame.mode === motionTarget.mode) {
+    if (
+      motionFrame.phase !== "idle" &&
+      motionFrame.mode === motionTarget.mode
+    ) {
       return;
     }
     motionKernel.syncTarget(motionTarget);
@@ -282,52 +285,51 @@ export function useFileViewerFrameController({
     previousIsSidebarInteractiveRef.current = isSidebarInteractive;
   }, [elementRegistry, isSidebarInteractive]);
 
-  const setSidebarRequestedOpen =
-    React.useCallback<FileViewerSetSidebarRequestedOpen>(
-      (value) => {
-        // Toggling requires a registered, collapsible sidebar; a non-collapsible
-        // sidebar is pinned open and an unregistered one has nothing to move.
-        if (!canToggleSidebar) return;
+  const setSidebarOpen = React.useCallback<FileViewerSetSidebarOpen>(
+    (value) => {
+      // Toggling requires a registered, collapsible sidebar; a non-collapsible
+      // sidebar is pinned open and an unregistered one has nothing to move.
+      if (!canToggleSidebar) return;
 
-        const currentOpen = openController.getSidebarRequestedOpen();
-        const nextOpen = typeof value === "function" ? value(currentOpen) : value;
-        if (nextOpen === currentOpen) return;
+      const currentOpen = openController.getSidebarOpen();
+      const nextOpen = typeof value === "function" ? value(currentOpen) : value;
+      if (nextOpen === currentOpen) return;
 
-        openController.setSidebarRequestedOpen(nextOpen);
-        const nextTarget: FileViewerMotionTarget = {
-          ...motionTargetRef.current,
-          open: nextOpen,
-        };
-        motionTargetRef.current = nextTarget;
-        motionKernel.startMotion(nextTarget);
-      },
-      [canToggleSidebar, motionKernel, openController],
-    );
-  const toggleSidebarRequestedOpen = React.useCallback(
-    () => setSidebarRequestedOpen((open) => !open),
-    [setSidebarRequestedOpen],
+      openController.setSidebarOpen(nextOpen);
+      const nextTarget: FileViewerMotionTarget = {
+        ...motionTargetRef.current,
+        open: nextOpen,
+      };
+      motionTargetRef.current = nextTarget;
+      motionKernel.startMotion(nextTarget);
+    },
+    [canToggleSidebar, motionKernel, openController],
+  );
+  const toggleSidebar = React.useCallback(
+    () => setSidebarOpen((open) => !open),
+    [setSidebarOpen],
   );
   const closeSidebar = React.useCallback(
-    () => setSidebarRequestedOpen(false),
-    [setSidebarRequestedOpen],
+    () => setSidebarOpen(false),
+    [setSidebarOpen],
   );
 
-  useFileViewerFrameKeyboard({
+  useFileViewerShellKeyboard({
     canToggleSidebar,
     closeSidebar,
     elementRegistry,
     isSidebarInteractive,
     isSidebarOverlayDismissible:
-      mode === "overlay" && canToggleSidebar && isSidebarRequestedOpen,
+      mode === "overlay" && canToggleSidebar && isSidebarOpen,
     viewerShellElement: size.element,
   });
 
   useFileViewerMotionTelemetry({
     getElements: elementRegistry.getElements,
-    getIsSidebarOpen: openController.getSidebarRequestedOpen,
+    getIsSidebarOpen: openController.getSidebarOpen,
     motionDurationMs: FILE_VIEWER_MOTION_DURATION_MS,
     motionKernel,
-    toggleSidebar: toggleSidebarRequestedOpen,
+    toggleSidebar,
   });
 
   const shellStaticContext = React.useMemo<FileViewerShellStaticContextValue>(
@@ -340,11 +342,11 @@ export function useFileViewerFrameController({
       motionKernel,
       registerSidebar,
       rootId,
-      setSidebarRequestedOpen,
+      setSidebarOpen,
       side,
       sidebarId,
       sidebarWidth,
-      toggleSidebarRequestedOpen,
+      toggleSidebar,
     }),
     [
       canToggleSidebar,
@@ -354,24 +356,24 @@ export function useFileViewerFrameController({
       motionKernel,
       registerSidebar,
       rootId,
-      setSidebarRequestedOpen,
+      setSidebarOpen,
       side,
       sidebarId,
       sidebarWidth,
-      toggleSidebarRequestedOpen,
+      toggleSidebar,
     ],
   );
   const sidebarDynamicContext =
     React.useMemo<FileViewerSidebarDynamicContextValue>(
       () => ({
         isSidebarInteractive,
-        isSidebarRequestedOpen,
+        isSidebarOpen,
         isSidebarTransitioning,
         sidebarState,
       }),
       [
         isSidebarInteractive,
-        isSidebarRequestedOpen,
+        isSidebarOpen,
         isSidebarTransitioning,
         sidebarState,
       ],
@@ -380,7 +382,7 @@ export function useFileViewerFrameController({
   return {
     effectiveCollapsible,
     headerMode: context.headerMode,
-    isSidebarRequestedOpen,
+    isSidebarOpen,
     mode,
     resourceCategory: context.resourceCategory,
     rootId,
@@ -398,18 +400,18 @@ export function useFileViewerFrameController({
 function resolveFileViewerSidebarInteractive({
   canToggleSidebar,
   collapsible,
-  isSidebarRequestedOpen,
+  isSidebarOpen,
   isSidebarTransitioning,
   mode,
 }: {
   canToggleSidebar: boolean;
   collapsible: FileViewerSidebarCollapsible;
-  isSidebarRequestedOpen: boolean;
+  isSidebarOpen: boolean;
   isSidebarTransitioning: boolean;
   mode: FileViewerSidebarMode;
 }): boolean {
   if (collapsible === "none") return true;
-  if (!isSidebarRequestedOpen) return false;
+  if (!isSidebarOpen) return false;
   return !(mode === "inline" && canToggleSidebar && isSidebarTransitioning);
 }
 

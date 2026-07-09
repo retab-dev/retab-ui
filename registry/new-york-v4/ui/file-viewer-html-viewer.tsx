@@ -22,7 +22,7 @@ type HtmlLoadState =
   | { status: "loaded"; key: unknown; html: string }
   | { status: "error"; key: unknown; error: unknown };
 
-export function HtmlFileContent({
+export function FileViewerHtmlContent({
   resource,
   className,
   bare,
@@ -37,7 +37,7 @@ export function HtmlFileContent({
 }) {
   if (resource.content.payload.kind === "text") {
     return (
-      <HtmlFileContentFrame
+      <FileViewerHtmlContentFrame
         key={viewerContentRenderKey(resource.content)}
         resource={resource}
         html={resource.content.payload.text}
@@ -132,7 +132,7 @@ function HtmlFileResource({
 
   const { html } = state;
   return (
-    <HtmlFileContentFrame
+    <FileViewerHtmlContentFrame
       key={contentKey}
       resource={resource}
       html={html}
@@ -143,7 +143,7 @@ function HtmlFileResource({
   );
 }
 
-function HtmlFileContentFrame({
+function FileViewerHtmlContentFrame({
   resource,
   html,
   className,

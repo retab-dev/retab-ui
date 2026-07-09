@@ -69,13 +69,13 @@ export {
 export {
   useFileViewerSidebar,
   type FileViewerHeaderMode,
-  type FileViewerSidebarStateValue,
+  type FileViewerSidebarValue,
 } from "./file-viewer-context";
 export {
   FileViewer,
   type FileViewerLayout,
   type FileViewerProps,
-} from "./file-viewer-frame";
+} from "./file-viewer-shell";
 export {
   FileViewerProvider,
   type FileViewerProviderProps,

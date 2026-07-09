@@ -69,7 +69,7 @@ export type FileViewerSidebarMotion = {
   /** True when the shell animates the sidebar (inline mode with a toggle). */
   isMotionManaged: boolean;
   isSidebarInteractive: boolean;
-  isSidebarRequestedOpen: boolean;
+  isSidebarOpen: boolean;
   isSidebarTransitioning: boolean;
 };
 
@@ -82,7 +82,7 @@ export function useOptionalFileViewerSidebarMotion(): FileViewerSidebarMotion | 
         ? {
             isMotionManaged: shell.mode === "inline" && shell.canToggleSidebar,
             isSidebarInteractive: shell.isSidebarInteractive,
-            isSidebarRequestedOpen: shell.isSidebarRequestedOpen,
+            isSidebarOpen: shell.isSidebarOpen,
             isSidebarTransitioning: shell.isSidebarTransitioning,
           }
         : null,
@@ -164,9 +164,9 @@ function useFileViewerRendererEnvironmentState() {
   const motionFrame = useFileViewerMotionFrame(shell?.motionKernel);
   const usesShellGeometry = Boolean(
     shell &&
-    motionFrame.shellInlineSize > 0 &&
-    shell.mode === "inline" &&
-    (shell.canToggleSidebar || shell.collapsible === "none"),
+      motionFrame.shellInlineSize > 0 &&
+      shell.mode === "inline" &&
+      (shell.canToggleSidebar || shell.collapsible === "none"),
   );
 
   return React.useMemo(

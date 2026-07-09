@@ -20,7 +20,7 @@ import {
   type FileViewerFallbackSize,
 } from "./file-viewer-core";
 import { UnsupportedCard } from "./file-viewer-fallback";
-import { HtmlFileContent } from "./file-viewer-html-viewer";
+import { FileViewerHtmlContent } from "./file-viewer-html-viewer";
 import {
   getFileViewerPrewarmTarget,
   scheduleFileViewerRendererPrewarm,
@@ -77,7 +77,7 @@ const CsvResourceContent = React.lazy(() =>
   })),
 );
 
-function CsvFileContent({
+function FileViewerCsvContent({
   resource,
   className,
   bare,
@@ -200,7 +200,7 @@ const RENDERERS: Partial<
     />
   ),
   csv: ({ resource, className, bare, controls, isolateStyles }) => (
-    <CsvFileContent
+    <FileViewerCsvContent
       resource={resource}
       className={className}
       bare={bare}
@@ -209,7 +209,7 @@ const RENDERERS: Partial<
     />
   ),
   html: ({ resource, className, bare, controls, descriptorSignal }) => (
-    <HtmlFileContent
+    <FileViewerHtmlContent
       resource={resource}
       className={className}
       bare={bare}

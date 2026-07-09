@@ -5,7 +5,7 @@ import type {
   ViewerSource,
 } from "@/registry/new-york-v4/ui/file-viewer-core";
 import {
-  FileViewer as FileViewerFrame,
+  FileViewer as FileViewerShell,
   FileViewerContent,
   FileViewerDocument,
   FileViewerHeader,
@@ -78,7 +78,7 @@ export function FileViewerHarness({
       sidebarOpen={sidebarOpen}
       source={source}
     >
-      <FileViewerFrame {...props} sidebarMode={mode}>
+      <FileViewerShell {...props} sidebarMode={mode}>
         {children ?? (
           <>
             <FileViewerHeader />
@@ -91,7 +91,7 @@ export function FileViewerHarness({
             </FileViewerContent>
           </>
         )}
-      </FileViewerFrame>
+      </FileViewerShell>
     </FileViewerProvider>
   );
 }
@@ -99,7 +99,7 @@ export function FileViewerHarness({
 export {
   FileViewerContent,
   FileViewerDocument,
-  FileViewerFrame,
+  FileViewerShell,
   FileViewerHeader,
   FileViewerMeta,
   FileViewerTitle,

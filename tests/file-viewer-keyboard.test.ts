@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   isFileViewerActiveElementInsideShell,
   shouldCloseFileViewerSidebarOnEscape,
-} from "@/registry/new-york-v4/ui/file-viewer-frame-keyboard";
+} from "@/registry/new-york-v4/ui/file-viewer-shell-keyboard";
 
 describe("FileViewer keyboard contract", () => {
   it("closes an open toggleable sidebar on a fresh Escape event", () => {

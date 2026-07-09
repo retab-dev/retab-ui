@@ -2280,19 +2280,19 @@
           "target": "@ui/file-viewer-fallback.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-frame.tsx",
+          "path": "registry/new-york-v4/ui/file-viewer-shell.tsx",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-frame.tsx"
+          "target": "@ui/file-viewer-shell.tsx"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
+          "path": "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-frame-controller.ts"
+          "target": "@ui/file-viewer-shell-controller.ts"
         },
         {
-          "path": "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
+          "path": "registry/new-york-v4/ui/file-viewer-shell-keyboard.ts",
           "type": "registry:ui",
-          "target": "@ui/file-viewer-frame-keyboard.ts"
+          "target": "@ui/file-viewer-shell-keyboard.ts"
         },
         {
           "path": "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",

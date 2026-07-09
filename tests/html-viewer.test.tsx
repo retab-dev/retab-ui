@@ -17,7 +17,7 @@ import {
   getHtmlViewerSrcDoc,
   htmlViewerSrcDocCacheStatsForTests,
 } from "@/registry/new-york-v4/ui/file-viewer-html-srcdoc-cache";
-import { HtmlFileContent } from "@/registry/new-york-v4/ui/file-viewer-html-viewer";
+import { FileViewerHtmlContent } from "@/registry/new-york-v4/ui/file-viewer-html-viewer";
 import { FileViewerHarness as FileViewer } from "./file-viewer-test-harness";
 
 function response(body: string, init: ResponseInit = {}) {
@@ -151,7 +151,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("HtmlFileContent", () => {
+describe("FileViewerHtmlContent", () => {
   it("renders URL HTML into an empty-sandbox iframe with document padding", async () => {
     const html =
       "<!doctype html><html><body><h1>Invoice</h1><script>window.__html_viewer_ran = true</script></body></html>";
@@ -825,7 +825,7 @@ describe("HtmlFileContent", () => {
     );
 
     const first = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={resource}
         descriptorSignal={new AbortController().signal}
       />,
@@ -842,7 +842,7 @@ describe("HtmlFileContent", () => {
     first.unmount();
 
     const second = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={resource}
         descriptorSignal={new AbortController().signal}
       />,
@@ -1114,7 +1114,7 @@ describe("HtmlFileContent", () => {
     const secondController = new AbortController();
 
     const { container, rerender } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct-a.html", "direct-a.html")}
         descriptorSignal={firstController.signal}
       />,
@@ -1127,7 +1127,7 @@ describe("HtmlFileContent", () => {
     expectIframeSrcDoc(await findIframe(container), "<p>first</p>");
 
     rerender(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct-b.html", "direct-b.html")}
         descriptorSignal={secondController.signal}
       />,
@@ -1164,7 +1164,7 @@ describe("HtmlFileContent", () => {
     const controller = new AbortController();
 
     const { container, rerender } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct/same-signal-a.html", "first.html")}
         descriptorSignal={controller.signal}
       />,
@@ -1173,7 +1173,7 @@ describe("HtmlFileContent", () => {
     await waitFor(() => expect(firstSignal).toBeTruthy());
 
     rerender(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct/same-signal-b.html", "second.html")}
         descriptorSignal={controller.signal}
       />,
@@ -1209,11 +1209,11 @@ describe("HtmlFileContent", () => {
 
     const { container, rerender } = render(
       <div>
-        <HtmlFileContent
+        <FileViewerHtmlContent
           resource={htmlUrlResource("/direct/shared.html", "first.html")}
           descriptorSignal={firstController.signal}
         />
-        <HtmlFileContent
+        <FileViewerHtmlContent
           resource={htmlUrlResource("/direct/shared.html", "second.html")}
           descriptorSignal={secondController.signal}
         />
@@ -1224,11 +1224,11 @@ describe("HtmlFileContent", () => {
 
     rerender(
       <div>
-        <HtmlFileContent
+        <FileViewerHtmlContent
           resource={htmlUrlResource("/direct/next.html", "next.html")}
           descriptorSignal={nextController.signal}
         />
-        <HtmlFileContent
+        <FileViewerHtmlContent
           resource={htmlUrlResource("/direct/shared.html", "second.html")}
           descriptorSignal={secondController.signal}
         />
@@ -1263,7 +1263,7 @@ describe("HtmlFileContent", () => {
     const controller = new AbortController();
 
     const { unmount } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct/unmount.html", "unmount.html")}
         descriptorSignal={controller.signal}
       />,
@@ -1289,7 +1289,7 @@ describe("HtmlFileContent", () => {
     const controller = new AbortController();
 
     render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource(
           "/direct/parent-abort.html",
           "parent-abort.html",
@@ -1312,7 +1312,7 @@ describe("HtmlFileContent", () => {
     controller.abort();
 
     render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource(
           "/direct/already-aborted.html",
           "already-aborted.html",
@@ -1327,7 +1327,7 @@ describe("HtmlFileContent", () => {
     expect(document.querySelector("iframe")).toBeNull();
   });
 
-  it("switches direct HtmlFileContent from loaded HTML to a fetched URL", async () => {
+  it("switches direct FileViewerHtmlContent from loaded HTML to a fetched URL", async () => {
     const fetched = deferred<Response>();
     vi.stubGlobal(
       "fetch",
@@ -1336,7 +1336,7 @@ describe("HtmlFileContent", () => {
     const controller = new AbortController();
 
     const { container, rerender } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlTextResource("<p>inline first</p>", "inline.html")}
         descriptorSignal={new AbortController().signal}
       />,
@@ -1345,7 +1345,7 @@ describe("HtmlFileContent", () => {
     expectIframeSrcDoc(await findIframe(container), "<p>inline first</p>");
 
     rerender(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct/from-inline.html", "fetched.html")}
         descriptorSignal={controller.signal}
       />,
@@ -1367,7 +1367,7 @@ describe("HtmlFileContent", () => {
     expect(iframe.getAttribute("title")).toBe("fetched.html");
   });
 
-  it("switches direct HtmlFileContent from a fetched URL to loaded HTML without keeping stale content", async () => {
+  it("switches direct FileViewerHtmlContent from a fetched URL to loaded HTML without keeping stale content", async () => {
     const fetched = deferred<Response>();
     vi.stubGlobal(
       "fetch",
@@ -1376,7 +1376,7 @@ describe("HtmlFileContent", () => {
     const controller = new AbortController();
 
     const { container, rerender } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlUrlResource("/direct/to-inline.html", "fetched.html")}
         descriptorSignal={controller.signal}
       />,
@@ -1392,7 +1392,7 @@ describe("HtmlFileContent", () => {
     expectIframeSrcDoc(await findIframe(container), "<p>fetched first</p>");
 
     rerender(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlTextResource("<p>inline next</p>", "inline.html")}
         descriptorSignal={new AbortController().signal}
       />,
@@ -1408,7 +1408,7 @@ describe("HtmlFileContent", () => {
     const secondBlob = new Blob(["<p>second blob</p>"], { type: "text/html" });
 
     const { container, rerender } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlBlobResource(firstBlob, "first.html")}
         descriptorSignal={new AbortController().signal}
       />,
@@ -1417,7 +1417,7 @@ describe("HtmlFileContent", () => {
     expectIframeSrcDoc(await findIframe(container), "<p>first blob</p>");
 
     rerender(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlBlobResource(secondBlob, "second.html")}
         descriptorSignal={new AbortController().signal}
       />,
@@ -1441,7 +1441,7 @@ describe("HtmlFileContent", () => {
     try {
       render(
         <TestErrorBoundary>
-          <HtmlFileContent
+          <FileViewerHtmlContent
             resource={htmlBlobResource(brokenBlob, "broken.html")}
             descriptorSignal={new AbortController().signal}
           />
@@ -1501,7 +1501,7 @@ describe("HtmlFileContent", () => {
     const signal = new AbortController().signal;
 
     const { container } = render(
-      <HtmlFileContent
+      <FileViewerHtmlContent
         resource={htmlTextResource("<article>direct</article>", "direct.html")}
         descriptorSignal={signal}
         bare

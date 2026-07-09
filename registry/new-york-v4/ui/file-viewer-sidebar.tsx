@@ -62,9 +62,7 @@ export function FileViewerSidebar({
       ref={sidebar.setSidebarGapElement}
       data-file-viewer-sidebar-collapsible={sidebar.resolvedCollapsible}
       data-file-viewer-sidebar-mode={sidebar.mode}
-      data-file-viewer-sidebar-open={
-        sidebar.isSidebarRequestedOpen ? "true" : "false"
-      }
+      data-file-viewer-sidebar-open={sidebar.isSidebarOpen ? "true" : "false"}
       data-file-viewer-sidebar-side={sidebar.resolvedSide}
       data-file-viewer-sidebar-state={sidebar.sidebarState}
       data-slot="file-viewer-sidebar-gap"
@@ -88,9 +86,7 @@ export function FileViewerSidebar({
         id={sidebar.sidebarId}
         data-file-viewer-sidebar-collapsible={sidebar.resolvedCollapsible}
         data-file-viewer-sidebar-mode={sidebar.mode}
-        data-file-viewer-sidebar-open={
-          sidebar.isSidebarRequestedOpen ? "true" : "false"
-        }
+        data-file-viewer-sidebar-open={sidebar.isSidebarOpen ? "true" : "false"}
         data-file-viewer-sidebar-side={sidebar.resolvedSide}
         data-file-viewer-sidebar-state={sidebar.sidebarState}
         data-slot="file-viewer-sidebar"
@@ -101,11 +97,11 @@ export function FileViewerSidebar({
             : "left-0 border-l",
           !sidebar.isInline && "shadow-lg transition-transform ease-linear",
           !sidebar.isInline &&
-            !sidebar.isSidebarRequestedOpen &&
+            !sidebar.isSidebarOpen &&
             sidebar.resolvedSide === "left" &&
             "-translate-x-full",
           !sidebar.isInline &&
-            !sidebar.isSidebarRequestedOpen &&
+            !sidebar.isSidebarOpen &&
             sidebar.resolvedSide === "right" &&
             "translate-x-full",
           className,
@@ -215,7 +211,7 @@ export function FileViewerSidebarRail({
 
         onClick?.(event);
         if (!event.defaultPrevented) {
-          sidebar.toggleSidebarRequestedOpen();
+          sidebar.toggleSidebar();
         }
       }}
       className={cn(

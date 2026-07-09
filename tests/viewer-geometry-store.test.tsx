@@ -1090,7 +1090,7 @@ describe("createViewerGeometryStore", () => {
     expect(sidebar.getAttribute("aria-hidden")).toBe("true");
     expect(sidebar.hasAttribute("inert")).toBe(true);
     expect(readFileViewerSidebarPhaseSnapshot("file-phases")).toMatchObject({
-      isSidebarRequestedOpen: false,
+      isSidebarOpen: false,
       isSidebarInteractive: false,
     });
 
@@ -1243,7 +1243,7 @@ function FileViewerSidebarPhaseSnapshot({
   return (
     <output data-testid={testId}>
       {JSON.stringify({
-        isSidebarRequestedOpen: sidebar.isSidebarRequestedOpen,
+        isSidebarOpen: sidebar.isSidebarOpen,
         isSidebarInteractive: sidebar.isSidebarInteractive,
       })}
     </output>
@@ -1257,7 +1257,7 @@ function FileViewerSidebarCloseButton() {
     <button
       type="button"
       data-testid="file-sidebar-close"
-      onClick={() => sidebar.setSidebarRequestedOpen(false)}
+      onClick={() => sidebar.setSidebarOpen(false)}
     >
       Close
     </button>
@@ -1312,7 +1312,7 @@ function readFileViewerContractSnapshot(testId: string) {
 
 function readFileViewerSidebarPhaseSnapshot(testId: string) {
   return JSON.parse(screen.getByTestId(testId).textContent ?? "{}") as {
-    isSidebarRequestedOpen: boolean;
+    isSidebarOpen: boolean;
     isSidebarInteractive: boolean;
   };
 }

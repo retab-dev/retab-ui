@@ -8,7 +8,7 @@ import {
   FileViewerViewport,
 } from "./file-viewer-layout";
 import { FileViewerDocument } from "./file-viewer-document";
-import { FileViewer } from "./file-viewer-frame";
+import { FileViewer } from "./file-viewer-shell";
 import { FileViewerProvider } from "./file-viewer-provider";
 import { type FileViewerResourceOptions } from "./file-viewer-resource-state";
 

@@ -39,7 +39,7 @@ export function isFileViewerActiveElementInsideShell({
   );
 }
 
-export function useFileViewerFrameKeyboard({
+export function useFileViewerShellKeyboard({
   canToggleSidebar,
   closeSidebar,
   elementRegistry,

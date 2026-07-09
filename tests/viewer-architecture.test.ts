@@ -1005,14 +1005,14 @@ describe("viewer architecture", () => {
         );
       }
     }
-    const fileViewerFrame = fileContent(
-      "registry/new-york-v4/ui/file-viewer-frame.tsx",
+    const fileViewerShell = fileContent(
+      "registry/new-york-v4/ui/file-viewer-shell.tsx",
     );
-    const fileViewerFrameController = fileContent(
-      "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
+    const fileViewerShellController = fileContent(
+      "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
     );
-    const fileViewerFrameKeyboard = fileContent(
-      "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
+    const fileViewerShellKeyboard = fileContent(
+      "registry/new-york-v4/ui/file-viewer-shell-keyboard.ts",
     );
     const fileViewerLayout = fileContent(
       "registry/new-york-v4/ui/file-viewer-layout.tsx",
@@ -1064,15 +1064,15 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-fallback.tsx",
     );
     const fileViewerAnatomy = [
-      fileViewerFrame,
+      fileViewerShell,
       fileViewerBody,
       fileViewerHeader,
       fileViewerState,
       fileViewerFallback,
     ].join("\n");
     const fileViewerRuntime = [
-      fileViewerFrameController,
-      fileViewerFrameKeyboard,
+      fileViewerShellController,
+      fileViewerShellKeyboard,
       fileViewerMotionKernel,
       fileViewerRendererContract,
       fileViewerRendererFrame,
@@ -1082,11 +1082,11 @@ describe("viewer architecture", () => {
     const viewerHeaderOutlet = fileContent(
       "registry/new-york-v4/ui/viewer-header-outlet.tsx",
     );
-    expect(fileViewerFrame).toContain("FileViewerShellStaticContext.Provider");
-    expect(fileViewerFrame).toContain(
+    expect(fileViewerShell).toContain("FileViewerShellStaticContext.Provider");
+    expect(fileViewerShell).toContain(
       "FileViewerSidebarDynamicContext.Provider",
     );
-    expect(fileViewerFrame).toContain("useFileViewerFrameController");
+    expect(fileViewerShell).toContain("useFileViewerShellController");
     expect(fileViewerAccessibility).toContain(
       "resolveFileViewerSidebarAccessibilityProps",
     );
@@ -1094,47 +1094,47 @@ describe("viewer architecture", () => {
       "resolveFileViewerSidebarTriggerAccessibilityProps",
     );
     expect(fileViewerAccessibility).not.toContain("React.");
-    expect(fileViewerFrameController).toContain("createFileViewerMotionKernel");
-    expect(fileViewerFrameController).toContain("useFileViewerFrameKeyboard");
-    expect(fileViewerFrameController).toContain(
+    expect(fileViewerShellController).toContain("createFileViewerMotionKernel");
+    expect(fileViewerShellController).toContain("useFileViewerShellKeyboard");
+    expect(fileViewerShellController).toContain(
       "useFileViewerSidebarOpenController",
     );
-    expect(fileViewerFrameController).toContain(
+    expect(fileViewerShellController).toContain(
       "useFileViewerSidebarRegistration",
     );
-    expect(fileViewerFrameKeyboard).toContain(
+    expect(fileViewerShellKeyboard).toContain(
       "shouldCloseFileViewerSidebarOnEscape",
     );
-    expect(fileViewerFrameKeyboard).toContain("closeSidebar()");
-    expect(fileViewerFrameKeyboard).toContain(
+    expect(fileViewerShellKeyboard).toContain("closeSidebar()");
+    expect(fileViewerShellKeyboard).toContain(
       "isFileViewerActiveElementInsideShell",
     );
-    expect(fileViewerFrameController).toContain(
+    expect(fileViewerShellController).toContain(
       "createFileViewerElementRegistry",
     );
-    expect(fileViewerFrameController).toContain(
+    expect(fileViewerShellController).toContain(
       "resolveFileViewerSidebarInteractive",
     );
-    expect(fileViewerFrameController).toContain("motionKernel.startMotion");
-    expect(fileViewerFrameController).toContain(
+    expect(fileViewerShellController).toContain("motionKernel.startMotion");
+    expect(fileViewerShellController).toContain(
       "elementRegistry.registerViewerShellElement",
     );
-    expect(fileViewerFrameController).toContain("isSidebarRequestedOpen");
-    expect(fileViewerFrameController).toContain("isSidebarInteractive");
-    expect(fileViewerFrameController).not.toContain("isSidebarVisible");
-    expect(fileViewerFrameController).not.toContain(
+    expect(fileViewerShellController).toContain("isSidebarOpen");
+    expect(fileViewerShellController).toContain("isSidebarInteractive");
+    expect(fileViewerShellController).not.toContain("isSidebarVisible");
+    expect(fileViewerShellController).not.toContain(
       "shouldCloseFileViewerSidebarOnEscape",
     );
-    expect(fileViewerFrameController).not.toContain("window.setTimeout");
-    expect(fileViewerFrameController).not.toContain(
+    expect(fileViewerShellController).not.toContain("window.setTimeout");
+    expect(fileViewerShellController).not.toContain(
       "--file-viewer-sidebar-inline-size",
     );
-    expect(fileViewerFrameController).not.toContain("cssTransition");
-    expect(fileViewerFrameController).not.toContain("transitionend");
-    expect(fileViewerFrameController).not.toContain(
+    expect(fileViewerShellController).not.toContain("cssTransition");
+    expect(fileViewerShellController).not.toContain("transitionend");
+    expect(fileViewerShellController).not.toContain(
       "resolveFileViewerCssLength",
     );
-    expect(fileViewerFrame).not.toContain("<ViewerRoot");
+    expect(fileViewerShell).not.toContain("<ViewerRoot");
     for (const slot of [
       "file-viewer-root",
       "file-viewer-header",
@@ -1272,8 +1272,8 @@ describe("viewer architecture", () => {
     );
     expect(fileViewerContext).not.toContain("accessibilityOpen");
     expect(fileViewerContext).not.toContain("accessibilityState");
-    expect(fileViewerFrameController).not.toContain("accessibilityOpen");
-    expect(fileViewerFrameController).not.toContain("accessibilityState");
+    expect(fileViewerShellController).not.toContain("accessibilityOpen");
+    expect(fileViewerShellController).not.toContain("accessibilityState");
     expect(fileViewerElements).toContain("FileViewerElementRegistry");
     expect(fileViewerElements).toContain("registerViewerShellElement");
     expect(fileViewerElements).toContain("registerDocumentSurface");
@@ -1355,20 +1355,20 @@ describe("viewer architecture", () => {
     expect(fileViewerBody).toContain("FileViewerSidebarRail");
     expect(fileViewerBody).toContain("file-viewer-sidebar-rail");
     expect(fileViewerBody).toContain("sidebar-rail");
-    expect(fileViewerBody).toContain("toggleSidebarRequestedOpen");
+    expect(fileViewerBody).toContain("toggleSidebar");
     const fileViewerSidebarStateType =
       fileViewerContext.match(
-        /export type FileViewerSidebarStateValue = \{[\s\S]*?\};/,
+        /export type FileViewerSidebarValue = \{[\s\S]*?\};/,
       )?.[0] ?? "";
     expect(fileViewerSidebarStateType).not.toContain("setOpen:");
-    expect(fileViewerSidebarStateType).not.toContain("toggleSidebar:");
+    expect(fileViewerSidebarStateType).not.toContain("RequestedOpen");
     expect(fileViewerSidebarStateType).not.toContain("open: boolean");
     expect(fileViewerSidebarStateType).not.toContain(
       "state: FileViewerSidebarState",
     );
     expect(fileViewerContext).toContain("sidebarState");
     expect(fileViewerContext).not.toContain("requestSidebarClose");
-    expect(fileViewerContext).toContain("setSidebarRequestedOpen");
+    expect(fileViewerContext).toContain("setSidebarOpen");
     expect(fileViewerEntrypoint).not.toContain("FileViewerSurface");
     expect(fileViewerEntrypoint).not.toContain("FileViewerDocumentFrameProps");
     expect(fileViewerEntrypoint).toContain("FileViewerSidebarRail");
@@ -1413,7 +1413,7 @@ describe("viewer architecture", () => {
   it("keeps FileViewer DOM reads and writes in internal contracts", () => {
     const allowedDomContractFiles = new Set([
       "registry/new-york-v4/ui/file-viewer-accessibility.ts",
-      "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
+      "registry/new-york-v4/ui/file-viewer-shell-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
     ]);
     const domContractPattern =
@@ -1583,9 +1583,9 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-context.tsx",
       "registry/new-york-v4/ui/file-viewer-document.tsx",
       "registry/new-york-v4/ui/file-viewer-elements.ts",
-      "registry/new-york-v4/ui/file-viewer-frame.tsx",
-      "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
-      "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
+      "registry/new-york-v4/ui/file-viewer-shell.tsx",
+      "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
+      "registry/new-york-v4/ui/file-viewer-shell-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-header.tsx",
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
       "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
@@ -1597,9 +1597,9 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-context.tsx",
       "registry/new-york-v4/ui/file-viewer-document.tsx",
       "registry/new-york-v4/ui/file-viewer-elements.ts",
-      "registry/new-york-v4/ui/file-viewer-frame.tsx",
-      "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
-      "registry/new-york-v4/ui/file-viewer-frame-keyboard.ts",
+      "registry/new-york-v4/ui/file-viewer-shell.tsx",
+      "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
+      "registry/new-york-v4/ui/file-viewer-shell-keyboard.ts",
       "registry/new-york-v4/ui/file-viewer-header.tsx",
       "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
@@ -1609,7 +1609,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-elements.ts",
     );
     const frame = fileContent(
-      "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
+      "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
     );
     const motionWriteOwner = fileContent(
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
@@ -1664,26 +1664,25 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-context.tsx",
     );
     const frame = fileContent(
-      "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
+      "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
     );
     const header = fileContent(
       "registry/new-york-v4/ui/file-viewer-header.tsx",
     );
 
-    expect(context).toContain("setSidebarRequestedOpen");
+    expect(context).toContain("setSidebarOpen");
     expect(context).not.toContain("requestSidebarOpen");
     expect(context).not.toContain("requestSidebarClose");
-    expect(context).toContain("toggleSidebarRequestedOpen");
+    expect(context).toContain("toggleSidebar");
     expect(context).not.toContain("commandBus");
-    expect(frame).toContain("setSidebarRequestedOpen");
+    expect(frame).toContain("setSidebarOpen");
     expect(frame).not.toContain("commandBus");
-    expect(frame).toContain("onOpenChange?.(nextIsSidebarRequestedOpen)");
+    expect(frame).toContain("onOpenChange?.(nextIsSidebarOpen)");
     expect(frame).toContain("motionKernel.syncTarget(motionTarget)");
     expect(frame).not.toContain("[context.sidebarOpenProps");
-    expect(frame).not.toContain("const toggleSidebar = React.useCallback");
-    expect(header).toContain("toggleSidebarRequestedOpen()");
+    expect(frame).not.toContain("RequestedOpen");
+    expect(header).toContain("toggleSidebar()");
     expect(header).not.toContain("commandBus");
-    expect(header).not.toContain("toggleSidebar();");
   });
 
   it("routes FileViewer sidebar accessibility through the coordinator", () => {
@@ -1697,7 +1696,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-sidebar-controller.ts",
     );
     const frameController = fileContent(
-      "registry/new-york-v4/ui/file-viewer-frame-controller.ts",
+      "registry/new-york-v4/ui/file-viewer-shell-controller.ts",
     );
     const header = fileContent(
       "registry/new-york-v4/ui/file-viewer-header.tsx",
@@ -1757,7 +1756,7 @@ describe("viewer architecture", () => {
       "registry/new-york-v4/ui/file-viewer-context.tsx",
       "registry/new-york-v4/ui/file-viewer-document.tsx",
       "registry/new-york-v4/ui/file-viewer-elements.ts",
-      "registry/new-york-v4/ui/file-viewer-frame.tsx",
+      "registry/new-york-v4/ui/file-viewer-shell.tsx",
       "registry/new-york-v4/ui/file-viewer-header.tsx",
       "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
       "registry/new-york-v4/ui/file-viewer-preview.tsx",
@@ -1922,7 +1921,7 @@ describe("viewer architecture", () => {
     }
     // Local-chrome leaves receive controls but own their own download chrome,
     // so the route never passes them a download prop.
-    for (const route of ["CsvFileContent", "HtmlFileContent"]) {
+    for (const route of ["FileViewerCsvContent", "FileViewerHtmlContent"]) {
       expectEveryRouteOpeningContains(route, "controls={controls}");
       expectEveryRouteOpeningExcludes(route, "download");
     }

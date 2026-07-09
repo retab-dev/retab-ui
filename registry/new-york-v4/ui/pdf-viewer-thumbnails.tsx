@@ -224,14 +224,11 @@ function usePdfThumbnailRenderSuspension(
   sidebarMotion: FileViewerSidebarMotion | null,
 ) {
   const isMotionManaged = sidebarMotion?.isMotionManaged === true;
-  const isSidebarRequestedOpen =
-    sidebarMotion?.isSidebarRequestedOpen === true;
+  const isSidebarOpen = sidebarMotion?.isSidebarOpen === true;
   const isSidebarInteractive = sidebarMotion?.isSidebarInteractive === true;
-  const isSidebarTransitioning =
-    sidebarMotion?.isSidebarTransitioning === true;
+  const isSidebarTransitioning = sidebarMotion?.isSidebarTransitioning === true;
   const [isOpenSettling, setIsOpenSettling] = React.useState(false);
-  const [isClosedWarmReleased, setIsClosedWarmReleased] =
-    React.useState(false);
+  const [isClosedWarmReleased, setIsClosedWarmReleased] = React.useState(false);
 
   React.useEffect(() => {
     if (!isMotionManaged) {
@@ -240,7 +237,7 @@ function usePdfThumbnailRenderSuspension(
       return;
     }
 
-    if (!isSidebarRequestedOpen) {
+    if (!isSidebarOpen) {
       setIsOpenSettling(false);
       setIsClosedWarmReleased(false);
       if (isSidebarTransitioning) return;
@@ -270,12 +267,12 @@ function usePdfThumbnailRenderSuspension(
     isMotionManaged,
     isOpenSettling,
     isSidebarInteractive,
-    isSidebarRequestedOpen,
+    isSidebarOpen,
     isSidebarTransitioning,
   ]);
 
   if (!isMotionManaged) return false;
-  if (!isSidebarRequestedOpen) return !isClosedWarmReleased;
+  if (!isSidebarOpen) return !isClosedWarmReleased;
   if (isSidebarTransitioning || !isSidebarInteractive) return true;
   return isOpenSettling;
 }

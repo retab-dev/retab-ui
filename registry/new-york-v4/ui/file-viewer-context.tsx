@@ -16,8 +16,8 @@ export type FileViewerHeaderMode = "inline" | "outlets";
 
 export const DEFAULT_FILE_VIEWER_SIDEBAR_WIDTH = "10rem";
 
-export type FileViewerSetSidebarRequestedOpen = (
-  value: boolean | ((isSidebarRequestedOpen: boolean) => boolean),
+export type FileViewerSetSidebarOpen = (
+  value: boolean | ((isSidebarOpen: boolean) => boolean),
 ) => void;
 
 export type FileViewerSidebarOpenProps = {
@@ -42,16 +42,16 @@ export type FileViewerSidebarRegistration = {
   widthPixels: number;
 };
 
-export type FileViewerSidebarStateValue = {
+export type FileViewerSidebarValue = {
   canToggleSidebar: boolean;
   isSidebarInteractive: boolean;
-  isSidebarRequestedOpen: boolean;
+  isSidebarOpen: boolean;
   mode: FileViewerSidebarMode;
   side: FileViewerSidebarSide;
   sidebarId: string;
   sidebarState: FileViewerSidebarState;
-  setSidebarRequestedOpen: FileViewerSetSidebarRequestedOpen;
-  toggleSidebarRequestedOpen: () => void;
+  setSidebarOpen: FileViewerSetSidebarOpen;
+  toggleSidebar: () => void;
 };
 
 export type FileViewerShellStaticContextValue = {
@@ -63,16 +63,16 @@ export type FileViewerShellStaticContextValue = {
   motionKernel: FileViewerMotionKernel;
   registerSidebar: (registration: FileViewerSidebarRegistration) => () => void;
   rootId: string;
-  setSidebarRequestedOpen: FileViewerSetSidebarRequestedOpen;
+  setSidebarOpen: FileViewerSetSidebarOpen;
   side: FileViewerSidebarSide;
   sidebarId: string;
   sidebarWidth: string;
-  toggleSidebarRequestedOpen: () => void;
+  toggleSidebar: () => void;
 };
 
 export type FileViewerSidebarDynamicContextValue = {
   isSidebarInteractive: boolean;
-  isSidebarRequestedOpen: boolean;
+  isSidebarOpen: boolean;
   isSidebarTransitioning: boolean;
   sidebarState: FileViewerSidebarState;
 };
@@ -128,7 +128,7 @@ export function useFileViewerShell(consumer: string) {
   return context;
 }
 
-export function useFileViewerSidebar(): FileViewerSidebarStateValue {
+export function useFileViewerSidebar(): FileViewerSidebarValue {
   const fileViewerContext = React.useContext(FileViewerContext);
   const shellContext = useOptionalFileViewerShell();
 

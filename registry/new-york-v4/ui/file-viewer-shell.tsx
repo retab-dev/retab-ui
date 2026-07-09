@@ -11,8 +11,8 @@ import {
 } from "./file-viewer-context";
 import {
   FILE_VIEWER_INLINE_BREAKPOINT,
-  useFileViewerFrameController,
-} from "./file-viewer-frame-controller";
+  useFileViewerShellController,
+} from "./file-viewer-shell-controller";
 
 export type FileViewerLayout = "fill" | "intrinsic";
 
@@ -31,7 +31,7 @@ export function FileViewer({
   style,
   ...props
 }: FileViewerProps) {
-  const controller = useFileViewerFrameController({
+  const controller = useFileViewerShellController({
     inlineBreakpoint,
     sidebarMode,
   });
@@ -52,7 +52,7 @@ export function FileViewer({
           data-file-viewer-sidebar-collapsible={controller.effectiveCollapsible}
           data-file-viewer-sidebar-mode={controller.mode}
           data-file-viewer-sidebar-open={
-            controller.isSidebarRequestedOpen ? "true" : "false"
+            controller.isSidebarOpen ? "true" : "false"
           }
           data-file-viewer-sidebar-side={controller.side}
           data-file-viewer-sidebar-state={controller.sidebarState}

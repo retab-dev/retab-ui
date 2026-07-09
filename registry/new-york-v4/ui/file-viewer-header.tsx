@@ -202,7 +202,7 @@ export function FileViewerSidebarTrigger({
     isSidebarInteractive,
     sidebarId,
     sidebarState,
-    toggleSidebarRequestedOpen,
+    toggleSidebar,
   } = useFileViewerShell("FileViewerSidebarTrigger");
   const isDisabled = Boolean(disabled || loading || !canToggleSidebar);
   const Icon = side === "right" ? PanelRight : PanelLeft;
@@ -239,7 +239,7 @@ export function FileViewerSidebarTrigger({
 
         onClick?.(event);
         if (!event.defaultPrevented) {
-          toggleSidebarRequestedOpen();
+          toggleSidebar();
         }
       }}
       size={size}
