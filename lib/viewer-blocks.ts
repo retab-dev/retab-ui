@@ -472,6 +472,58 @@ export const VIEWER_BLOCKS = [
     featured: true,
     categories: [],
   },
+  {
+    id: "split-consensus",
+    registryName: "split-consensus-viewer-block",
+    title: "Split Consensus",
+    description:
+      "A split result with multi-run consensus visible in the sidebar — the page rail stays beside output-level likelihoods and each vote used to build the final split.",
+    command: getRegistryAddCommand("split-consensus-viewer-block"),
+    docsHref: "/examples/split-consensus",
+    viewHref: "/view/blocks/split-consensus",
+    previewHeightClassName: "h-[680px]",
+    categories: ["primitives"],
+  },
+  {
+    id: "split-consensus-diagram-horizontal",
+    registryName: "split-consensus-diagram-horizontal-viewer-block",
+    title: "Split Consensus Diagram Horizontal",
+    description:
+      "A split consensus segment diagram with consolidation, five raw votes, and contested-page density in a wide horizontal sidebar beside the PDF.",
+    command: getRegistryAddCommand(
+      "split-consensus-diagram-horizontal-viewer-block",
+    ),
+    docsHref: "/examples/split-consensus-diagram-horizontal",
+    viewHref: "/view/blocks/split-consensus-diagram-horizontal",
+    previewHeightClassName: "h-[760px]",
+    categories: ["primitives"],
+  },
+  {
+    id: "split-consensus-diagram-vertical",
+    registryName: "split-consensus-diagram-vertical-viewer-block",
+    title: "Split Consensus Diagram Vertical",
+    description:
+      "A split consensus segment diagram with the page axis running vertically for a narrow sidebar beside the PDF.",
+    command: getRegistryAddCommand(
+      "split-consensus-diagram-vertical-viewer-block",
+    ),
+    docsHref: "/examples/split-consensus-diagram-vertical",
+    viewHref: "/view/blocks/split-consensus-diagram-vertical",
+    previewHeightClassName: "h-[760px]",
+    categories: ["primitives"],
+  },
+  {
+    id: "classify-consensus",
+    registryName: "classify-consensus-viewer-block",
+    title: "Classify Consensus",
+    description:
+      "A classification result with the consensus switch in the sidebar — selected category, likelihood, and every vote beside the source document.",
+    command: getRegistryAddCommand("classify-consensus-viewer-block"),
+    docsHref: "/examples/classify-consensus",
+    viewHref: "/view/blocks/classify-consensus",
+    previewHeightClassName: "h-[680px]",
+    categories: ["primitives"],
+  },
 ] as const satisfies readonly ViewerBlockConfig[];
 
 export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"];

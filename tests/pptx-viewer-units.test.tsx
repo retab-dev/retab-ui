@@ -214,7 +214,8 @@ describe("pptx slide scroll layout", () => {
       afterHeight: 5904,
       beforeHeight: 5168,
       height: 3664,
-      stickyInset: -2944,
+      stickyBottomInset: -2944,
+      stickyTopInset: -2944,
       slides: expect.arrayContaining([
         expect.objectContaining({
           slideNumber: 8,

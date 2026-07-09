@@ -108,6 +108,7 @@ function FileViewerCsvContent({
         resource={resource}
         dialect={dialect}
         fillHeight
+        frame={!bare}
         controls={controls}
         isolateStyles={isolateStyles}
       />

@@ -520,11 +520,11 @@ export function ImageFrameScroller({
                 className="sticky"
                 data-slot="image-frame-sticky-window"
                 style={{
-                  bottom: renderedWindow.stickyInset,
+                  bottom: renderedWindow.stickyBottomInset,
                   contain: "layout style inline-size",
                   height: renderedWindow.height,
                   isolation: "isolate",
-                  top: renderedWindow.stickyInset,
+                  top: renderedWindow.stickyTopInset,
                 }}
               >
                 <div

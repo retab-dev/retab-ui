@@ -55,7 +55,8 @@ export type ImageRenderedFrameWindow = {
   beforeHeight: number;
   frames: readonly ImageRenderedFrameLayout[];
   height: number;
-  stickyInset: number;
+  stickyBottomInset: number;
+  stickyTopInset: number;
 };
 
 export type ImageRenderPixelWindow = {
@@ -276,18 +277,35 @@ export function getImageRenderedFrameWindow({
     0,
     finiteNumber(physicalScrollHeight),
   );
-  const stickyInset =
+  const afterHeight = Math.max(
+    0,
+    safePhysicalScrollHeight - beforeHeight - height,
+  );
+  const stickyCoverInset =
     safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
+  // The sticky cover clamp only ever needs to slide the window over CONTENT
+  // the viewport can reach. When the window already holds the document's
+  // first/last frame, the spacer beyond it is pure edge padding — relax that
+  // side's inset by the spacer so the settled window keeps its flow position
+  // at the scroll extremes. Without the relaxation the clamp drags the window
+  // over the edge padding at scroll 0/max, and the settled layout stops being
+  // a single linear function of scale (which the reading-fraction rebase
+  // depends on to restore the reading line exactly across a re-fit).
+  const includesFirstFrame = frames[0].frameNumber === 1;
+  const includesLastFrame =
+    frames[frames.length - 1].frameNumber === layout.frameCount;
 
   return {
-    afterHeight: Math.max(0, safePhysicalScrollHeight - beforeHeight - height),
+    afterHeight,
     beforeHeight,
     frames: frames.map((frame) => ({
       ...frame,
       windowTop: frame.offsetTop - logicalBeforeHeight,
     })),
     height,
-    stickyInset,
+    stickyBottomInset:
+      stickyCoverInset - (includesFirstFrame ? beforeHeight : 0),
+    stickyTopInset: stickyCoverInset - (includesLastFrame ? afterHeight : 0),
   };
 }
 

@@ -715,7 +715,8 @@ function projectPptxSlides({
       afterHeight: metrics.physicalScrollHeight,
       beforeHeight: 0,
       height: 0,
-      stickyInset: 0,
+      stickyBottomInset: 0,
+      stickyTopInset: 0,
     });
     return { fillOverscanNextFrame: fitPerfectly };
   }
@@ -913,7 +914,8 @@ function syncPptxProjectionWindow(
     afterHeight: number;
     beforeHeight: number;
     height: number;
-    stickyInset: number;
+    stickyBottomInset: number;
+    stickyTopInset: number;
   },
 ) {
   setPptxPixelStyle(
@@ -924,12 +926,12 @@ function syncPptxProjectionWindow(
   setPptxStyle(
     projectionWindow.sticky,
     "top",
-    `${renderedWindow.stickyInset}px`,
+    `${renderedWindow.stickyTopInset}px`,
   );
   setPptxStyle(
     projectionWindow.sticky,
     "bottom",
-    `${renderedWindow.stickyInset}px`,
+    `${renderedWindow.stickyBottomInset}px`,
   );
   setPptxPixelStyle(projectionWindow.sticky, "height", renderedWindow.height);
   setPptxPixelStyle(projectionWindow.content, "height", renderedWindow.height);

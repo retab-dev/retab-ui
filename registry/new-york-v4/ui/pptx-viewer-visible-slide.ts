@@ -47,7 +47,8 @@ export interface PptxRenderedSlideWindow {
   beforeHeight: number;
   height: number;
   slides: Array<PptxVirtualSlide & { windowTop: number }>;
-  stickyInset: number;
+  stickyBottomInset: number;
+  stickyTopInset: number;
 }
 
 export interface PptxRenderPixelWindow {
@@ -284,21 +285,35 @@ export function getPptxRenderedSlideWindow({
       : layout.slideHeight > 0
         ? layout.slideHeight
         : 0;
-  const stickyInset =
+  const stickyCoverInset =
     safeViewportHeight > 0 ? -Math.max(0, height - safeViewportHeight) : 0;
+  const afterHeight = Math.max(
+    0,
+    safeSize(physicalScrollHeight) - beforeHeight - height,
+  );
+  // The sticky cover clamp only ever needs to slide the window over CONTENT
+  // the viewport can reach. When the window already holds the document's
+  // first/last slide, the spacer beyond it is pure edge padding — relax that
+  // side's inset by the spacer so the settled window keeps its flow position
+  // at the scroll extremes. Without the relaxation the clamp drags the window
+  // over the edge padding at scroll 0/max, and the settled layout stops being
+  // a single linear function of scale (which the reading-fraction rebase
+  // depends on to restore the reading line exactly across a re-fit).
+  const includesFirstSlide = renderedSlides[0].index === 0;
+  const includesLastSlide =
+    renderedSlides[renderedSlides.length - 1].index === layout.slideCount - 1;
 
   return {
-    afterHeight: Math.max(
-      0,
-      safeSize(physicalScrollHeight) - beforeHeight - height,
-    ),
+    afterHeight,
     beforeHeight,
     height,
     slides: renderedSlides.map((slide) => ({
       ...slide,
       windowTop: slide.top - logicalBeforeHeight,
     })),
-    stickyInset,
+    stickyBottomInset:
+      stickyCoverInset - (includesFirstSlide ? beforeHeight : 0),
+    stickyTopInset: stickyCoverInset - (includesLastSlide ? afterHeight : 0),
   };
 }
 

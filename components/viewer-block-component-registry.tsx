@@ -3,6 +3,7 @@
 import type { ComponentType } from "react";
 
 import type { ViewerBlockId, ViewerBlockMetadata } from "@/lib/viewer-blocks";
+import { ClassifyConsensusViewerBlock } from "@/registry/new-york-v4/blocks/classify-consensus-viewer-block";
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block";
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block";
 import { AvatarImageSlot } from "@/registry/new-york-v4/blocks/dropzone-avatar-image-slot";
@@ -35,6 +36,9 @@ import { PartitionViewerBlock } from "@/registry/new-york-v4/blocks/partition-vi
 import { PdfThumbnailsBlock } from "@/registry/new-york-v4/blocks/pdf-thumbnails-block";
 import { PrimitiveCardsBlock } from "@/registry/new-york-v4/blocks/primitive-cards-block";
 import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer-block";
+import { SplitConsensusViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-viewer-block";
+import { SplitConsensusDiagramHorizontalViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-diagram-horizontal-viewer-block";
+import { SplitConsensusDiagramVerticalViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-diagram-vertical-viewer-block";
 import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block";
 import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block";
 import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block";
@@ -80,6 +84,11 @@ export const VIEWER_BLOCK_COMPONENTS = {
   fslight: FsLightBlock,
   "primitive-cards": PrimitiveCardsBlock,
   "pdf-thumbnails": PdfThumbnailsBlock,
+  "split-consensus": SplitConsensusViewerBlock,
+  "split-consensus-diagram-horizontal":
+    SplitConsensusDiagramHorizontalViewerBlock,
+  "split-consensus-diagram-vertical": SplitConsensusDiagramVerticalViewerBlock,
+  "classify-consensus": ClassifyConsensusViewerBlock,
 } satisfies Record<ViewerBlockId, ViewerBlockComponent>;
 
 export function getViewerBlockComponent(blockId: ViewerBlockId) {

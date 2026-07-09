@@ -11,9 +11,16 @@ export interface SplitResult {
   partitions?: PartitionChunk[];
 }
 
+export interface SplitSubdocumentLikelihood {
+  /** Consensus confidence for the subdocument label. */
+  name?: number | null;
+  /** Consensus confidence per assigned page, aligned with the output pages. */
+  pages?: number[] | null;
+}
+
 export interface SplitViewConsensus {
   choices?: SplitResult[][];
-  likelihoods?: unknown[] | null;
+  likelihoods?: SplitSubdocumentLikelihood[] | null;
 }
 
 export interface SplitView {

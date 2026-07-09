@@ -78,7 +78,8 @@ describe("image viewer virtualization", () => {
     expect(window).toMatchObject({
       beforeHeight: IMAGE_FRAME_PADDING + 200 + IMAGE_FRAME_GAP,
       height: 200 + IMAGE_FRAME_GAP + 200,
-      stickyInset: -(200 + IMAGE_FRAME_GAP + 200 - 100),
+      stickyBottomInset: -(200 + IMAGE_FRAME_GAP + 200 - 100),
+      stickyTopInset: -(200 + IMAGE_FRAME_GAP + 200 - 100),
     });
     expect(window?.afterHeight).toBe(
       layout.totalHeight -
