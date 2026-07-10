@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/image-viewer-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import type { FileViewerDocumentAlign } from "./file-viewer-renderer-contract";
+
 import {
   getImageFrameLayout,
   getImagePhysicalScrollHeight,
@@ -66,6 +68,7 @@ export interface ImageFrameScrollerProps {
   layout: ImageFrameLayoutModel;
   scale: number;
   rotation: QuarterTurn;
+  align?: FileViewerDocumentAlign;
   documentSurfaceRef?: React.Ref<HTMLDivElement>;
   frameListRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
@@ -274,6 +277,7 @@ export function ImageFrameScroller({
   layout,
   scale,
   rotation,
+  align = "center",
   documentSurfaceRef,
   frameListRef,
   getScrollMetrics,
@@ -495,9 +499,14 @@ export function ImageFrameScroller({
         className="relative min-h-full w-full overflow-clip"
         data-slot="image-viewer-fit-width-measure"
       >
+        {/* The margin class must mirror the fit-width motion resolver's
+            align-margin model: the counter-transform's translateX assumes the
+            surface's DOM margins follow the renderer frame's align, so a
+            hardcoded mx-auto under align="start" leaves the auto-margin
+            re-centering uncompensated mid-slide. */}
         <div
           ref={documentSurfaceRef}
-          className="relative mx-auto"
+          className={`relative ${getImageDocumentAlignClass(align)}`}
           data-slot="image-viewer-document"
           style={{
             contain: "layout style",
@@ -553,6 +562,17 @@ export function ImageFrameScroller({
       </div>
     </ScrollArea>
   );
+}
+
+function getImageDocumentAlignClass(align: FileViewerDocumentAlign) {
+  switch (align) {
+    case "center":
+      return "mx-auto";
+    case "end":
+      return "ml-auto";
+    case "start":
+      return "mr-auto";
+  }
 }
 
 type ImageFrameProjectionCache = {

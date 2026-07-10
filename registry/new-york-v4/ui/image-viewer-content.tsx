@@ -405,6 +405,7 @@ export function ImageViewerContent({
               layout={frameLayout}
               scale={scale}
               rotation={rotation}
+              align={rendererFrame.align}
               documentSurfaceRef={setImageDocumentSurfaceRef}
               frameListRef={frameListRef}
               getScrollMetrics={getScrollMetrics}

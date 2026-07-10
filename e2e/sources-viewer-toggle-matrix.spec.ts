@@ -26,26 +26,28 @@ const SURVEY = process.env.MATRIX_SURVEY === "1";
 const SETTLE_DRIFT_BUDGET_PX = 14;
 const EXCURSION_BUDGET_PX = 16;
 // Horizontal: a centered document legitimately recenters by half the sidebar
-// width (210px here); the budget allows that plus a small tolerance. The
-// rapid budget covers the known image retarget x-overshoot (~265px measured,
-// tracked separately) without letting it grow.
+// width (210px here); the budget allows that plus a small tolerance. A rapid
+// retarget's corridor is bounded by the full one-way recenter (the first leg
+// reverses at most from its far point), so it shares the plain ceiling — the
+// old ~265px image rapid overshoot was the image surface's hardcoded mx-auto
+// fighting the fit-width counter-transform's align-margin model (fixed with
+// the open-leg pop anomaly; the surface margin now follows rendererFrame's
+// align like PDF/DOCX).
 const X_CORRIDOR_BUDGET_PX = 218;
-const RAPID_X_CORRIDOR_BUDGET_PX = 280;
+const RAPID_X_CORRIDOR_BUDGET_PX = 218;
 // A rapid retarget travels toward the target before reversing; its excursion
 // is bounded by how far one 60ms leg gets, not by the full corridor budget.
 const RAPID_EXCURSION_BUDGET_PX = 220;
 const CYCLE_EXCURSION_BUDGET_PX = 40;
-// The image retarget X-overshoot also fires on ordinary repeated toggles
-// (~300px measured on this page) — same tracked anomaly as the rapid case;
-// hold its ceiling until the painted-x-anchor fix lands.
-const CYCLE_X_CORRIDOR_BUDGET_PX = 310;
-// TEMPORAL budgets (see MOTION-TESTING.md). Survey: DOCX/PDF 0.7-1.1 on
-// plain toggles, rapids ≤1.46. Image OPEN runs 1.23-1.47 on THIS page at
-// every depth/viewport (benchmark page: ≤1.00; close leg: ~1.0) — a
-// tracked ~40% velocity excess over the motion plan on the open leg
-// (task chip filed); the budget rides just above it and drops to ~1.5
-// when that lands. A single-frame teleport scores ~3.
-const POP_SCORE_BUDGET = 1.6;
+// Repeated toggles trace the same one-way recenter per leg (the old ~300px
+// image cycle overshoot was the same align-model mismatch as the rapid
+// case, fixed alongside it — cycles now measure exactly 210).
+const CYCLE_X_CORRIDOR_BUDGET_PX = 218;
+// TEMPORAL budgets (see MOTION-TESTING.md). Survey: plain toggles 0.4-0.9
+// across formats (the image open leg's tracked ~40% velocity excess was the
+// align-model mismatch above — fixed, opens now 0.5-0.8), rapids ≤1.46.
+// Matches the benchmark matrix ceiling. A single-frame teleport scores ~3.
+const POP_SCORE_BUDGET = 1.5;
 const RAPID_POP_SCORE_BUDGET = 1.9;
 const SETTLE_MS_BUDGET = 600;
 
@@ -175,7 +177,9 @@ for (const viewport of VIEWPORTS) {
             trace.popScoreX > popBudget ||
             (action !== "cycle" && trace.settleMs > SETTLE_MS_BUDGET)
           ) {
-            failures.push(line);
+            // The profile says WHERE in the flight the defect sat — no
+            // re-instrumented repro run needed.
+            failures.push(`${line}\n  profile(t/y/x): ${trace.profile}`);
           }
         }
       }
