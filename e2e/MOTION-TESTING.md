@@ -38,6 +38,7 @@ Gate all three, always.
 | `verify:viewer-monkey-fuzz` | Seeded random interleavings incl. mid-flight format switches, under zero-console-error + bounded-resource + bounded-GC'd-heap invariants |
 | `verify:robustness-matrix` | 4x CPU-throttled settles, cold-start toggles (before readiness), RTL trajectory |
 | `verify:keyboard-focus-matrix` | Keyboard toggles fly the click trajectory, focus survives the toggle, PageDown-mid-flight binary contract |
+| `verify:block-pages-toggle-matrix` | The application-block hosts (split, split-consensus, classify-consensus, extract): FileViewer inside product chrome, incl. the segment-page-rail second scroll consumer |
 | `verify:sources-viewer-visual-blink` | Screencast pixel probes + reading-anchor destination + terminal deceleration on the sources page |
 | `verify:file-viewer-visual-blink` | Screencast pixel gate on the benchmark page (whiteout, ink dip, post-motion churn) |
 | `verify:file-viewer-sidebar-motion[:strict]` | The benchmark page's own 21-metric telemetry contracts |

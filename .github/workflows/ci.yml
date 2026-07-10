@@ -84,6 +84,13 @@ jobs:
         run: pnpm verify:benchmark-toggle-matrix
         env:
           MOTION_METRICS_PATH: ${{ runner.temp }}/motion-metrics.jsonl
+      # The application-block hosts (split, consensus, classify, extract):
+      # FileViewer embedded in product chrome, incl. the segment-page-rail
+      # that observes the same scroller the kernel rebases.
+      - name: Block pages toggle matrix gate
+        run: pnpm verify:block-pages-toggle-matrix
+        env:
+          MOTION_METRICS_PATH: ${{ runner.temp }}/motion-metrics.jsonl
       # State branches the geometry matrices never enter: overlay mode,
       # inline<->overlay breakpoint crossing, explicit zoom, reduced motion.
       - name: Mode and state matrix gate
