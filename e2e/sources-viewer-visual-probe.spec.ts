@@ -77,9 +77,48 @@ test.describe("Sources Viewer pixel probe", () => {
           body: JSON.stringify({ stats, verdict }, null, 2),
           contentType: "application/json",
         });
-        failures.push(
-          ...verdict.failures.map((failure) => `${action}: ${failure}`),
+        const churnFailures = verdict.failures.filter((failure) =>
+          failure.includes("still churning"),
         );
+        failures.push(
+          ...verdict.failures
+            .filter((failure) => !failure.includes("still churning"))
+            .map((failure) => `${action}: ${failure}`),
+        );
+        if (churnFailures.length > 0) {
+          // Quiescence must EXIST, not arrive on schedule (rule 9 on the
+          // pixel axis): a loaded runner's full-scale re-raster can land
+          // more than 1.2s after the motion, straight into the capture's
+          // quiet tail. Re-capture a rest window — a real shimmer is still
+          // churning in it; a slow one-off settle has finished.
+          await page.waitForTimeout(1_500);
+          const stillFrames = await captureScreencastDuring(
+            page,
+            async () => {},
+            { settleMs: 1_200 },
+          );
+          const stillStats = await analyzeScreencastFrames(
+            page,
+            stillFrames,
+            SOURCES_DOCUMENT_REGION,
+          );
+          const maxStillDiff = Math.max(
+            0,
+            ...stillStats.slice(1).map((sample) => sample.meanAbsDiff),
+          );
+          if (maxStillDiff > 1.5) {
+            failures.push(
+              ...churnFailures.map(
+                (failure) =>
+                  `${action}: ${failure} (and a rest recapture still churns at ${maxStillDiff.toFixed(2)})`,
+              ),
+            );
+          } else {
+            console.log(
+              `${format.name} ${action}: late settle absorbed — rest recapture quiet (max ${maxStillDiff.toFixed(2)})`,
+            );
+          }
+        }
         await page.waitForTimeout(600);
       }
 
