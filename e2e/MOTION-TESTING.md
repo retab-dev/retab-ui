@@ -109,6 +109,18 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
    lands mid-flight and a pptx re-fit once read 605px before settling to
    exactly 0.0. In-flight corridors are different: those are sampled
    every frame by design.
+10. **A rAF-indexed flight probe starves with the main thread; sample on
+    a time axis.** The motion clock is time, so a synchronous stall at
+    motion start (the close toggle rasters the image at its new committed
+    scale) collapses the whole flight into one sample gap — a fully eased
+    slide once read as "motion never moved the frame" on CI (settleIndex
+    2 of 40 samples; ~180ms first gap at 4x throttle). Timestamp every
+    sample, score velocity per frame-length rather than raw per-sample
+    steps, and treat a flight that collapsed into a starved gap as
+    unobservable (retry the toggle) — but a collapse inside a
+    frame-length gap is a real teleport and must stay scoreable, since
+    a time-based motion cannot finish inside one 16ms frame.
+    Repro: `FAR_EDGE_CPU_THROTTLE=4` on the far-edge gate.
 
 ## Changing motion behavior intentionally
 
