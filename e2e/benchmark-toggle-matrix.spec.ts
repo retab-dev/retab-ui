@@ -150,6 +150,11 @@ type ScrollDepth = "zero" | "quarter" | "half" | "max" | number;
 // the four structural ones — for finding depth-specific anomalies like the
 // PDF page-boundary anchor miss (survey mode recommended).
 const SCROLL_STEPS = Number(process.env.MATRIX_SCROLL_STEPS ?? 0);
+// Hunt axis: MATRIX_ZOOM=N clicks "Zoom in" N times before the cells run.
+// Explicit zoom leaves the fit-width resolver for the zoom code path, and
+// zoomed geometry multiplies scrollHeight — the mode-state matrix gates
+// exactly one zoomed config; this sweeps them all (survey recommended).
+const ZOOM_STEPS = Number(process.env.MATRIX_ZOOM ?? 0);
 const SCROLLS: readonly ScrollDepth[] =
   SCROLL_STEPS > 1
     ? Array.from({ length: SCROLL_STEPS }, (_, i) => i / (SCROLL_STEPS - 1))
@@ -170,6 +175,23 @@ for (const format of FORMATS) {
       timeout: 60_000,
     });
     await page.waitForTimeout(1_500);
+
+    if (ZOOM_STEPS > 0) {
+      const zoomIn = page
+        .locator('[data-slot="file-viewer-root"]:visible')
+        .first()
+        .getByRole("button", { name: "Zoom in" });
+      if (await zoomIn.isVisible().catch(() => false)) {
+        for (let step = 0; step < ZOOM_STEPS; step += 1) {
+          if (!(await zoomIn.isEnabled().catch(() => false))) break;
+          await zoomIn.click();
+          await page.waitForTimeout(250);
+        }
+        await page.waitForTimeout(800);
+      } else {
+        console.log(`ZOOM ${format.id}: no zoom control — running unzoomed`);
+      }
+    }
 
     const failures: string[] = [];
     for (const scroll of SCROLLS) {

@@ -49,6 +49,11 @@ jobs:
       - name: DPR-1 trajectory matrix (raster rounding hunt)
         run: MATRIX_DPR=1 pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=chromium --workers=2
 
+      # Survey until the zoomed-pdf cycle velocity excess (pop 1.78-2.01,
+      # task_120dcca9) lands its fix; then flip to gate mode.
+      - name: Zoomed trajectory sweep (survey)
+        run: MATRIX_ZOOM=2 MATRIX_SURVEY=1 pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=chromium --workers=2
+
       - name: Motion baseline drift check
         run: |
           MOTION_METRICS_PATH="$RUNNER_TEMP/metrics.jsonl" pnpm verify:sources-viewer-toggle-matrix

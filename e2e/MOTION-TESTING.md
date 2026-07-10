@@ -57,6 +57,10 @@ Gate all three, always.
 - `MATRIX_DPR=1|3` — re-run the benchmark matrix at a different device
   pixel ratio; raster scaling and half-pixel rounding are dpr-sensitive
   and every default run is dpr2.
+- `MATRIX_ZOOM=N` — click "Zoom in" N times before the cells; explicit
+  zoom leaves the fit-width resolver for the zoom code path and
+  multiplies scrollHeight. First sweep found the zoomed-pdf cycle
+  velocity excess (pop ~2.0, tracked).
 - `--project=webkit` / `--project=firefox` — the trajectory matrices are
   engine-portable (18/18 clean on all three engines as of 2026-07-10); the
   scrollable-overflow-includes-transforms bug was engine behavior, so
