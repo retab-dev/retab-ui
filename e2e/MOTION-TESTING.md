@@ -59,8 +59,17 @@ Gate all three, always.
   and every default run is dpr2.
 - `MATRIX_ZOOM=N` — click "Zoom in" N times before the cells; explicit
   zoom leaves the fit-width resolver for the zoom code path and
-  multiplies scrollHeight. First sweep found the zoomed-pdf cycle
-  velocity excess (pop ~2.0, tracked).
+  multiplies scrollHeight. The "zoomed-pdf cycle excess" (pop ~2.0) this
+  lane first reported was misattributed twice over: the zoom clicks were
+  silently no-ops (two "Zoom in" buttons — header + document overlay —
+  and the strict-mode violation was swallowed by an isVisible catch), and
+  the pop was the kernel's click-anchored clock landing every toggle
+  leg's first paint ~16ms deep into the ease after the slide-start
+  commit. Only cycles scored it because only their sampling straddles the
+  click. Fixed by anchoring the motion clock to the first tick's rAF
+  frame time (rule 11, writer side). A genuinely zoomed PDF does not move
+  on sidebar toggles at all — fixed scale, no rebase, so its cells
+  legitimately read 0.0 everywhere.
 - `--project=webkit` / `--project=firefox` — the trajectory matrices are
   engine-portable (18/18 clean on all three engines as of 2026-07-10); the
   scrollable-overflow-includes-transforms bug was engine behavior, so
@@ -155,6 +164,18 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
     status` clean on viewer files, or wait. Budgets come from CI
     hardware besides (see the baseline section) — a local survey only
     ever scouts.
+13. **Verify the instrument's GEOMETRY before declaring a product bug.**
+    Three "serious product bugs" in one week were instrument-adjacent:
+    a touch gesture aimed at coordinates captured BEFORE the toggles
+    moved the pane ("touch permanently dead"); a zoom lever that was a
+    silent no-op (two "Zoom in" buttons — the strict-mode throw was
+    swallowed by an `isVisible().catch()` — so the sweep surveyed an
+    unzoomed world); and a scroller hidden in a shadow root (rule 6).
+    Before filing: re-derive the probe's coordinates/locators/containment
+    at the moment of the failing action, make every lever prove it
+    engaged (the zoom sweep now throws "lever did not engage"), and
+    treat a swallowed error as a finding in itself. Rule 4 checks that
+    the instrument reads; this rule checks that it points.
 
 ## Changing motion behavior intentionally
 

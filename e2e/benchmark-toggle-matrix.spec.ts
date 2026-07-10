@@ -184,17 +184,44 @@ for (const format of FORMATS) {
     await page.waitForTimeout(1_500);
 
     if (ZOOM_STEPS > 0) {
+      // Both the header FileViewerControls and the document's own controls
+      // overlay expose a "Zoom in" — an unscoped role query matches two
+      // buttons, and the strict-mode violation used to be swallowed by the
+      // isVisible catch below, silently running the sweep unzoomed.
       const zoomIn = page
         .locator('[data-slot="file-viewer-root"]:visible')
         .first()
-        .getByRole("button", { name: "Zoom in" });
+        .getByRole("button", { name: "Zoom in" })
+        .first();
       if (await zoomIn.isVisible().catch(() => false)) {
+        // Prove the lever ENGAGES (rule 13): this sweep once ran silently
+        // unzoomed and a whole investigation chased the misattributed
+        // numbers. Zoom that applied must change the frame's rendered
+        // width; a no-op throws instead of surveying the wrong world.
+        const widthBefore = (
+          await page.locator(format.frameSelector).first().boundingBox()
+        )?.width;
+        let clicked = 0;
         for (let step = 0; step < ZOOM_STEPS; step += 1) {
           if (!(await zoomIn.isEnabled().catch(() => false))) break;
           await zoomIn.click();
+          clicked += 1;
           await page.waitForTimeout(250);
         }
         await page.waitForTimeout(800);
+        const widthAfter = (
+          await page.locator(format.frameSelector).first().boundingBox()
+        )?.width;
+        if (
+          clicked > 0 &&
+          widthBefore != null &&
+          widthAfter != null &&
+          Math.abs(widthAfter - widthBefore) < 1
+        ) {
+          throw new Error(
+            `MATRIX_ZOOM lever did not engage for ${format.id}: frame width ${widthBefore.toFixed(1)} -> ${widthAfter.toFixed(1)} after ${clicked} zoom clicks`,
+          );
+        }
       } else {
         console.log(`ZOOM ${format.id}: no zoom control — running unzoomed`);
       }
@@ -245,9 +272,6 @@ for (const format of FORMATS) {
         await page.waitForTimeout(500);
         const line = `${format.id} scroll=${scrollLabel} ${action}: settle=${trace.settleDrift.toFixed(1)} corridor=${trace.corridor.toFixed(1)} excursion=${trace.excursion.toFixed(1)} settleX=${trace.settleDriftX.toFixed(1)} corridorX=${trace.corridorX.toFixed(1)} pop=${trace.popScoreX.toFixed(2)} settleMs=${trace.settleMs.toFixed(0)} (scroll ${trace.scrollBefore.toFixed(0)}->${trace.scrollAfter.toFixed(0)})`;
         console.log(`BMATRIX ${line}`);
-        if (action === "cycle") {
-          console.log(`CYCLEPROFILE ${format.id} (t/y/x): ${trace.profile}`);
-        }
         recordMotionMetric(
           `bmatrix:${format.id}:${scrollLabel}:${action}`,
           {
