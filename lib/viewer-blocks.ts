@@ -493,10 +493,11 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand(
       "split-consensus-diagram-horizontal-viewer-block",
     ),
-    docsHref: "/examples/split-consensus-diagram-horizontal",
+    docsHref: "/examples/split-consensus",
     viewHref: "/view/blocks/split-consensus-diagram-horizontal",
     previewHeightClassName: "h-[760px]",
     categories: ["primitives"],
+    isStandaloneTab: false,
   },
   {
     id: "split-consensus-diagram-vertical",
@@ -519,10 +520,11 @@ export const VIEWER_BLOCKS = [
     description:
       "The split benchmark diagram from Lukas Bjorkland's article, with GT, Split v1, Split v2, the PDF pane, and the same dark metrics table treatment.",
     command: getRegistryAddCommand("split-consensus-lukas-viewer-block"),
-    docsHref: "/examples/split-consensus-lukas",
+    docsHref: "/examples/split-consensus",
     viewHref: "/view/blocks/split-consensus-lukas",
     previewHeightClassName: "h-[760px]",
     categories: ["primitives"],
+    isStandaloneTab: false,
   },
   {
     id: "classify-consensus",
