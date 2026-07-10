@@ -112,8 +112,25 @@ jobs:
       # catches creep — any commit that MOVES a motion metric beyond the
       # run-to-run noise band owns that move explicitly (regenerate the
       # baseline with the change if intentional).
-      - name: Motion metric drift check
+      # Report-only until the baseline is calibrated on CI hardware: its
+      # first-ever CI execution (run 29059707754 — every prior run died at
+      # an earlier gate) drifted 90 metrics against the locally-regenerated
+      # baseline with a pure hardware signature (settleMs ~2x, corridors and
+      # pops uniformly smaller). Flip this blocking once a CI-sourced
+      # baseline (from the motion-metrics artifact below) is committed.
+      - name: Motion metric drift check (report-only)
         run: node scripts/compare-motion-baseline.mjs ${{ runner.temp }}/motion-metrics.jsonl
+        continue-on-error: true
+      # The metrics every matrix gate appended this run; a green run's
+      # artifact is the CI-hardware baseline candidate.
+      - name: Upload motion metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motion-metrics
+          path: ${{ runner.temp }}/motion-metrics.jsonl
+          retention-days: 14
+          if-no-files-found: ignore
       # The visual gate scores timing-sensitive budgets (main-thread, layout
       # shift) that 2-core CI runners can miss without a product defect.
       # Report-only until budgets are calibrated on CI hardware.
