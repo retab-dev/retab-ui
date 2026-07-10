@@ -6,6 +6,11 @@ import type {
   MarkdownGreenfieldDocument,
 } from "./markdown-greenfield-document";
 
+// The chunk reading column's max inline size (the old max-w-4xl, 56rem at
+// the 16px root). Shared with the surface motion resolver: the align
+// translate that hides the close-leg recenter must agree with the markup
+// about where the column's margin clamps.
+export const MARKDOWN_GREENFIELD_CHUNK_MAX_INLINE_SIZE = 896;
 const CHUNK_PADDING_X = 32;
 const DOCUMENT_PADDING_TOP = CHUNK_PADDING_X;
 const DOCUMENT_PADDING_BOTTOM = CHUNK_PADDING_X;

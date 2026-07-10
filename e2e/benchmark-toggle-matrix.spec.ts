@@ -135,15 +135,15 @@ const FORMATS: readonly MatrixFormat[] = [
   // (max-w-4xl, left-1/2 -translate-x-1/2): its X-observable is its
   // center, which legitimately recenters by half the sidebar delta
   // (rule 5) — start-align here would read the recenter as a 140px fault.
-  // KNOWN (2026-07-10, unmasked by this retracking): the CLOSE leg recenters
-  // in a single frame — the canvas commits the motion's TARGET width via
-  // minWidth at the click (layoutPolicy "target") and markdown registers no
-  // motion resolver to reproject it, so a widening pane snaps while a
-  // narrowing pane glides on the live width. Single-leg pop reads 0.00
-  // because the snap lands before the first post-click sample; the cycle
-  // leg's continuous sampling records it (pop ~6, ungated). Gate semantics
-  // here score the flight as observed today; the product fix is a separate
-  // change (align-derived translate resolver for the markdown surface).
+  // The close-leg snap this retracking unmasked (canvas commits the TARGET
+  // width via minWidth at the click, no motion resolver to reproject it —
+  // widening pane snapped the centered chunk in one frame while a narrowing
+  // pane glided) is FIXED: the markdown surface registers the align-derived
+  // translate-only resolver (file-viewer-fit-width-motion), so both legs
+  // now glide and close cells score like docx. The tracer's pre-click rest
+  // samples keep this class visible to single-leg pop — the snap used to
+  // land before the first post-click sample and read 0.00, with only the
+  // cycle leg's continuous sampling recording it (pop ~6).
   {
     id: "markdown",
     ready: '[data-slot="markdown-virtual-canvas"]',

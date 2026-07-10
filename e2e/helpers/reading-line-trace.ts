@@ -351,6 +351,7 @@ export async function traceReadingLineThroughToggle(
         }
       };
 
+      let activatedAt: number | null = null;
       if (cycles > 0) {
         // Accumulation detector: repeated full close+open cycles must return
         // the reading line to its origin — capture/restore pairs that lose a
@@ -367,6 +368,19 @@ export async function traceReadingLineThroughToggle(
         // path while this samples. Longer window to cover the lead-in.
         await sampleFrames(140);
       } else {
+        // Pre-click REST samples arm the velocity chain across the click
+        // itself. A click-synchronous teleport — layout committing the
+        // target position inside the toggle's own task — lands BEFORE the
+        // first post-click sample, so a trace that starts sampling at the
+        // click scores it pop=0.00: the whole travel sits between the
+        // (unsampled) rest reference and sample zero. The markdown
+        // close-leg recenter snap shipped through exactly that blind spot;
+        // only the cycle legs' continuous sampling ever recorded it. Rest
+        // frames are zero-velocity, so a clean flight's score is untouched
+        // while a snap now spans a sampled frame pair. settleMs is rebased
+        // to the click below so the lead-in doesn't read as flight time.
+        await sampleFrames(6);
+        activatedAt = performance.now();
         trigger.click();
         if (rapid) {
           await new Promise((resolve) => setTimeout(resolve, 60));
@@ -404,8 +418,12 @@ export async function traceReadingLineThroughToggle(
       // Scored only when the X travel is real (≥24px) — pop of a nothing
       // motion is sampling noise.
       const MOTION_DURATION_MS = 150;
+      // Flight time starts at the ACTIVATION, not the first sample: with
+      // pre-click rest samples in the buffer, times[0] predates the click
+      // by the whole lead-in.
+      const flightStart = activatedAt ?? times[0] ?? 0;
       let peakVelocityX = 0;
-      let lastMovingT = times[0] ?? 0;
+      let lastMovingT = flightStart;
       for (let index = 1; index < times.length; index += 1) {
         const dt = times[index]! - times[index - 1]!;
         if (dt <= 0) continue;
@@ -424,7 +442,7 @@ export async function traceReadingLineThroughToggle(
         travelX >= 24
           ? (peakVelocityX * MOTION_DURATION_MS) / (3 * travelX)
           : 0;
-      const settleMs = lastMovingT - (times[0] ?? 0);
+      const settleMs = Math.max(0, lastMovingT - flightStart);
 
       const t0 = times[0] ?? 0;
       const profile = positions

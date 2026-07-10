@@ -2,7 +2,11 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
+
 import { FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT } from "./file-viewer-elements";
+import { createFileViewerAlignTranslateSurfaceMotionResolver } from "./file-viewer-fit-width-motion";
 import {
   resolveFileViewerRendererLayoutInlineSize,
   type FileViewerDocumentAlign,
@@ -11,6 +15,7 @@ import {
   useOptionalFileViewerRendererEnvironment,
   useOptionalFileViewerRendererFrame,
 } from "./file-viewer-renderer-frame";
+import { MARKDOWN_GREENFIELD_CHUNK_MAX_INLINE_SIZE } from "./markdown-greenfield-layout";
 
 export type MarkdownGreenfieldRendererFrame = {
   setDocumentSurfaceElement: React.RefCallback<HTMLDivElement>;
@@ -37,7 +42,8 @@ export function useMarkdownGreenfieldRendererFrame({
       rendererFrame,
     }) ?? fallbackViewportInlineSize;
   const surfaceRef = React.useRef<HTMLDivElement | null>(null);
-  const surfaceCleanupRef = React.useRef<(() => void) | null>(null);
+  const [surfaceElement, setSurfaceElement] =
+    React.useState<HTMLDivElement | null>(null);
   const handleBeforeLayoutMotion = React.useCallback(() => {
     onBeforeLayoutMotion();
   }, [onBeforeLayoutMotion]);
@@ -49,20 +55,56 @@ export function useMarkdownGreenfieldRendererFrame({
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
-      surfaceCleanupRef.current?.();
-      surfaceCleanupRef.current = null;
       surfaceRef.current = element;
+      setSurfaceElement((previous) =>
+        previous === element ? previous : element,
+      );
       if (!element) return;
-      surfaceCleanupRef.current = registerDocumentSurface({
-        element,
-      });
       element.addEventListener(
         FILE_VIEWER_BEFORE_LAYOUT_MOTION_EVENT,
         handleBeforeLayoutMotion,
       );
     },
-    [handleBeforeLayoutMotion, registerDocumentSurface],
+    [handleBeforeLayoutMotion],
   );
+  // Commit-then-relax's relax half. The canvas commits the motion's TARGET
+  // width via minWidth from the first sliding frame, so on a widening pane
+  // the centered chunks would recenter synchronously with the click; the
+  // resolver translates them back to the live width's align margin and eases
+  // to identity. The chunk column is CLAMPED (max inline size), not
+  // fit-width — its content width does not scale with the pane — so the
+  // reprojection is translate-only, never a scale.
+  //
+  // The align is the CHUNK COLUMN's, not rendererFrame.align: the shell
+  // declares the document frame "start" (inert — the frame is w-full), while
+  // the column centers itself inside the canvas by its own markup (left-1/2
+  // -translate-x-1/2, physical and direction-independent). Deriving from the
+  // shell align here made the resolver a silent no-op and the close-leg snap
+  // survived it.
+  const resolveSurfaceMotionStyle = React.useMemo(
+    () =>
+      createFileViewerAlignTranslateSurfaceMotionResolver({
+        align: "center",
+        direction: rendererFrame.direction,
+        maxStageInlineSize: MARKDOWN_GREENFIELD_CHUNK_MAX_INLINE_SIZE,
+      }),
+    [rendererFrame.direction],
+  );
+  const documentSurfaceKey = surfaceElement
+    ? joinEffectKey([
+        "markdown-document-surface",
+        surfaceElement,
+        registerDocumentSurface,
+        resolveSurfaceMotionStyle,
+      ])
+    : null;
+  useKeyedLayoutEffect(documentSurfaceKey, () => {
+    if (!surfaceElement) return;
+    return registerDocumentSurface({
+      element: surfaceElement,
+      resolveMotionStyle: resolveSurfaceMotionStyle,
+    });
+  });
 
   return React.useMemo(
     () => ({

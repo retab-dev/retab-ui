@@ -15,6 +15,7 @@ import {
 import { useMarkdownGreenfieldDocument } from "./markdown-greenfield-document-store";
 import {
   layoutMarkdownGreenfieldDocument,
+  MARKDOWN_GREENFIELD_CHUNK_MAX_INLINE_SIZE,
   MARKDOWN_GREENFIELD_LAYOUT_POLICY_VERSION,
   type MarkdownGreenfieldChunkFrame,
   type MarkdownGreenfieldMeasurementContext,
@@ -1045,7 +1046,7 @@ function ChunkFrame({
           : `Markdown lines ${frame.sourceStartLine} to ${frame.sourceEndLine}`
       }
       className={[
-        "absolute left-1/2 w-full max-w-4xl -translate-x-1/2 px-8 py-1",
+        "absolute left-1/2 w-full -translate-x-1/2 px-8 py-1",
       ].join(" ")}
       data-markdown-chunk=""
       data-markdown-highlighted={highlighted ? "" : undefined}
@@ -1058,6 +1059,7 @@ function ChunkFrame({
       data-source-start-line={frame.sourceStartLine}
       role={highlighted ? "region" : undefined}
       style={{
+        maxWidth: MARKDOWN_GREENFIELD_CHUNK_MAX_INLINE_SIZE,
         top: frame.top - renderedTop,
         ...(highlighted ? MARKDOWN_GREENFIELD_HIGHLIGHT_STYLE : null),
       }}

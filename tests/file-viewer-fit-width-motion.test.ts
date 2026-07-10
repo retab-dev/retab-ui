@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  createFileViewerAlignTranslateSurfaceMotionResolver,
   createFileViewerFitWidthSurfaceMotionResolver,
 } from "@/registry/new-york-v4/ui/file-viewer-fit-width-motion";
 import { DEFAULT_FILE_VIEWER_MOTION_FRAME } from "@/registry/new-york-v4/ui/file-viewer-motion-kernel";
@@ -186,5 +187,116 @@ describe("file viewer fit-width motion", () => {
     });
 
     expect(style?.transform).toBe("");
+  });
+});
+
+// The clamped-column resolver (markdown reading column): the stage's inline
+// size is min(canvas, max-width), so a pane width change moves only the
+// align margin — the reprojection is a translate, never a scale. The canvas
+// commits the TARGET width via minWidth, so the CLOSE leg (widening pane)
+// is the leg that engages it; the OPEN leg's canvas tracks the live width
+// and the resolver must stay identity there.
+describe("file viewer align-translate motion (clamped column)", () => {
+  const makeResolver = (direction: "ltr" | "rtl" = "ltr") =>
+    createFileViewerAlignTranslateSurfaceMotionResolver({
+      align: "center",
+      direction,
+      maxStageInlineSize: 896,
+    });
+
+  it("cancels the close-leg recenter at the first sliding frame", () => {
+    // Closing: pane 1160 → 1440; the canvas already lays out at 1440, so the
+    // 896 column's settled margin is (1440−896)/2 = 272 while the reader
+    // still sees a 1160 pane whose margin is (1160−896)/2 = 132. The first
+    // frame must translate the full −140 half-delta back.
+    const style = makeResolver()({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 1160,
+      layoutInlineSize: 1160,
+      phase: "sliding",
+      toInlineSize: 1440,
+    });
+
+    expect(style?.transform).toBe("translate3d(-140px, 0px, 0)");
+    expect(style?.willChange).toBe("transform");
+  });
+
+  it("terminates on identity as the live width reaches the target", () => {
+    const style = makeResolver()({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 1160,
+      layoutInlineSize: 1440,
+      phase: "sliding",
+      toInlineSize: 1440,
+    });
+
+    expect(style?.transform).toBe("");
+  });
+
+  it("stays identity on the open leg (canvas tracks the live width)", () => {
+    // Opening: pane 1440 → 1160. The canvas lays out at max(live, target) =
+    // live, so the chunk margin already follows the live width every frame —
+    // the glide is layout-owned and the resolver must not double-move it.
+    const style = makeResolver()({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 1440,
+      layoutInlineSize: 1300,
+      phase: "sliding",
+      toInlineSize: 1160,
+    });
+
+    expect(style?.transform).toBe("");
+  });
+
+  it("clears every motion style outside the sliding phase", () => {
+    for (const phase of ["settling", "idle"] as const) {
+      const style = makeResolver()({
+        ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+        fromInlineSize: 1160,
+        layoutInlineSize: 1200,
+        phase,
+        toInlineSize: 1440,
+      });
+
+      expect(style?.transform).toBe("");
+      expect(style?.transformOrigin).toBe("");
+      expect(style?.willChange).toBe("");
+    }
+  });
+
+  it("pins the column to the pane's start edge while it overflows", () => {
+    // Mid-close on a narrow pane: live 800 < column 896 ≤ canvas 1000. The
+    // ideal rest state at 800 pins the column to the start edge; the layout
+    // places it at the canvas margin (1000−896)/2 = 52 → translate −52.
+    const style = makeResolver()({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 720,
+      layoutInlineSize: 800,
+      phase: "sliding",
+      toInlineSize: 1000,
+    });
+
+    expect(style?.transform).toBe("translate3d(-52px, 0px, 0)");
+  });
+
+  it("compensates the RTL canvas overflow pinning on the close leg", () => {
+    // In RTL an overflowing canvas pins its RIGHT edge to the pane, hanging
+    // the overflow off the left: canvas left = live − canvas = −280. The
+    // column's pane-space left is −280 + 272 = −8, the live margin is 132 →
+    // translate +140 (equal and opposite to LTR's −140).
+    const frame = {
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 1160,
+      layoutInlineSize: 1160,
+      phase: "sliding" as const,
+      toInlineSize: 1440,
+    };
+
+    expect(makeResolver("ltr")(frame)?.transform).toBe(
+      "translate3d(-140px, 0px, 0)",
+    );
+    expect(makeResolver("rtl")(frame)?.transform).toBe(
+      "translate3d(140px, 0px, 0)",
+    );
   });
 });

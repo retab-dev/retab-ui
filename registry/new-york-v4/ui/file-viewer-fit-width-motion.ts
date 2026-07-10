@@ -70,6 +70,104 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
   };
 }
 
+// Commit-then-relax for a CLAMPED reading column rather than a fit-width
+// stage: the stage's inline size is min(canvas, maxStageInlineSize), so it
+// does not scale with the pane — the only thing a width change moves is the
+// align margin. The canvas commits the motion's TARGET width from the first
+// sliding frame (minWidth under layoutPolicy "target"), which means a
+// widening pane's chunks land at the settled margin synchronously with the
+// click; this resolver reprojects them back to the live width's margin with
+// a translate that terminates on identity. A narrowing pane never engages it
+// (the canvas tracks the live width above its minWidth, so live and settled
+// margins agree) — exactly the leg that already glides on layout.
+export function createFileViewerAlignTranslateSurfaceMotionResolver({
+  align,
+  direction = "ltr",
+  maxStageInlineSize,
+}: {
+  align: FileViewerDocumentAlign;
+  direction?: FileViewerInlineDirection;
+  /** The column's max inline size (the chunk's max-width, in px). */
+  maxStageInlineSize: number;
+}): FileViewerDocumentSurfaceMotionResolver {
+  return (frame) => {
+    if (frame.phase !== "sliding") {
+      return {
+        transform: "",
+        transformOrigin: "",
+        willChange: "",
+      };
+    }
+
+    return {
+      transform: getFileViewerAlignTranslateSurfaceMotionTransform({
+        align,
+        direction,
+        frame,
+        maxStageInlineSize,
+      }),
+      transformOrigin: "0px 0px",
+      willChange: "transform",
+    };
+  };
+}
+
+function getFileViewerAlignTranslateSurfaceMotionTransform({
+  align,
+  direction,
+  frame,
+  maxStageInlineSize,
+}: {
+  align: FileViewerDocumentAlign;
+  direction: FileViewerInlineDirection;
+  frame: FileViewerMotionFrame;
+  maxStageInlineSize: number;
+}) {
+  if (
+    !Number.isFinite(maxStageInlineSize) ||
+    maxStageInlineSize <= 0 ||
+    frame.layoutInlineSize <= 0 ||
+    frame.toInlineSize <= 0
+  ) {
+    return "";
+  }
+
+  // The canvas lays out at max(live, target): minWidth holds the committed
+  // target under a still-narrow pane, and a pane wider than the target just
+  // fills. The stage (reading column) centers/aligns INSIDE the canvas, and
+  // an overflowing canvas itself pins to the pane's start edge — left in
+  // LTR, right in RTL — so the stage's pane-space position carries the
+  // canvas offset too.
+  const canvasInlineSize = Math.max(
+    frame.layoutInlineSize,
+    frame.toInlineSize,
+  );
+  const stageInlineSize = Math.min(canvasInlineSize, maxStageInlineSize);
+  const canvasInlineOffset =
+    direction === "rtl"
+      ? Math.min(0, frame.layoutInlineSize - canvasInlineSize)
+      : 0;
+  const settledStageLeft =
+    canvasInlineOffset +
+    getFileViewerStageInlineMargin({
+      align,
+      availableInlineSize: canvasInlineSize,
+      direction,
+      stageInlineSize,
+    });
+  const liveStageLeft = getFileViewerStageInlineMargin({
+    align,
+    availableInlineSize: frame.layoutInlineSize,
+    direction,
+    stageInlineSize,
+  });
+  const translateX = liveStageLeft - settledStageLeft;
+
+  if (Math.abs(translateX) <= 0.001) return "";
+
+  return `translate3d(${formatFileViewerMotionPixel(translateX)}px, 0px, 0)`;
+}
+
 export function getFileViewerFitWidthScale({
   availableInlineSize,
   contentInlineSize,
