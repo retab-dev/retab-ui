@@ -56,6 +56,24 @@ const FORMATS = [
     markerRatio: 0.2,
     align: "center" as const,
   },
+  // The text-family renderers: start-aligned virtual canvases, and the
+  // richest selection targets (real text under the cursor everywhere).
+  {
+    id: "markdown",
+    ready: '[data-slot="markdown-virtual-canvas"]',
+    frameSelector: '[data-slot="markdown-virtual-canvas"]',
+    trackSelector: '[data-slot="markdown-virtual-canvas"]',
+    markerRatio: 0,
+    align: "start" as const,
+  },
+  {
+    id: "text",
+    ready: '[data-slot="text-virtual-canvas"]',
+    frameSelector: '[data-slot="text-virtual-canvas"]',
+    trackSelector: '[data-slot="text-virtual-canvas"]',
+    markerRatio: 0,
+    align: "start" as const,
+  },
 ] as const;
 
 for (const format of FORMATS) {
@@ -240,6 +258,17 @@ for (const format of FORMATS) {
       .locator('[data-slot="file-viewer-root"]:visible')
       .first();
     const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
+
+    // The text-family virtual panes have NO native scroller — keyboard
+    // scrolling doesn't work there at all (tracked a11y gap: PageDown,
+    // arrows, Home/End are dead; only wheel scrolls, and markdown shows
+    // the accessible pattern with its tabindex=0 viewport). The conflict
+    // contract is inapplicable until that lands; skip loudly, not pass.
+    const hasNativeScroller = (await readScroll()).top != null;
+    test.skip(
+      !hasNativeScroller,
+      "no native scroller — keyboard scrolling unsupported (tracked a11y gap)",
+    );
 
     // Baseline toggle without keyboard input.
     await trigger.click();

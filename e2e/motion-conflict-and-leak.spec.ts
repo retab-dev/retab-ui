@@ -59,6 +59,25 @@ const FORMATS = [
     markerRatio: 0,
     align: "center" as const,
   },
+  // The text-family renderers virtualize with transform-positioned line
+  // windows — a different scroll consumer than the page/slide formats,
+  // so their two-writer and round-trip behavior is not implied by them.
+  {
+    id: "markdown",
+    ready: '[data-slot="markdown-virtual-canvas"]',
+    frameSelector: '[data-slot="markdown-virtual-canvas"]',
+    trackSelector: '[data-slot="markdown-virtual-canvas"]',
+    markerRatio: 0,
+    align: "start" as const,
+  },
+  {
+    id: "text",
+    ready: '[data-slot="text-virtual-canvas"]',
+    frameSelector: '[data-slot="text-virtual-canvas"]',
+    trackSelector: '[data-slot="text-virtual-canvas"]',
+    markerRatio: 0,
+    align: "start" as const,
+  },
 ] as const;
 
 async function readScroll(
@@ -99,6 +118,16 @@ for (const format of FORMATS) {
       .locator('[data-slot="file-viewer-root"]:visible')
       .first();
     const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
+
+    // The text-family virtual panes have no native scroller to read — the
+    // scroll-conflict contract needs the virtual-scroll driver (tracked)
+    // before it can measure them. Skip loudly, not pass.
+    const scrollReadable =
+      (await readScroll(page, format.frameSelector)) != null;
+    test.skip(
+      !scrollReadable,
+      "no native scroller — needs the virtual-scroll probe driver",
+    );
 
     // Baseline: a clean toggle from the same state — where the rebase alone
     // puts the scroll.
