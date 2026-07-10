@@ -646,7 +646,9 @@ describe("fixed grid viewport shell", () => {
     const viewport = ref.mock.calls[0]?.[0] as HTMLDivElement;
     expect(viewport).toBeInstanceOf(HTMLDivElement);
     expect(viewport.dataset.slot).toBe("shared-grid-body");
-    expect(viewport.className).toBe("absolute inset-0 overflow-auto");
+    expect(viewport.className).toBe(
+      "absolute inset-0 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+    );
     expect(viewport.getAttribute("role")).toBe("grid");
     expect(viewport.getAttribute("aria-label")).toBe("Shared grid");
     expect(viewport.tabIndex).toBe(0);

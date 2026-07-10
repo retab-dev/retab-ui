@@ -16,7 +16,7 @@ export interface FixedGridViewportProps
 export function FixedGridViewport({
   scrollRef,
   dataSlot,
-  className = "absolute inset-0 overflow-auto",
+  className = "absolute inset-0 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
   children,
   ...props
 }: FixedGridViewportProps) {

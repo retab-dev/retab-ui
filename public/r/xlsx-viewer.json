@@ -137,7 +137,7 @@
     },
     {
       "path": "registry/new-york-v4/ui/fixed-grid-viewport.tsx",
-      "content": "\"use client\";\n\nimport * as React from \"react\";\n\nexport interface FixedGridViewportRefs {\n  scrollElement: HTMLDivElement | null;\n}\n\nexport interface FixedGridViewportProps\n  extends Omit<React.HTMLAttributes<HTMLDivElement>, \"children\"> {\n  scrollRef: React.Ref<HTMLDivElement>;\n  dataSlot: string;\n  children: React.ReactNode;\n}\n\nexport function FixedGridViewport({\n  scrollRef,\n  dataSlot,\n  className = \"absolute inset-0 overflow-auto\",\n  children,\n  ...props\n}: FixedGridViewportProps) {\n  return (\n    <div ref={scrollRef} data-slot={dataSlot} className={className} {...props}>\n      {children}\n    </div>\n  );\n}\n",
+      "content": "\"use client\";\n\nimport * as React from \"react\";\n\nexport interface FixedGridViewportRefs {\n  scrollElement: HTMLDivElement | null;\n}\n\nexport interface FixedGridViewportProps\n  extends Omit<React.HTMLAttributes<HTMLDivElement>, \"children\"> {\n  scrollRef: React.Ref<HTMLDivElement>;\n  dataSlot: string;\n  children: React.ReactNode;\n}\n\nexport function FixedGridViewport({\n  scrollRef,\n  dataSlot,\n  className = \"absolute inset-0 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset\",\n  children,\n  ...props\n}: FixedGridViewportProps) {\n  return (\n    <div ref={scrollRef} data-slot={dataSlot} className={className} {...props}>\n      {children}\n    </div>\n  );\n}\n",
       "type": "registry:ui",
       "target": "@ui/fixed-grid-viewport.tsx"
     },

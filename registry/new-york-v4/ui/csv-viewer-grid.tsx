@@ -328,7 +328,12 @@ export const CsvGrid = React.forwardRef<CsvGridHandle, CsvGridProps>(
             enabled={shouldIndexNativeFind}
             maxIndexedCells={CSV_NATIVE_FIND_MAX_INDEXED_CELLS}
           />
-          <FixedGridViewport scrollRef={setViewportRef} dataSlot="csv-body">
+          <FixedGridViewport
+            scrollRef={setViewportRef}
+            dataSlot="csv-body"
+            aria-label={CSV_TABLE_LABEL}
+            tabIndex={0}
+          >
             <div
               style={getFixedGridCanvasStyle({
                 width: totalWidth,

@@ -238,10 +238,17 @@ for (const format of FORMATS) {
             '[data-slot="file-viewer-root"]',
           ),
         ).find((candidate) => candidate.getBoundingClientRect().width > 0)!;
-        const frame = root.querySelector<HTMLElement>(frameSelector);
-        const scroller = Array.from(
-          root.querySelectorAll<HTMLElement>("*"),
-        ).find(
+        // Pierce shadow roots — the csv/xlsx grids host their scroller
+        // inside a style-isolation shadow scope where querySelectorAll
+        // cannot see it.
+        const collect = (node: ParentNode): HTMLElement[] =>
+          Array.from(node.querySelectorAll<HTMLElement>("*")).flatMap((el) =>
+            el.shadowRoot ? [el, ...collect(el.shadowRoot)] : [el],
+          );
+        const everything = collect(root);
+        const frame =
+          everything.find((el) => el.matches(frameSelector)) ?? null;
+        const scroller = everything.find(
           (el) =>
             el.scrollHeight > el.clientHeight + 4 &&
             /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
@@ -259,15 +266,16 @@ for (const format of FORMATS) {
       .first();
     const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
 
-    // The text-family virtual panes have NO native scroller — keyboard
-    // scrolling doesn't work there at all (tracked a11y gap: PageDown,
-    // arrows, Home/End are dead; only wheel scrolls, and markdown shows
-    // the accessible pattern with its tabindex=0 viewport). The conflict
-    // contract is inapplicable until that lands; skip loudly, not pass.
-    const hasNativeScroller = (await readScroll()).top != null;
+    // Every format has a native scroller (the text family scrolls a
+    // scroll-area viewport that arms tabindex=0 once content overflows;
+    // the csv/xlsx grids scroll an overflow-auto viewport inside their
+    // shadow scope). But a sample that fits the pane never overflows —
+    // there is nothing to scroll and the conflict contract is vacuous
+    // (today: the 5-line text sample). Skip loudly, not pass.
+    const hasOverflowingScroller = (await readScroll()).top != null;
     test.skip(
-      !hasNativeScroller,
-      "no native scroller — keyboard scrolling unsupported (tracked a11y gap)",
+      !hasOverflowingScroller,
+      "document does not overflow the pane — nothing to keyboard-scroll",
     );
 
     // Baseline toggle without keyboard input.
@@ -313,6 +321,117 @@ for (const format of FORMATS) {
         cleanlyIgnored || cleanlyApplied,
         `mid-flight PageDown neither ignored nor applied: ${preserved!.toFixed(1)}px vs a rest-state step of ${keyDelta.toFixed(1)}px`,
       ).toBe(true);
+    }
+  });
+}
+
+// The grid renderers (csv, xlsx) scroll a native overflow-auto viewport
+// hosted inside a style-isolation shadow scope. Keyboard users must be
+// able to reach that viewport with Tab (tabindex=0 — the pane holds no
+// other guaranteed tab stop) and drive it with PageDown/End/Home. This
+// caught csv shipping its viewport with no tabindex: mouse users could
+// click-then-PageDown (the click sets the browser's scroll target), but
+// keyboard-only users had no way in.
+const GRID_FORMATS = [
+  { id: "csv", viewportSlot: "csv-body", ready: '[data-slot="csv-cell"]' },
+  {
+    id: "xlsx",
+    viewportSlot: "xlsx-body",
+    ready: '[data-slot="xlsx-row-window"]',
+  },
+] as const;
+
+for (const format of GRID_FORMATS) {
+  test(`${format.id} grid viewport is keyboard-reachable and key-scrollable`, async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await page.locator(`[data-benchmark-format-option="${format.id}"]`).click();
+    // Playwright locators pierce shadow roots; the evaluate probes below
+    // must walk shadowRoot boundaries by hand.
+    await expect(page.locator(format.ready).first()).toBeVisible({
+      timeout: 60_000,
+    });
+    await page.waitForTimeout(1_500);
+
+    const readViewport = () =>
+      page.evaluate((viewportSlot) => {
+        const collect = (node: ParentNode): HTMLElement[] =>
+          Array.from(node.querySelectorAll<HTMLElement>("*")).flatMap((el) =>
+            el.shadowRoot ? [el, ...collect(el.shadowRoot)] : [el],
+          );
+        const viewport = collect(document).find(
+          (el) => el.getAttribute("data-slot") === viewportSlot,
+        );
+        if (!viewport) return null;
+        const active = (() => {
+          let current: Element | null = document.activeElement;
+          while (current?.shadowRoot?.activeElement) {
+            current = current.shadowRoot.activeElement;
+          }
+          return current;
+        })();
+        return {
+          tabindex: viewport.getAttribute("tabindex"),
+          top: viewport.scrollTop,
+          max: viewport.scrollHeight - viewport.clientHeight,
+          viewportHeight: viewport.clientHeight,
+          hasFocus: active === viewport,
+        };
+      }, format.viewportSlot);
+
+    const initial = await readViewport();
+    expect(initial, "grid viewport not found").not.toBeNull();
+    console.log(`GRIDKEY ${format.id} initial:`, JSON.stringify(initial));
+    expect(
+      initial!.tabindex,
+      "grid viewport is not Tab-reachable (tabindex must be 0)",
+    ).toBe("0");
+    expect(
+      initial!.max,
+      "sample does not overflow the pane — keyboard-scroll probe invalid",
+    ).toBeGreaterThan(50);
+
+    // Reach the pane by keyboard alone: focus it, then drive with keys.
+    await page.evaluate((viewportSlot) => {
+      const collect = (node: ParentNode): HTMLElement[] =>
+        Array.from(node.querySelectorAll<HTMLElement>("*")).flatMap((el) =>
+          el.shadowRoot ? [el, ...collect(el.shadowRoot)] : [el],
+        );
+      collect(document)
+        .find((el) => el.getAttribute("data-slot") === viewportSlot)
+        ?.focus();
+    }, format.viewportSlot);
+    const focused = await readViewport();
+    expect(focused!.hasFocus, "grid viewport did not take focus").toBe(true);
+
+    await page.keyboard.press("PageDown");
+    await page.waitForTimeout(400);
+    const afterPageDown = await readViewport();
+    await page.keyboard.press("End");
+    await page.waitForTimeout(400);
+    const afterEnd = await readViewport();
+    await page.keyboard.press("Home");
+    await page.waitForTimeout(400);
+    const afterHome = await readViewport();
+
+    console.log(
+      `GRIDKEY ${format.id}: pageDown=${afterPageDown!.top} end=${afterEnd!.top}/${afterEnd!.max} home=${afterHome!.top}`,
+    );
+    if (!SURVEY) {
+      expect(
+        afterPageDown!.top,
+        "PageDown did not scroll the focused grid viewport",
+      ).toBeGreaterThan(50);
+      expect(
+        afterEnd!.top,
+        "End did not reach the bottom of the grid",
+      ).toBeGreaterThanOrEqual(afterEnd!.max - 4);
+      expect(
+        afterHome!.top,
+        "Home did not return to the top of the grid",
+      ).toBeLessThanOrEqual(4);
     }
   });
 }

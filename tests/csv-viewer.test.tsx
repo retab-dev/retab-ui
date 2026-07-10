@@ -546,6 +546,31 @@ describe("CsvViewer", () => {
     ).toEqual(["2", "3", "4"]);
   });
 
+  it("exposes a keyboard-reachable scroll viewport", () => {
+    const { container } = render(
+      <CsvViewer
+        source={{
+          kind: "table",
+          table: {
+            columns: ["a", "b"],
+            rows: [["1", "2"]],
+          },
+        }}
+        controls={false}
+      />,
+    );
+
+    // Keyboard-only users scroll the grid through its native viewport;
+    // without a real tab stop the pane is mouse-wheel-only (xlsx-grid
+    // carries the same contract on its own viewport).
+    const viewport = container.querySelector<HTMLDivElement>(
+      '[data-slot="csv-body"]',
+    );
+    expect(viewport).toBeTruthy();
+    expect(viewport?.tabIndex).toBe(0);
+    expect(viewport?.getAttribute("aria-label")).toBe("CSV data");
+  });
+
   it("virtualizes large tables while preserving full row counts", () => {
     const rows = Array.from({ length: 250 }, (_, index) => [
       String(index + 1),
