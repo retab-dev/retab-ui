@@ -77,9 +77,12 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
 1. **Track the element under the reading line, never a virtualization
    wrapper.** Window churn (pages mounting/unmounting) reads as content
    drift. Pick the page/frame/slide containing the marker; re-resolve it
-   by identity key (`data-page`/`data-frame`/`data-slide`) across keyed
-   remounts; a detached node's zero-rect at the origin reads as a phantom
-   full-viewport excursion.
+   by identity key (`data-page`/`data-frame`/`data-slide`, plus
+   `data-source-line` for text lines and `aria-rowindex` for grid rows)
+   across keyed remounts; a detached node's zero-rect at the origin reads
+   as a phantom full-viewport excursion. Recycled-pool renderers (text
+   lines, csv/xlsx rows) reassign a node while it stays CONNECTED — check
+   the identity attribute every sample, not just connectedness.
 2. **Probe the line the format actually pins.** Image and the
    fraction-rebase formats pin the viewport top; DOCX and PDF pin the
    reading marker 20% down. At scroll 0 every format pins the top (the
@@ -98,9 +101,19 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
 5. **A start-aligned pane's X-observable is its left edge; a centered
    document's is its center.** A start-aligned container's center
    displaces with the pane width by construction — not a defect.
-6. **Scrollerless panes** (transform-virtualized grids/canvases) have no
-   marker in scroll space; their reference is their own initial screen
-   top.
+6. **"Scrollerless" is a verdict, not an observation.** Both causes of a
+   missing scroller turned out to be probe blindness, and each silently
+   degenerated every text/csv/xlsx depth cell to scroll=zero for the
+   suite's whole life: the grids host a perfectly native overflow-auto
+   viewport inside their style-isolation shadow root, NESTED INSIDE the
+   tracked window element (invisible to light-DOM queries and to
+   `Node.contains`, which does not cross shadow boundaries — pierce
+   shadow roots and check composed containment in both directions); and
+   the old 5-line text sample simply fit its pane, leaving nothing to
+   scroll (rule 3's degenerate case baked into the fixture). A pane that
+   truly has no scroller keeps its own initial screen top as the
+   reference — and a matrix depth cell that cannot scroll must FAIL, not
+   `continue` (the benchmark matrix now does).
 7. **Zero samples must throw, never pass.** A tracker that resolves
    nothing scores a perfect run otherwise.
 8. **Pixel metrics are noisy; DOM metrics are deterministic.** Calibrate

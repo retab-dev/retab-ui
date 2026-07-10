@@ -178,12 +178,20 @@ for (const format of FORMATS) {
     await page.waitForTimeout(600);
 
     // Select a word in the document (dblclick), snapshot the selected text.
+    // A single fixed probe point is a content lottery — prose documents
+    // have blank lines and section gaps, and one landing under the probe
+    // reads as "no selectable text" and silently skips the gate. Walk a
+    // few line-heights down until a dblclick actually takes.
     const target = page.locator(format.trackSelector).first();
-    await target.dblclick({ position: { x: 200, y: 120 } });
-    await page.waitForTimeout(200);
-    const before = await page.evaluate(
-      () => window.getSelection()?.toString() ?? "",
-    );
+    let before = "";
+    for (const yOffset of [120, 144, 168, 192, 240]) {
+      await target.dblclick({ position: { x: 200, y: yOffset } });
+      await page.waitForTimeout(200);
+      before = await page.evaluate(
+        () => window.getSelection()?.toString() ?? "",
+      );
+      if (before.trim().length > 0) break;
+    }
     // The image canvas has no selectable text — the invariant is vacuous
     // there; only score formats where a selection actually took.
     test.skip(

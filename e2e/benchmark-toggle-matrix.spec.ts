@@ -102,11 +102,18 @@ const FORMATS: readonly MatrixFormat[] = [
     markerRatio: 0.2,
     align: "center",
   },
+  // The grid and text formats track a CONTENT row/line, not the grid or
+  // canvas element: those are the fixed virtualization windows, whose rect
+  // never moves with virtual scroll (probe rule 1), so window-tracked depth
+  // cells would measure nothing. Rows carry aria-rowindex and text lines
+  // data-source-line; the tracer re-resolves recycled pool nodes by that
+  // identity. Their real scroller lives behind the style-isolation shadow
+  // root — the tracer's deep lookup finds it.
   {
     id: "xlsx",
     ready: '[data-slot="xlsx-grid"]',
     frameSelector: '[data-slot="xlsx-grid"]',
-    trackSelector: '[data-slot="xlsx-grid"]',
+    trackSelector: '[data-slot="xlsx-row"]',
     markerRatio: 0,
     align: "start",
   },
@@ -114,7 +121,7 @@ const FORMATS: readonly MatrixFormat[] = [
     id: "csv",
     ready: '[data-slot="csv-grid"]',
     frameSelector: '[data-slot="csv-grid"]',
-    trackSelector: '[data-slot="csv-grid"]',
+    trackSelector: '[data-slot="csv-row"]',
     markerRatio: 0,
     align: "start",
   },
@@ -138,7 +145,7 @@ const FORMATS: readonly MatrixFormat[] = [
     id: "text",
     ready: '[data-slot="text-virtual-canvas"]',
     frameSelector: '[data-slot="text-virtual-canvas"]',
-    trackSelector: '[data-slot="text-virtual-canvas"]',
+    trackSelector: '[data-slot="text-line"]',
     markerRatio: 0,
     align: "start",
   },
@@ -202,7 +209,21 @@ for (const format of FORMATS) {
       );
       const scrollLabel =
         typeof scroll === "number" ? scroll.toFixed(2) : scroll;
-      if (!scrolled) continue;
+      if (!scrolled) {
+        // A depth cell that cannot scroll is a coverage hole, not a pass —
+        // this exact silent `continue` hid the text/csv/xlsx zero-only gap
+        // for the suite's whole life (a one-viewport text fixture plus the
+        // grids' shadow-hidden scroller). Every benchmark fixture overflows
+        // at this viewport by construction now, so a false return means a
+        // fixture shrank or the scroller lookup broke. Fail loudly.
+        console.log(`BMATRIX ${format.id} scroll=${scrollLabel}: UNSCROLLABLE`);
+        if (scroll !== "zero" && scroll !== 0) {
+          failures.push(
+            `${format.id} scroll=${scrollLabel}: pane did not scroll — the fixture no longer overflows or the scroller lookup regressed`,
+          );
+        }
+        continue;
+      }
       await page.waitForTimeout(600);
 
       const actions =

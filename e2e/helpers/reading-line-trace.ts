@@ -57,6 +57,17 @@ export type ReadingLineTarget = {
   align: "center" | "start";
 };
 
+// The scroller/content lookups below are SHADOW-PIERCING. Style-isolated
+// renderers (the csv/xlsx grids under isolateStyles) host their real
+// overflow-auto viewport and every row inside an open shadow root BELOW the
+// grid element — light-DOM querySelectorAll never sees them, and
+// Node.contains does not cross the boundary. Before this, setViewerScroll
+// silently returned false for the grids and every matrix depth cell
+// `continue`d — the text/csv/xlsx scroll=zero-only coverage hole.
+//
+// The helpers are duplicated inside each page.evaluate because Playwright
+// serializes each function in isolation; keep the copies identical.
+
 export async function setViewerScroll(
   page: Page,
   frameSelector: string,
@@ -64,21 +75,50 @@ export async function setViewerScroll(
 ): Promise<boolean> {
   return page.evaluate(
     ({ frameSelector, scroll }) => {
+      const deepQueryAll = (
+        scope: ParentNode,
+        selector: string,
+      ): HTMLElement[] => {
+        const out = Array.from(scope.querySelectorAll<HTMLElement>(selector));
+        for (const host of scope.querySelectorAll<HTMLElement>("*")) {
+          if (host.shadowRoot)
+            out.push(...deepQueryAll(host.shadowRoot, selector));
+        }
+        return out;
+      };
+      const composedContains = (ancestor: Node, node: Node | null) => {
+        for (let current = node; current; ) {
+          if (current === ancestor) return true;
+          const parent: Node | null = current.parentNode;
+          current =
+            parent instanceof ShadowRoot ? parent.host : parent;
+        }
+        return false;
+      };
       const root = Array.from(
         document.querySelectorAll<HTMLElement>(
           '[data-slot="file-viewer-root"]',
         ),
       ).find((candidate) => candidate.getBoundingClientRect().width > 0)!;
-      const frame = root.querySelector<HTMLElement>(frameSelector);
-      const scroller = Array.from(
-        root.querySelectorAll<HTMLElement>("*"),
-      ).find(
-        (el) =>
-          el.scrollHeight > el.clientHeight + 4 &&
-          /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-          frame != null &&
-          el.contains(frame),
-      );
+      const frame = deepQueryAll(root, frameSelector)[0] ?? null;
+      const isScrollable = (el: HTMLElement) =>
+        el.scrollHeight > el.clientHeight + 4 &&
+        /(auto|scroll)/.test(getComputedStyle(el).overflowY);
+      const everything = deepQueryAll(root, "*");
+      // Ancestor scrollers first (the page/slide formats); the grids nest
+      // their real viewport INSIDE the tracked window element, behind the
+      // shadow boundary — only fall through to that when no ancestor
+      // scrolls, so an overflow-x code block inside a document can never
+      // shadow the document's own scroller.
+      const scroller =
+        everything.find(
+          (el) =>
+            isScrollable(el) && frame != null && composedContains(el, frame),
+        ) ??
+        everything.find(
+          (el) =>
+            isScrollable(el) && frame != null && composedContains(frame, el),
+        );
       if (!scroller) return scroll === "zero" || scroll === 0;
       const range = scroller.scrollHeight - scroller.clientHeight;
       scroller.scrollTop =
@@ -128,6 +168,26 @@ export async function traceReadingLineThroughToggle(
       cycles,
       activate,
     }) => {
+      // Shadow-piercing lookups — keep identical to setViewerScroll's copies.
+      const deepQueryAll = (
+        scope: ParentNode,
+        selector: string,
+      ): HTMLElement[] => {
+        const out = Array.from(scope.querySelectorAll<HTMLElement>(selector));
+        for (const host of scope.querySelectorAll<HTMLElement>("*")) {
+          if (host.shadowRoot)
+            out.push(...deepQueryAll(host.shadowRoot, selector));
+        }
+        return out;
+      };
+      const composedContains = (ancestor: Node, node: Node | null) => {
+        for (let current = node; current; ) {
+          if (current === ancestor) return true;
+          const parent: Node | null = current.parentNode;
+          current = parent instanceof ShadowRoot ? parent.host : parent;
+        }
+        return false;
+      };
       const root = Array.from(
         document.querySelectorAll<HTMLElement>(
           '[data-slot="file-viewer-root"]',
@@ -139,24 +199,27 @@ export async function traceReadingLineThroughToggle(
       // A deep scroll jump right after a toggle can catch the virtualization
       // window mid-rebuild, with no frame mounted for a few frames — wait it
       // out rather than tracing a null frame.
-      let frame = root.querySelector<HTMLElement>(frameSelector);
+      let frame = deepQueryAll(root, frameSelector)[0] ?? null;
       for (let index = 0; index < 120 && !frame; index += 1) {
         await new Promise<void>((resolve) =>
           requestAnimationFrame(() => resolve()),
         );
-        frame = root.querySelector<HTMLElement>(frameSelector);
+        frame = deepQueryAll(root, frameSelector)[0] ?? null;
       }
       if (!frame) {
         throw new Error(`reading-line trace: no frame for ${frameSelector}`);
       }
-      const scroller = Array.from(
-        root.querySelectorAll<HTMLElement>("*"),
-      ).find(
-        (el) =>
-          el.scrollHeight > el.clientHeight + 4 &&
-          /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-          el.contains(frame),
-      );
+      const isScrollable = (el: HTMLElement) =>
+        el.scrollHeight > el.clientHeight + 4 &&
+        /(auto|scroll)/.test(getComputedStyle(el).overflowY);
+      const everything = deepQueryAll(root, "*");
+      const scroller =
+        everything.find(
+          (el) => isScrollable(el) && composedContains(el, frame!),
+        ) ??
+        everything.find(
+          (el) => isScrollable(el) && composedContains(frame!, el),
+        );
 
       const scrollerRect = scroller?.getBoundingClientRect();
       const markerY = scrollerRect
@@ -167,8 +230,7 @@ export async function traceReadingLineThroughToggle(
       // fall back to the NEAREST candidate — never candidates[0], which is a
       // virtualization-window edge that unmounts mid-flight and reads as a
       // full-viewport drift.
-      const queryCandidates = () =>
-        Array.from(root.querySelectorAll<HTMLElement>(trackSelector));
+      const queryCandidates = () => deepQueryAll(root, trackSelector);
       const pickTracked = () => {
         const candidates = queryCandidates();
         let nearest: HTMLElement | undefined;
@@ -193,13 +255,29 @@ export async function traceReadingLineThroughToggle(
       // page the catching-up window is about to replace — its key never
       // returns and the whole flight reads zero samples. Require the same
       // nearest identity for 8 consecutive frames before picking.
+      // data-source-line (text lines) and aria-rowindex (grid rows) join the
+      // keyed-remount identities: those renderers RECYCLE pooled DOM nodes,
+      // rewriting the identity attribute in place, so a connected node is
+      // not proof it still shows the same content.
+      const IDENTITY_ATTRS = [
+        "data-page",
+        "data-page-number",
+        "data-slide",
+        "data-frame",
+        "data-source-line",
+        "aria-rowindex",
+      ];
+      const keyOf = (el: HTMLElement) => {
+        for (const attr of IDENTITY_ATTRS) {
+          const value = el.getAttribute(attr);
+          if (value != null) return `${attr}=${value}`;
+        }
+        return null;
+      };
       const identityOf = (el: HTMLElement | undefined) =>
         el == null
           ? null
-          : (el.getAttribute("data-page") ??
-            el.getAttribute("data-page-number") ??
-            el.getAttribute("data-slide") ??
-            el.getAttribute("data-frame") ??
+          : (keyOf(el) ??
             "@node"); // unkeyed formats: fall through to reference equality
       let stableFor = 0;
       let lastPick: HTMLElement | undefined;
@@ -216,21 +294,26 @@ export async function traceReadingLineThroughToggle(
       }
 
       const tracked = pickTracked();
-      // Survive keyed remounts (PDF pages re-raster at the committed scale):
-      // re-resolve the SAME logical page by its identity attribute when the
-      // original node detaches; a detached rect reads as a zero box at the
-      // origin, which scores as a phantom full-viewport excursion.
-      const trackedKey =
-        tracked.getAttribute("data-page") ??
-        tracked.getAttribute("data-page-number");
+      // Survive keyed remounts (PDF pages re-raster at the committed scale)
+      // AND pool recycling (text lines / grid rows reassign a CONNECTED node
+      // to different content): re-resolve the SAME logical element by its
+      // identity key whenever the original node detaches or its key is
+      // rewritten. A detached rect reads as a zero box at the origin, which
+      // scores as a phantom full-viewport excursion; a silently reassigned
+      // pool node reads as a teleport to wherever its new row sits.
+      const trackedKey = keyOf(tracked);
       const resolveTracked = () => {
-        if (tracked.isConnected) return tracked;
+        if (
+          tracked.isConnected &&
+          (trackedKey == null || keyOf(tracked) === trackedKey)
+        ) {
+          return tracked;
+        }
         if (trackedKey == null) return null;
         return (
           queryCandidates().find(
             (el) =>
-              (el.getAttribute("data-page") ??
-                el.getAttribute("data-page-number")) === trackedKey &&
+              keyOf(el) === trackedKey &&
               el.getBoundingClientRect().height > 0,
           ) ?? null
         );
@@ -385,27 +468,48 @@ export async function traceReadingLineThroughResize(
 
   await page.evaluate(
     ({ frameSelector, trackSelector, markerRatio, align }) => {
+      // Shadow-piercing lookups — keep identical to setViewerScroll's copies.
+      const deepQueryAll = (
+        scope: ParentNode,
+        selector: string,
+      ): HTMLElement[] => {
+        const out = Array.from(scope.querySelectorAll<HTMLElement>(selector));
+        for (const host of scope.querySelectorAll<HTMLElement>("*")) {
+          if (host.shadowRoot)
+            out.push(...deepQueryAll(host.shadowRoot, selector));
+        }
+        return out;
+      };
+      const composedContains = (ancestor: Node, node: Node | null) => {
+        for (let current = node; current; ) {
+          if (current === ancestor) return true;
+          const parent: Node | null = current.parentNode;
+          current = parent instanceof ShadowRoot ? parent.host : parent;
+        }
+        return false;
+      };
       const root = Array.from(
         document.querySelectorAll<HTMLElement>(
           '[data-slot="file-viewer-root"]',
         ),
       ).find((candidate) => candidate.getBoundingClientRect().width > 0)!;
-      const frame = root.querySelector<HTMLElement>(frameSelector)!;
-      const scroller = Array.from(
-        root.querySelectorAll<HTMLElement>("*"),
-      ).find(
-        (el) =>
-          el.scrollHeight > el.clientHeight + 4 &&
-          /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-          el.contains(frame),
-      );
+      const frame = deepQueryAll(root, frameSelector)[0]!;
+      const isScrollable = (el: HTMLElement) =>
+        el.scrollHeight > el.clientHeight + 4 &&
+        /(auto|scroll)/.test(getComputedStyle(el).overflowY);
+      const everything = deepQueryAll(root, "*");
+      const scroller =
+        everything.find(
+          (el) => isScrollable(el) && composedContains(el, frame),
+        ) ??
+        everything.find(
+          (el) => isScrollable(el) && composedContains(frame, el),
+        );
       const scrollerRect = scroller?.getBoundingClientRect();
       const markerY = scrollerRect
         ? scrollerRect.top + (scroller?.clientHeight ?? 0) * markerRatio
         : frame.getBoundingClientRect().top;
-      const candidates = Array.from(
-        root.querySelectorAll<HTMLElement>(trackSelector),
-      );
+      const candidates = deepQueryAll(root, trackSelector);
       const tracked =
         candidates.find((el) => {
           const r = el.getBoundingClientRect();
@@ -428,6 +532,8 @@ export async function traceReadingLineThroughResize(
           tracked.getAttribute("data-page-number") ??
           tracked.getAttribute("data-slide") ??
           tracked.getAttribute("data-frame") ??
+          tracked.getAttribute("data-source-line") ??
+          tracked.getAttribute("aria-rowindex") ??
           null,
         trackedIndex: candidates.indexOf(tracked),
         root,
@@ -536,31 +642,61 @@ async function sampleResizePosition(page: Page) {
         ).find((candidate) => candidate.getBoundingClientRect().width > 0);
         if (nextRoot) state.root = nextRoot;
       }
+      // Shadow-piercing lookups — keep identical to setViewerScroll's copies.
+      const deepQueryAll = (
+        scope: ParentNode,
+        selector: string,
+      ): HTMLElement[] => {
+        const out = Array.from(scope.querySelectorAll<HTMLElement>(selector));
+        for (const host of scope.querySelectorAll<HTMLElement>("*")) {
+          if (host.shadowRoot)
+            out.push(...deepQueryAll(host.shadowRoot, selector));
+        }
+        return out;
+      };
+      const composedContains = (ancestor: Node, node: Node | null) => {
+        for (let current = node; current; ) {
+          if (current === ancestor) return true;
+          const parent: Node | null = current.parentNode;
+          current = parent instanceof ShadowRoot ? parent.host : parent;
+        }
+        return false;
+      };
+      const keyOf = (el: HTMLElement) =>
+        el.getAttribute("data-page") ??
+        el.getAttribute("data-page-number") ??
+        el.getAttribute("data-slide") ??
+        el.getAttribute("data-frame") ??
+        el.getAttribute("data-source-line") ??
+        el.getAttribute("aria-rowindex") ??
+        null;
       // The SCROLLER remounts too on some formats — a detached scroller's
       // zero rect collapses markerY to 0, which reads as +rect.top.
       if (state.scroller && !state.scroller.isConnected) {
         const frame = state.tracked.isConnected ? state.tracked : state.root;
+        const everything = deepQueryAll(state.root, "*");
+        const isScrollable = (el: HTMLElement) =>
+          el.scrollHeight > el.clientHeight + 4 &&
+          /(auto|scroll)/.test(getComputedStyle(el).overflowY);
         state.scroller =
-          Array.from(state.root.querySelectorAll<HTMLElement>("*")).find(
-            (el) =>
-              el.scrollHeight > el.clientHeight + 4 &&
-              /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-              el.contains(frame),
-          ) ?? null;
+          everything.find(
+            (el) => isScrollable(el) && composedContains(el, frame),
+          ) ??
+          everything.find(
+            (el) => isScrollable(el) && composedContains(frame, el),
+          ) ??
+          null;
       }
-      if (!state.tracked.isConnected) {
-        const candidates = Array.from(
-          state.root.querySelectorAll<HTMLElement>(state.trackSelector),
-        );
+      // Rehome when detached OR when a recycled pool node was reassigned in
+      // place (text lines / grid rows rewrite their identity attribute).
+      if (
+        !state.tracked.isConnected ||
+        (state.trackedKey != null && keyOf(state.tracked) !== state.trackedKey)
+      ) {
+        const candidates = deepQueryAll(state.root, state.trackSelector);
         const rehomed =
           (state.trackedKey != null
-            ? candidates.find(
-                (el) =>
-                  (el.getAttribute("data-page") ??
-                    el.getAttribute("data-page-number") ??
-                    el.getAttribute("data-slide") ??
-                    el.getAttribute("data-frame")) === state.trackedKey,
-              )
+            ? candidates.find((el) => keyOf(el) === state.trackedKey)
             : undefined) ?? candidates[state.trackedIndex];
         if (rehomed) state.tracked = rehomed;
       }

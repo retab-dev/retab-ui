@@ -1,0 +1,404 @@
+Review notes: the long-form text surface
+
+These notes exist to overflow the pane. The short sample fits inside a single viewport, which leaves every scroll-dependent behavior untested; this one runs long enough that quarter, half, and full depth are all distinct geometries.
+
+Section 1: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 1.1 - Checked at review pass 1. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 1.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 2: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 2.1 - Checked at review pass 2. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 2.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 3: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 3.1 - Checked at review pass 3. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 3.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 4: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 4.1 - Checked at review pass 4. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 4.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 5: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 5.1 - Checked at review pass 5. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 5.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 6: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 6.1 - Checked at review pass 6. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 6.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 7: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 7.1 - Checked at review pass 7. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 7.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 8: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 8.1 - Checked at review pass 8. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 8.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 9: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 9.1 - Checked at review pass 9. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 9.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 10: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 10.1 - Checked at review pass 10. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 10.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 11: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 11.1 - Checked at review pass 11. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 11.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 12: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 12.1 - Checked at review pass 12. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 12.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 13: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 13.1 - Checked at review pass 13. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 13.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 14: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 14.1 - Checked at review pass 14. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 14.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 15: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 15.1 - Checked at review pass 15. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 15.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 16: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 16.1 - Checked at review pass 16. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 16.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 17: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 17.1 - Checked at review pass 17. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 17.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 18: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 18.1 - Checked at review pass 18. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 18.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 19: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 19.1 - Checked at review pass 19. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 19.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 20: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 20.1 - Checked at review pass 20. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 20.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 21: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 21.1 - Checked at review pass 21. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 21.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 22: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 22.1 - Checked at review pass 22. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 22.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 23: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 23.1 - Checked at review pass 23. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 23.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 24: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 24.1 - Checked at review pass 24. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 24.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 25: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 25.1 - Checked at review pass 25. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 25.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 26: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 26.1 - Checked at review pass 26. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 26.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 27: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 27.1 - Checked at review pass 27. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 27.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 28: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 28.1 - Checked at review pass 28. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 28.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 29: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 29.1 - Checked at review pass 29. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 29.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 30: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 30.1 - Checked at review pass 30. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 30.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 31: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 31.1 - Checked at review pass 31. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 31.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 32: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 32.1 - Checked at review pass 32. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 32.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 33: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 33.1 - Checked at review pass 33. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 33.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 34: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 34.1 - Checked at review pass 34. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 34.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 35: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 35.1 - Checked at review pass 35. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 35.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 36: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 36.1 - Checked at review pass 36. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 36.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 37: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 37.1 - Checked at review pass 37. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 37.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 38: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 38.1 - Checked at review pass 38. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 38.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 39: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 39.1 - Checked at review pass 39. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 39.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 40: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 40.1 - Checked at review pass 40. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 40.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 41: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 41.1 - Checked at review pass 41. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 41.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 42: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 42.1 - Checked at review pass 42. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 42.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 43: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 43.1 - Checked at review pass 43. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 43.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 44: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 44.1 - Checked at review pass 44. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 44.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 45: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 45.1 - Checked at review pass 45. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 45.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 46: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 46.1 - Checked at review pass 46. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 46.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 47: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 47.1 - Checked at review pass 47. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 47.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 48: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 48.1 - Checked at review pass 48. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 48.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 49: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 49.1 - Checked at review pass 49. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 49.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 50: Scrolling & anchoring
+
+A reader mid-document has an implicit anchor: the line under their eye. Every relayout, refit, and pane resize is judged by whether that anchor holds. Drift budgets exist because zero is not achievable under rounding, but creep is a bug.
+
+Note 50.1 - Checked at review pass 50. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 50.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 51: Virtualization windows
+
+Only a narrow window of rows is mounted at any moment. The window advances with scroll, recycling row nodes as it goes, and the recycled node is rewritten in place for its new source line.
+
+Note 51.1 - Checked at review pass 51. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 51.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 52: Highlight & navigation
+
+Jumping to a highlighted source line must work whether or not that line is currently mounted. The layout table answers where the line will be before it exists, and the scroll lands within a line height of the target.
+
+Note 52.1 - Checked at review pass 52. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 52.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 53: Selection & copy
+
+Text selection has to survive the virtualization seam. A selection that spans unmounted rows is resolved against the source text, not the DOM, so copy produces the document, not the window.
+
+Note 53.1 - Checked at review pass 53. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 53.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 54: Resize behavior
+
+Narrowing the pane re-wraps every paragraph. The wrap count changes, the total height changes, and the reading anchor must be restored by document fraction rather than raw pixel offset.
+
+Note 54.1 - Checked at review pass 54. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 54.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 55: Sidebar interplay
+
+Opening the sidebar narrows the pane by a fixed width. The re-wrap that follows is the same machinery as a window resize, exercised in a single discrete step with a motion plan attached.
+
+Note 55.1 - Checked at review pass 55. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 55.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 56: Performance notes
+
+A full remeasure of a long document stays under a frame budget because the predictor works from font metrics, not from mounted DOM. The expensive path is reserved for lines whose prediction was wrong.
+
+Note 56.1 - Checked at review pass 56. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 56.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+Section 57: Layout & measurement
+
+The measurement pass predicts wrapped heights from the column width before any row mounts. When the prediction disagrees with the mounted height, the projector reconciles on the next frame and the delta is folded into the running offset.
+
+Note 57.1 - Checked at review pass 57. The wrapped measure held across the standard column widths, and the anchor line stayed within budget through a full close-open cycle of the sidebar.
+Note 57.2 - Edge case: the last viewport of the document pins to the bottom edge rather than the reading line, because the clamp permits nothing else there.
+
+End of review notes.

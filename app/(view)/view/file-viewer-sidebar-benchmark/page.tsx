@@ -214,8 +214,12 @@ const BENCHMARK_FIXTURES: readonly BenchmarkFixture[] = [
     align: "start",
     source: {
       kind: "url",
-      url: "/samples/review-notes.txt",
-      fileName: "review-notes.txt",
+      // The short review-notes.txt fits inside one viewport — a document
+      // that never overflows exercises none of the scroll-dependent motion
+      // paths, so every depth cell of every matrix silently degenerated to
+      // scroll=zero for this format. The long variant overflows ~12x.
+      url: "/samples/review-notes-long.txt",
+      fileName: "review-notes-long.txt",
       mimeType: "text/plain",
     },
   },
