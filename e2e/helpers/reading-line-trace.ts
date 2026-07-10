@@ -247,15 +247,20 @@ export async function traceReadingLineThroughToggle(
       const times: number[] = [];
       const sampleFrames = async (count: number) => {
         for (let index = 0; index < count; index += 1) {
-          await new Promise<void>((resolve) =>
-            requestAnimationFrame(() => resolve()),
+          // Stamp with the rAF FRAME timestamp (vsync-aligned, what the
+          // paint belongs to), never the callback's execution time: under
+          // jank a late callback and an on-time successor run 6ms apart
+          // while their displacement spans a full 16ms frame — execution
+          // timestamps inflated a clean keyboard toggle's velocity 2.7x.
+          const frameTime = await new Promise<number>((resolve) =>
+            requestAnimationFrame((t) => resolve(t)),
           );
           const element = resolveTracked();
           if (!element) continue;
           const rect = element.getBoundingClientRect();
           positions.push(rect.top + contentAtMarker * rect.height - markerY);
           centersX.push(readX(rect) - centerX0);
-          times.push(performance.now());
+          times.push(frameTime);
         }
       };
 

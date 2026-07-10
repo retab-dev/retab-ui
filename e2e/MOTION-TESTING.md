@@ -121,6 +121,14 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
     frame-length gap is a real teleport and must stay scoreable, since
     a time-based motion cannot finish inside one 16ms frame.
     Repro: `FAR_EDGE_CPU_THROTTLE=4` on the far-edge gate.
+11. **Stamp samples with the rAF frame timestamp, never the callback's
+    execution time.** Under jank a late callback and its on-time
+    successor run 6ms apart while their displacement spans a full 16ms
+    frame — execution-time stamping inflated a clean keyboard toggle's
+    pop score to 9.95 (a 2.7x phantom velocity). The rAF callback's
+    argument is the vsync-aligned time the paint belongs to; velocity
+    must divide by that axis. (Click-driven traces hid this: their
+    activation jank happens before sampling starts.)
 
 ## Changing motion behavior intentionally
 

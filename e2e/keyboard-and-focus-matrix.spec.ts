@@ -24,6 +24,11 @@ import {
 const SURVEY = process.env.MATRIX_SURVEY === "1";
 const SETTLE_DRIFT_BUDGET_PX = 14;
 const EXCURSION_BUDGET_PX = 16;
+// Keyboard flights start under the activation handler's commit jank, so
+// their pop noise band is wider than click-driven flights (survey with
+// frame-timestamped sampling: 0.94-1.85 vs ~1.0). A teleport still
+// scores ~3 — the budget splits the difference.
+const POP_SCORE_BUDGET = 2.2;
 // PageDown scrolls by ~one viewport; "applied" means most of it survived.
 const KEY_IGNORED_TOLERANCE_PX = 24;
 const KEY_APPLIED_MIN_RATIO = 0.5;
@@ -105,12 +110,17 @@ for (const format of FORMATS) {
       console.log(
         `KEYTOGGLE ${format.id} ${leg} (${key === " " ? "Space" : key}): settle=${trace.settleDrift.toFixed(1)} excursion=${trace.excursion.toFixed(1)} pop=${trace.popScoreX.toFixed(2)}`,
       );
+      if (SURVEY) console.log(`  profile(t/y/x): ${trace.profile}`);
       if (!SURVEY) {
         expect(
           Math.abs(trace.settleDrift),
           `${leg} via keyboard settled ${trace.settleDrift.toFixed(1)}px off the reading line`,
         ).toBeLessThanOrEqual(SETTLE_DRIFT_BUDGET_PX);
         expect(trace.excursion).toBeLessThanOrEqual(EXCURSION_BUDGET_PX);
+        expect(
+          trace.popScoreX,
+          `${leg} via keyboard flew ${trace.popScoreX.toFixed(2)}x the plan's peak velocity — teleport-class\n  profile(t/y/x): ${trace.profile}`,
+        ).toBeLessThanOrEqual(POP_SCORE_BUDGET);
       }
 
       // Focus survival: the trigger caused the toggle; it must still own
