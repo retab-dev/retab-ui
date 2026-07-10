@@ -258,7 +258,7 @@
     },
     {
       "path": "registry/new-york-v4/ui/utif.d.ts",
-      "content": "// Ambient shim for the `utif` package, which ships no type declarations\n// (and has no @types/utif on npm). shadcn's registry build strips leading\n// comments from source files, so an inline `@ts-expect-error` above the import\n// does not survive into the published item — a real declaration is required for\n// a fresh consumer install to typecheck. The decode workers cast the default\n// export to their own local shapes, so an opaque `any` default is sufficient.\ndeclare module \"utif\" {\n  // eslint-disable-next-line @typescript-eslint/no-explicit-any\n  const UTIF: any;\n  export default UTIF;\n}\n",
+      "content": "// Ambient shim for the `utif` package, which ships no type declarations\n// (and has no @types/utif on npm). shadcn's registry build strips leading\n// comments from source files, so an inline `@ts-expect-error` above the import\n// does not survive into the published item — a real declaration is required for\n// a fresh consumer install to typecheck. The decode workers cast the default\n// export to their own local shapes, so an opaque `any` default is sufficient.\ndeclare module \"utif\" {\n   \n  const UTIF: any;\n  export default UTIF;\n}\n",
       "type": "registry:ui",
       "target": "@ui/utif.d.ts"
     },

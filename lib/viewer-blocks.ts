@@ -513,15 +513,39 @@ export const VIEWER_BLOCKS = [
     categories: ["primitives"],
   },
   {
+    id: "split-consensus-lukas",
+    registryName: "split-consensus-lukas-viewer-block",
+    title: "Split Consensus Lukas",
+    description:
+      "The split benchmark diagram from Lukas Bjorkland's article, with GT, Split v1, Split v2, the PDF pane, and the same dark metrics table treatment.",
+    command: getRegistryAddCommand("split-consensus-lukas-viewer-block"),
+    docsHref: "/examples/split-consensus-lukas",
+    viewHref: "/view/blocks/split-consensus-lukas",
+    previewHeightClassName: "h-[760px]",
+    categories: ["primitives"],
+  },
+  {
     id: "classify-consensus",
     registryName: "classify-consensus-viewer-block",
     title: "Classify Consensus",
     description:
-      "A classification result with the consensus switch in the sidebar — selected category, likelihood, and every vote beside the source document.",
+      "A classification result with consensus visible in the sidebar — selected category, likelihood, and every vote beside the source document.",
     command: getRegistryAddCommand("classify-consensus-viewer-block"),
     docsHref: "/examples/classify-consensus",
     viewHref: "/view/blocks/classify-consensus",
     previewHeightClassName: "h-[680px]",
+    categories: ["primitives"],
+  },
+  {
+    id: "classify-consensus-deed",
+    registryName: "classify-consensus-deed-viewer-block",
+    title: "Classify Consensus Deed",
+    description:
+      "A deed classification consensus example with eight real-estate recording categories, a multi-page recorded deed, likelihood, and every vote beside the source document.",
+    command: getRegistryAddCommand("classify-consensus-deed-viewer-block"),
+    docsHref: "/examples/classify-consensus-deed",
+    viewHref: "/view/blocks/classify-consensus-deed",
+    previewHeightClassName: "h-[760px]",
     categories: ["primitives"],
   },
 ] as const satisfies readonly ViewerBlockConfig[];

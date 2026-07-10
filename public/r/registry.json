@@ -5855,6 +5855,11 @@
           "path": "registry/new-york-v4/ui/viewer-measurement.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-measurement.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-fit-width-motion.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-fit-width-motion.ts"
         }
       ],
       "devDependencies": ["@types/prismjs@^1.26.6"]
@@ -6162,6 +6167,11 @@
           "path": "registry/new-york-v4/ui/viewer-measurement.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-measurement.ts"
+        },
+        {
+          "path": "registry/new-york-v4/ui/file-viewer-fit-width-motion.ts",
+          "type": "registry:ui",
+          "target": "@ui/file-viewer-fit-width-motion.ts"
         }
       ],
       "devDependencies": ["@types/prismjs@^1.26.6"]
@@ -6937,22 +6947,78 @@
       "categories": ["primitives"]
     },
     {
+      "name": "split-consensus-lukas-viewer-block",
+      "type": "registry:block",
+      "title": "Split Consensus Lukas",
+      "description": "The split benchmark diagram from Lukas Bjorkland's article, with GT, Split v1, Split v2, the PDF pane, and the same dark metrics table treatment.",
+      "registryDependencies": ["@retab/file-viewer", "@retab/pdf-viewer"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/split-consensus-lukas-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/split-consensus-lukas-viewer-block.tsx"
+        },
+        {
+          "path": "registry/new-york-v4/blocks/split-consensus-lukas-data.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/split-consensus-lukas-data.ts"
+        },
+        {
+          "path": "app/api/politax-pdf/[prefix]/[document]/route.ts",
+          "type": "registry:file",
+          "target": "app/api/politax-pdf/[prefix]/[document]/route.ts"
+        }
+      ],
+      "categories": ["primitives"]
+    },
+    {
       "name": "classify-consensus-viewer-block",
       "type": "registry:block",
       "title": "Classify Consensus",
-      "description": "A classification result with the consensus switch in the sidebar: selected category, likelihood, and every vote beside the source document.",
+      "description": "A classification result with consensus visible in the sidebar: selected category, likelihood, and every vote beside the source document.",
       "dependencies": ["lucide-react"],
-      "registryDependencies": [
-        "@retab/file-viewer",
-        "@retab/pdf-viewer",
-        "@retab/label",
-        "@retab/switch"
-      ],
+      "registryDependencies": ["@retab/file-viewer", "@retab/pdf-viewer"],
       "files": [
         {
           "path": "registry/new-york-v4/blocks/classify-consensus-viewer-block.tsx",
           "type": "registry:component",
           "target": "@components/blocks/classify-consensus-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/classify/classify-consensus-block.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/classify/classify-consensus-block.tsx"
+        },
+        {
+          "path": "components/viewers/classify/classifier-viewer.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/classify/classifier-viewer.tsx"
+        },
+        {
+          "path": "components/viewers/lib/classify-types.ts",
+          "type": "registry:component",
+          "target": "@components/viewers/lib/classify-types.ts"
+        }
+      ],
+      "categories": ["primitives"]
+    },
+    {
+      "name": "classify-consensus-deed-viewer-block",
+      "type": "registry:block",
+      "title": "Classify Consensus Deed",
+      "description": "A deed classification consensus example with eight real-estate recording categories, a multi-page recorded deed, likelihood, and every vote beside the source document.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["@retab/file-viewer", "@retab/pdf-viewer"],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/classify-consensus-deed-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/classify-consensus-deed-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/classify/classify-consensus-block.tsx",
+          "type": "registry:component",
+          "target": "@components/viewers/classify/classify-consensus-block.tsx"
         },
         {
           "path": "components/viewers/classify/classifier-viewer.tsx",

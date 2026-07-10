@@ -182,7 +182,7 @@ export function PageRibbon({
                       ...style,
                       backgroundColor: segment.color,
                       boxShadow: state.isHighlighted
-                        ? "inset 0 0 0 1.5px rgb(24 24 27)"
+                        ? "inset 0 0 0 1.5px var(--foreground)"
                         : undefined,
                     }}
                     aria-label={`${label} pages ${start} to ${end}`}

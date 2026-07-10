@@ -3,6 +3,7 @@
 import type { ComponentType } from "react";
 
 import type { ViewerBlockId, ViewerBlockMetadata } from "@/lib/viewer-blocks";
+import { ClassifyConsensusDeedViewerBlock } from "@/registry/new-york-v4/blocks/classify-consensus-deed-viewer-block";
 import { ClassifyConsensusViewerBlock } from "@/registry/new-york-v4/blocks/classify-consensus-viewer-block";
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block";
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block";
@@ -39,6 +40,7 @@ import { SourcesViewerBlock } from "@/registry/new-york-v4/blocks/sources-viewer
 import { SplitConsensusViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-viewer-block";
 import { SplitConsensusDiagramHorizontalViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-diagram-horizontal-viewer-block";
 import { SplitConsensusDiagramVerticalViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-diagram-vertical-viewer-block";
+import { SplitConsensusLukasViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-lukas-viewer-block";
 import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block";
 import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block";
 import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block";
@@ -88,7 +90,9 @@ export const VIEWER_BLOCK_COMPONENTS = {
   "split-consensus-diagram-horizontal":
     SplitConsensusDiagramHorizontalViewerBlock,
   "split-consensus-diagram-vertical": SplitConsensusDiagramVerticalViewerBlock,
+  "split-consensus-lukas": SplitConsensusLukasViewerBlock,
   "classify-consensus": ClassifyConsensusViewerBlock,
+  "classify-consensus-deed": ClassifyConsensusDeedViewerBlock,
 } satisfies Record<ViewerBlockId, ViewerBlockComponent>;
 
 export function getViewerBlockComponent(blockId: ViewerBlockId) {

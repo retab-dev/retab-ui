@@ -51,7 +51,7 @@ type SegmentDiagramDoc = {
   legendSegments: DocumentSegment[];
   rows: SegmentRow[];
   ribbonRows: RibbonRow[];
-  contestedRibbonRow: RibbonRow;
+  diffRibbonRow: RibbonRow;
 };
 
 type DiagramOrientation = "horizontal" | "vertical";
@@ -78,6 +78,9 @@ const TYPE_COLORS = new Map<string, string>([
 ]);
 
 const TYPE_ORDER = Array.from(TYPE_COLORS.keys());
+
+/** Floor for the diff shading so a single dissenting vote still reads clearly. */
+const DIFF_MIN_PERCENT = 40;
 
 const VOTE_SEGMENTS: Segment[][] = [
   [
@@ -159,10 +162,6 @@ const HARRIS_CONSOLIDATION_SEGMENTS = weightedConsolidationSegments(
   VOTE_SEGMENTS,
   40,
 );
-const HARRIS_CONTESTED_HEATMAP = new Map([[40, 1]]);
-const HARRIS_TOUCHED_PAGES = new Set(
-  Array.from({ length: 40 }, (_, index) => index + 1),
-);
 const HARRIS_SEGMENT_ROWS: SegmentRow[] = [
   createSegmentRow(
     "harris-consolidation",
@@ -188,11 +187,10 @@ const HARRIS_SEGMENT_DOC: SegmentDiagramDoc = {
   legendSegments: createLegendSegments(HARRIS_CONSOLIDATION_SEGMENTS),
   rows: HARRIS_SEGMENT_ROWS,
   ribbonRows: HARRIS_SEGMENT_ROWS.map(toRibbonRow),
-  contestedRibbonRow: createContestedRibbonRow({
-    id: "harris-contested",
+  diffRibbonRow: createDiffRibbonRow({
+    id: "harris-diff",
+    voteRows: VOTE_SEGMENTS,
     pageCount: 40,
-    contestedHeatmap: HARRIS_CONTESTED_HEATMAP,
-    touchedPages: HARRIS_TOUCHED_PAGES,
   }),
 };
 
@@ -233,15 +231,17 @@ export function SplitConsensusSegmentDiagramViewer({
                 width={isHorizontal ? "42rem" : "24rem"}
                 className="border-r"
               >
-                <FileViewerSidebarHeader className="min-h-12">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium">Segment diagram</div>
-                    <div className="text-muted-foreground mt-0.5 font-mono text-[10px]">
-                      {HARRIS_SEGMENT_DOC.rows.length - 1} votes /{" "}
-                      {HARRIS_SEGMENT_DOC.pageCount} pages
+                {isHorizontal ? (
+                  <FileViewerSidebarHeader className="min-h-12">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">Segment diagram</div>
+                      <div className="text-muted-foreground mt-0.5 font-mono text-[10px]">
+                        {HARRIS_SEGMENT_DOC.rows.length - 1} votes /{" "}
+                        {HARRIS_SEGMENT_DOC.pageCount} pages
+                      </div>
                     </div>
-                  </div>
-                </FileViewerSidebarHeader>
+                  </FileViewerSidebarHeader>
+                ) : null}
                 <FileViewerSidebarContent>
                   {isHorizontal ? (
                     <HorizontalSegmentDiagram
@@ -255,6 +255,7 @@ export function SplitConsensusSegmentDiagramViewer({
                     <VerticalSegmentDiagram
                       doc={HARRIS_SEGMENT_DOC}
                       currentPage={currentPage}
+                      scrollProgress={scrollProgress}
                       interaction={segmentInteraction}
                       onJumpToPage={jumpToPage}
                     />
@@ -310,7 +311,7 @@ function HorizontalSegmentDiagram({
   interaction: DiagramSegmentInteraction;
   onJumpToPage: (page: number) => void;
 }) {
-  const rows = [...doc.ribbonRows, doc.contestedRibbonRow];
+  const rows = [...doc.ribbonRows, doc.diffRibbonRow];
 
   return (
     <div className="flex min-h-full flex-col gap-5 overflow-auto p-5">
@@ -346,20 +347,21 @@ function HorizontalSegmentDiagram({
 function VerticalSegmentDiagram({
   doc,
   currentPage,
+  scrollProgress,
   interaction,
   onJumpToPage,
 }: {
   doc: SegmentDiagramDoc;
   currentPage: number;
+  scrollProgress: number;
   interaction: DiagramSegmentInteraction;
   onJumpToPage: (page: number) => void;
 }) {
-  const rows = [...doc.ribbonRows, doc.contestedRibbonRow];
+  const rows = [...doc.ribbonRows, doc.diffRibbonRow];
 
   return (
-    <div className="flex min-h-full flex-col gap-4 overflow-auto p-4">
-      <DiagramIntro doc={doc} compact />
-      <div className="flex flex-col gap-1">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-1">
         <div
           className="grid gap-1"
           style={{
@@ -377,9 +379,9 @@ function VerticalSegmentDiagram({
           ))}
           <div
             className="text-muted-foreground text-center font-mono text-[10px]"
-            title={doc.contestedRibbonRow.label}
+            title={doc.diffRibbonRow.label}
           >
-            heat
+            diff
           </div>
           <div />
         </div>
@@ -388,10 +390,11 @@ function VerticalSegmentDiagram({
           rows={rows}
           pageCount={doc.pageCount}
           currentPage={currentPage}
+          scrollProgress={scrollProgress}
           interaction={interaction}
           onSelectPage={onJumpToPage}
           showTicks
-          className="h-[560px]"
+          className="min-h-0 flex-1"
         />
       </div>
     </div>
@@ -412,8 +415,8 @@ function DiagramIntro({
           Segment diagram
         </h2>
         <p className="text-muted-foreground mt-1 text-[11px] leading-5">
-          Consolidation, all {doc.rows.length - 1} raw consensus votes, and
-          contested-density heatmap.
+          Consolidation, all {doc.rows.length - 1} raw consensus votes, and a
+          per-page vote-disagreement diff.
         </p>
       </div>
       <p className="text-muted-foreground text-[11px] leading-5">{doc.label}</p>
@@ -473,49 +476,56 @@ function createRibbonSegments(
   }));
 }
 
-function createContestedRibbonRow({
+/**
+ * The "diff" lane: each page shaded proportionally to how much the votes
+ * disagree on it. A page where every vote assigns the same type reads as empty;
+ * an even split reads as full-strength. Intensity is the share of dissenting
+ * votes, normalized so a maximally-split page (the most even split possible for
+ * the vote count) saturates the color — floored to DIFF_MIN_PERCENT so any
+ * non-zero disagreement stays visible.
+ */
+function createDiffRibbonRow({
   id,
+  voteRows,
   pageCount,
-  contestedHeatmap,
-  touchedPages,
 }: {
   id: string;
+  voteRows: readonly (readonly Segment[])[];
   pageCount: number;
-  contestedHeatmap: ReadonlyMap<number, number>;
-  touchedPages: ReadonlySet<number>;
 }): RibbonRow {
-  const contestedPages = new Set(
-    Array.from(contestedHeatmap.entries())
-      .filter(([, heat]) => heat > 0)
-      .map(([page]) => page),
-  );
-  const touchedOnlyPages = Array.from(touchedPages)
-    .filter(
-      (page) => page >= 1 && page <= pageCount && !contestedPages.has(page),
-    )
-    .sort((left, right) => left - right);
-  const segments: DocumentSegment[] = [
-    {
-      id: `${id}-touched`,
-      label: "touched",
-      pages: touchedOnlyPages,
-      color: "color-mix(in oklab, var(--muted-foreground) 30%, transparent)",
-      index: 0,
+  const pageVotes = buildPageVotes(voteRows, pageCount);
+  const maxDissent = Math.max(1, Math.floor(voteRows.length / 2));
+  const pagesByPercent = new Map<number, number[]>();
+
+  for (let page = 1; page <= pageCount; page += 1) {
+    const counts = Object.values(pageVotes[page]!);
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    if (total === 0) continue;
+    const dissent = total - Math.max(...counts);
+    if (dissent <= 0) continue;
+    // Proportional to the dissent share, but floored so even a single
+    // dissenting vote stays clearly visible rather than reading as empty.
+    const normalized = Math.min(1, dissent / maxDissent);
+    const percent = Math.round(DIFF_MIN_PERCENT + normalized * (100 - DIFF_MIN_PERCENT));
+    const bucket = pagesByPercent.get(percent) ?? [];
+    bucket.push(page);
+    pagesByPercent.set(percent, bucket);
+  }
+
+  const segments: DocumentSegment[] = Array.from(pagesByPercent.entries())
+    .sort(([left], [right]) => left - right)
+    .map(([percent, pages], index) => ({
+      id: `${id}-diff-${percent}`,
+      label: `${percent}% disagreement`,
+      pages: pages.sort((left, right) => left - right),
+      color: `color-mix(in oklab, var(--warning) ${percent}%, transparent)`,
+      index,
       confidence: null,
-    },
-    {
-      id: `${id}-contested`,
-      label: "contested",
-      pages: Array.from(contestedPages).sort((left, right) => left - right),
-      color: "var(--warning)",
-      index: 1,
-      confidence: null,
-    },
-  ].filter((segment) => segment.pages.length > 0);
+    }));
 
   return {
     id,
-    label: "contested",
+    label: "diff",
     segments,
   };
 }
@@ -547,10 +557,10 @@ function segmentIdForType(type: string) {
   return `segment-type-${index === -1 ? type : index}`;
 }
 
-function weightedConsolidationSegments(
+function buildPageVotes(
   voteRows: readonly (readonly Segment[])[],
   pageCount: number,
-): Segment[] {
+): SegmentVoteCounts[] {
   const pageVotes: SegmentVoteCounts[] = Array.from(
     { length: pageCount + 1 },
     () => ({}),
@@ -564,6 +574,15 @@ function weightedConsolidationSegments(
       }
     });
   });
+
+  return pageVotes;
+}
+
+function weightedConsolidationSegments(
+  voteRows: readonly (readonly Segment[])[],
+  pageCount: number,
+): Segment[] {
+  const pageVotes = buildPageVotes(voteRows, pageCount);
 
   const weightedSegments: Segment[] = [];
   let currentKey = voteSignature(pageVotes[1]!);
