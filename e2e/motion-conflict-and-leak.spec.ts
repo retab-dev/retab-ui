@@ -61,7 +61,10 @@ const FORMATS = [
   },
 ] as const;
 
-async function readScroll(page: import("@playwright/test").Page, frameSelector: string) {
+async function readScroll(
+  page: import("@playwright/test").Page,
+  frameSelector: string,
+) {
   return page.evaluate((frameSelector) => {
     const root = Array.from(
       document.querySelectorAll<HTMLElement>('[data-slot="file-viewer-root"]'),
@@ -141,8 +144,7 @@ for (const format of FORMATS) {
 
     if (!SURVEY) {
       expect(preserved, "scroll state unreadable").not.toBeNull();
-      const cleanlyIgnored =
-        Math.abs(preserved!) <= WHEEL_IGNORED_TOLERANCE_PX;
+      const cleanlyIgnored = Math.abs(preserved!) <= WHEEL_IGNORED_TOLERANCE_PX;
       const cleanlyApplied =
         preserved! >= WHEEL_DELTA_PX * WHEEL_PRESERVED_MIN_RATIO;
       expect(
@@ -154,6 +156,115 @@ for (const format of FORMATS) {
     // reset for cleanliness
     await trigger.click();
     await page.waitForTimeout(600);
+  });
+
+  test.describe(`${format.id} touch input`, () => {
+    // The synthesized gesture only reaches the scroller when the context
+    // reports touch support (rule 4: the rest-state control caught this).
+    test.use({ hasTouch: true });
+
+    test(`${format.id} preserves touch scroll landing mid-flight`, async ({
+      page,
+    }) => {
+      // FIXME(task_8f3b0c1e touch-dead-after-toggle): this gate's REST-STATE
+      // CONTROL found a product bug before the gate itself could run —
+      // touch scroll works on a fresh page, is permanently dead after one
+      // sidebar toggle round trip (no recovery after 3s or a tap), while
+      // wheel keeps working. Confirmed pdf + docx; the suspension latch is
+      // shared shell code. Un-fixme when the fix lands: the control then
+      // validates and the conflict contract arms.
+      test.fixme(
+        true,
+        "touch scroll is dead after any sidebar toggle — tracked product bug",
+      );
+      test.setTimeout(180_000);
+      await page.goto("/view/file-viewer-sidebar-benchmark");
+      await page
+        .locator(`[data-benchmark-format-option="${format.id}"]`)
+        .click();
+      await expect(page.locator(format.ready).first()).toBeVisible({
+        timeout: 60_000,
+      });
+      await page.waitForTimeout(1_500);
+      await setViewerScroll(page, format.frameSelector, "half");
+      await page.waitForTimeout(600);
+
+      const viewerRoot = page
+        .locator('[data-slot="file-viewer-root"]:visible')
+        .first();
+      const trigger = viewerRoot.getByRole("button", {
+        name: "Toggle sidebar",
+      });
+      const frameBox = await page
+        .locator(format.frameSelector)
+        .first()
+        .boundingBox();
+      const gestureAt = {
+        x: Math.round((frameBox?.x ?? 400) + (frameBox?.width ?? 400) / 2),
+        y: Math.round((frameBox?.y ?? 300) + 200),
+      };
+      // A real touch-source scroll gesture (the tablet input path), not a
+      // wheel event — chromium-only via CDP, which is where this gate runs.
+      const session = await page.context().newCDPSession(page);
+      const touchScroll = async (distance: number) =>
+        session.send("Input.synthesizeScrollGesture", {
+          x: gestureAt.x,
+          y: gestureAt.y,
+          yDistance: -distance,
+          speed: 2_000,
+          gestureSourceType: "touch",
+        });
+
+      try {
+        // Baseline: clean toggle, no touch input.
+        await trigger.click();
+        await page.waitForTimeout(900);
+        const baselineAfter = await readScroll(page, format.frameSelector);
+        await trigger.click();
+        await page.waitForTimeout(900);
+
+        // Control: the gesture must scroll at rest (validate the instrument).
+        const preTouch = await readScroll(page, format.frameSelector);
+        await touchScroll(240);
+        await page.waitForTimeout(500);
+        const postTouch = await readScroll(page, format.frameSelector);
+        const touchDelta = (postTouch ?? 0) - (preTouch ?? 0);
+        expect(
+          touchDelta,
+          "rest-state touch scroll did not scroll — touch conflict probe invalid",
+        ).toBeGreaterThan(100);
+        await setViewerScroll(page, format.frameSelector, "half");
+        await page.waitForTimeout(400);
+
+        // Conflict: the gesture landing mid-flight.
+        await trigger.click();
+        await page.waitForTimeout(50);
+        await touchScroll(WHEEL_DELTA_PX);
+        await page.waitForTimeout(1_100);
+        const conflictAfter = await readScroll(page, format.frameSelector);
+
+        const preserved =
+          conflictAfter != null && baselineAfter != null
+            ? conflictAfter - baselineAfter
+            : null;
+        console.log(
+          `TOUCHCONFLICT ${format.id}: baseline=${baselineAfter} conflict=${conflictAfter} preserved=${preserved?.toFixed(1)} restDelta=${touchDelta.toFixed(1)}`,
+        );
+        if (!SURVEY) {
+          expect(preserved, "scroll state unreadable").not.toBeNull();
+          const cleanlyIgnored =
+            Math.abs(preserved!) <= WHEEL_IGNORED_TOLERANCE_PX;
+          const cleanlyApplied =
+            preserved! >= touchDelta * WHEEL_PRESERVED_MIN_RATIO;
+          expect(
+            cleanlyIgnored || cleanlyApplied,
+            `mid-flight touch scroll neither ignored nor applied: ${preserved!.toFixed(1)}px vs a rest-state gesture of ${touchDelta.toFixed(1)}px`,
+          ).toBe(true);
+        }
+      } finally {
+        await session.detach().catch(() => {});
+      }
+    });
   });
 
   test(`${format.id} resources return to baseline after toggle cycles`, async ({

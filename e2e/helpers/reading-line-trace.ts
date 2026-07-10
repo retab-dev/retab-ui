@@ -460,15 +460,29 @@ export async function traceReadingLineThroughResize(
   // 0.0. Convergence makes the reading deterministic under load; a real
   // per-step displacement converges to itself and still fails.
   const readStep = async () => {
-    let previous: { y: number; x: number } | null = null;
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      if (attempt > 0) await page.waitForTimeout(250);
-      const reading = await sampleResizePosition(page);
-      if (reading == null) continue;
-      if (previous && Math.abs(reading.y - previous.y) < 1) return reading;
-      previous = reading;
+    const converge = async () => {
+      let previous: { y: number; x: number } | null = null;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        if (attempt > 0) await page.waitForTimeout(250);
+        const reading = await sampleResizePosition(page);
+        if (reading == null) continue;
+        if (previous && Math.abs(reading.y - previous.y) < 1) return reading;
+        previous = reading;
+      }
+      return previous;
+    };
+    const reading = await converge();
+    // Convergence has a STALL HOLE on loaded runners: a re-fit frozen on
+    // raster work holds one position long enough for two agreeing reads,
+    // and a pptx step once "converged" 605px out before settling to 0.0.
+    // A suspiciously large reading earns one extended re-read — a stall
+    // recovers, a real per-step displacement persists and still fails.
+    if (reading != null && Math.abs(reading.y) > 60) {
+      await page.waitForTimeout(700);
+      const recheck = await converge();
+      if (recheck != null) return recheck;
     }
-    return previous;
+    return reading;
   };
 
   for (const width of widths) {
@@ -581,6 +595,12 @@ const CONSOLE_IGNORE = [
   /favicon/i,
   /third-party cookie/i,
   /Slow network is detected/i,
+  // Firefox's generic advisory for any page that reads scroll positions;
+  // the engine-sweep trajectory matrices prove the motion holds on Gecko.
+  /scroll-linked positioning effect/i,
+  // The Vercel Analytics dev script doesn't load in headless engines —
+  // deployment chrome, not viewer behavior.
+  /va\.vercel-scripts\.com/,
 ];
 
 export function installConsoleSentinel(
