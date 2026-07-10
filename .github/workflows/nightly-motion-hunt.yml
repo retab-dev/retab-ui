@@ -46,6 +46,13 @@ jobs:
       - name: Firefox trajectory matrix
         run: pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=firefox --workers=2
 
+      # The state-and-input gates on both non-chromium engines (proven
+      # green locally on all three; the touch gate self-skips off-CDP).
+      - name: Engine sweep of state-and-input gates
+        run: |
+          pnpm exec playwright test e2e/keyboard-and-focus-matrix.spec.ts e2e/block-pages-toggle-matrix.spec.ts --project=webkit --workers=2
+          pnpm exec playwright test e2e/keyboard-and-focus-matrix.spec.ts e2e/block-pages-toggle-matrix.spec.ts --project=firefox --workers=2
+
       - name: DPR-1 trajectory matrix (raster rounding hunt)
         run: MATRIX_DPR=1 pnpm exec playwright test e2e/benchmark-toggle-matrix.spec.ts --project=chromium --workers=2
 

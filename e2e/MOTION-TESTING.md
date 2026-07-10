@@ -134,6 +134,14 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
     argument is the vsync-aligned time the paint belongs to; velocity
     must divide by that axis. (Click-driven traces hid this: their
     activation jank happens before sampling starts.)
+12. **Never calibrate on a mutating tree.** Concurrent sessions editing
+    viewer code HMR-remount components mid-trace — one produced a
+    phantom pop of 8.27 on a flight that scored 1.0 on a quiet tree —
+    and a baseline regenerated against uncommitted WIP breaks the drift
+    gate for everyone at HEAD. Before surveying or regenerating: `git
+    status` clean on viewer files, or wait. Budgets come from CI
+    hardware besides (see the baseline section) — a local survey only
+    ever scouts.
 
 ## Changing motion behavior intentionally
 
