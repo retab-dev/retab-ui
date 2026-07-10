@@ -474,14 +474,16 @@ export const VIEWER_BLOCKS = [
   },
   {
     id: "split-consensus",
-    registryName: "split-consensus-viewer-block",
+    registryName: "split-consensus-diagram-vertical-viewer-block",
     title: "Split Consensus",
     description:
-      "A split result with multi-run consensus visible in the sidebar — the page rail stays beside output-level likelihoods and each vote used to build the final split.",
-    command: getRegistryAddCommand("split-consensus-viewer-block"),
+      "A split consensus segment diagram with the page axis running vertically for a narrow sidebar beside the PDF.",
+    command: getRegistryAddCommand(
+      "split-consensus-diagram-vertical-viewer-block",
+    ),
     docsHref: "/examples/split-consensus",
     viewHref: "/view/blocks/split-consensus",
-    previewHeightClassName: "h-[680px]",
+    previewHeightClassName: "h-[760px]",
     categories: ["primitives"],
   },
   {
@@ -498,20 +500,6 @@ export const VIEWER_BLOCKS = [
     previewHeightClassName: "h-[760px]",
     categories: ["primitives"],
     isStandaloneTab: false,
-  },
-  {
-    id: "split-consensus-diagram-vertical",
-    registryName: "split-consensus-diagram-vertical-viewer-block",
-    title: "Split Consensus Diagram Vertical",
-    description:
-      "A split consensus segment diagram with the page axis running vertically for a narrow sidebar beside the PDF.",
-    command: getRegistryAddCommand(
-      "split-consensus-diagram-vertical-viewer-block",
-    ),
-    docsHref: "/examples/split-consensus-diagram-vertical",
-    viewHref: "/view/blocks/split-consensus-diagram-vertical",
-    previewHeightClassName: "h-[760px]",
-    categories: ["primitives"],
   },
   {
     id: "split-consensus-lukas",
