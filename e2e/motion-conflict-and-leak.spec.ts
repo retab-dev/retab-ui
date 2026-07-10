@@ -195,17 +195,6 @@ for (const format of FORMATS) {
     test(`${format.id} preserves touch scroll landing mid-flight`, async ({
       page,
     }) => {
-      // FIXME(task_8f3b0c1e touch-dead-after-toggle): this gate's REST-STATE
-      // CONTROL found a product bug before the gate itself could run —
-      // touch scroll works on a fresh page, is permanently dead after one
-      // sidebar toggle round trip (no recovery after 3s or a tap), while
-      // wheel keeps working. Confirmed pdf + docx; the suspension latch is
-      // shared shell code. Un-fixme when the fix lands: the control then
-      // validates and the conflict contract arms.
-      test.fixme(
-        true,
-        "touch scroll is dead after any sidebar toggle — tracked product bug",
-      );
       test.setTimeout(180_000);
       await page.goto("/view/file-viewer-sidebar-benchmark");
       await page
@@ -224,25 +213,40 @@ for (const format of FORMATS) {
       const trigger = viewerRoot.getByRole("button", {
         name: "Toggle sidebar",
       });
-      const frameBox = await page
-        .locator(format.frameSelector)
-        .first()
-        .boundingBox();
-      const gestureAt = {
-        x: Math.round((frameBox?.x ?? 400) + (frameBox?.width ?? 400) / 2),
-        y: Math.round((frameBox?.y ?? 300) + 200),
+      // The gesture point comes from the shell viewport, measured per
+      // gesture — NOT from the document frame: at half-scroll the frame's
+      // bounding box tops out far above the scrollport (the docx sticky
+      // window sits ~1550px off-screen), and a frame-derived point lands
+      // out of bounds. That artifact read as "touch is dead after a
+      // toggle" before this probe was fixed — validate the instrument's
+      // COORDINATES, not just its rest-state effect.
+      const gesturePoint = async () => {
+        const viewportBox = await page
+          .locator('[data-slot="file-viewer-viewport"]:visible')
+          .first()
+          .boundingBox();
+        return {
+          x: Math.round(
+            (viewportBox?.x ?? 400) + (viewportBox?.width ?? 800) / 2,
+          ),
+          y: Math.round(
+            (viewportBox?.y ?? 300) + (viewportBox?.height ?? 600) / 2,
+          ),
+        };
       };
       // A real touch-source scroll gesture (the tablet input path), not a
       // wheel event — chromium-only via CDP, which is where this gate runs.
       const session = await page.context().newCDPSession(page);
-      const touchScroll = async (distance: number) =>
-        session.send("Input.synthesizeScrollGesture", {
-          x: gestureAt.x,
-          y: gestureAt.y,
+      const touchScroll = async (distance: number) => {
+        const at = await gesturePoint();
+        return session.send("Input.synthesizeScrollGesture", {
+          x: at.x,
+          y: at.y,
           yDistance: -distance,
           speed: 2_000,
           gestureSourceType: "touch",
         });
+      };
 
       try {
         // Baseline: clean toggle, no touch input.
