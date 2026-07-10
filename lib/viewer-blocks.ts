@@ -536,18 +536,6 @@ export const VIEWER_BLOCKS = [
     previewHeightClassName: "h-[680px]",
     categories: ["primitives"],
   },
-  {
-    id: "classify-consensus-deed",
-    registryName: "classify-consensus-deed-viewer-block",
-    title: "Classify Consensus Deed",
-    description:
-      "A deed classification consensus example with eight real-estate recording categories, a multi-page recorded deed, likelihood, and every vote beside the source document.",
-    command: getRegistryAddCommand("classify-consensus-deed-viewer-block"),
-    docsHref: "/examples/classify-consensus-deed",
-    viewHref: "/view/blocks/classify-consensus-deed",
-    previewHeightClassName: "h-[760px]",
-    categories: ["primitives"],
-  },
 ] as const satisfies readonly ViewerBlockConfig[];
 
 export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"];

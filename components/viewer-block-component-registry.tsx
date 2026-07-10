@@ -3,7 +3,6 @@
 import type { ComponentType } from "react";
 
 import type { ViewerBlockId, ViewerBlockMetadata } from "@/lib/viewer-blocks";
-import { ClassifyConsensusDeedViewerBlock } from "@/registry/new-york-v4/blocks/classify-consensus-deed-viewer-block";
 import { ClassifyConsensusViewerBlock } from "@/registry/new-york-v4/blocks/classify-consensus-viewer-block";
 import { CsvSourcesBlock } from "@/registry/new-york-v4/blocks/csv-sources-block";
 import { DocxSourcesBlock } from "@/registry/new-york-v4/blocks/docx-sources-block";
@@ -92,7 +91,6 @@ export const VIEWER_BLOCK_COMPONENTS = {
   "split-consensus-diagram-vertical": SplitConsensusDiagramVerticalViewerBlock,
   "split-consensus-lukas": SplitConsensusLukasViewerBlock,
   "classify-consensus": ClassifyConsensusViewerBlock,
-  "classify-consensus-deed": ClassifyConsensusDeedViewerBlock,
 } satisfies Record<ViewerBlockId, ViewerBlockComponent>;
 
 export function getViewerBlockComponent(blockId: ViewerBlockId) {
