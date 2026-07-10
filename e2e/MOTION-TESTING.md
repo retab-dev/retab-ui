@@ -124,17 +124,22 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
 
 ## Changing motion behavior intentionally
 
-Any change to how motion feels moves baseline numbers. Regenerate and
-commit the baseline with your change:
+Any change to how motion feels moves baseline numbers. The baseline is
+**CI-sourced**: it must come from a green CI run's `motion-metrics`
+artifact, never from a local run — local-Mac numbers carry a hardware
+signature (settleMs ~2x slower on runners, corridors and pops uniformly
+smaller) that once drifted 90 metrics at zero code change. After your
+motion change merges and its matrices pass:
 
 ```
-MOTION_METRICS_PATH=/tmp/metrics.jsonl pnpm verify:benchmark-toggle-matrix
-MOTION_METRICS_PATH=/tmp/metrics.jsonl pnpm verify:sources-viewer-toggle-matrix
-node scripts/compare-motion-baseline.mjs /tmp/metrics.jsonl --update
+gh run download <green-run-id> --name motion-metrics --dir /tmp/mm
+node scripts/compare-motion-baseline.mjs /tmp/mm/motion-metrics.jsonl --update
 ```
 
-The baseline diff in your PR is the reviewable record of what your change
-did to every trajectory.
+Commit the regenerated baseline referencing the run id. The baseline diff
+is the reviewable record of what your change did to every trajectory. (A
+local `MOTION_METRICS_PATH` run is still the right tool for SURVEYING a
+change before it ships — just never `--update` from it.)
 
 ## Adding a format or a page
 
