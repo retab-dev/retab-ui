@@ -258,13 +258,17 @@ export async function traceReadingLineThroughToggle(
       // data-source-line (text lines) and aria-rowindex (grid rows) join the
       // keyed-remount identities: those renderers RECYCLE pooled DOM nodes,
       // rewriting the identity attribute in place, so a connected node is
-      // not proof it still shows the same content.
+      // not proof it still shows the same content. Markdown chunks carry
+      // data-source-start-line; they are React-keyed (detach-rehome, not
+      // pool recycling), but the key still matters — an unmounted chunk's
+      // zero-rect otherwise scores a phantom excursion.
       const IDENTITY_ATTRS = [
         "data-page",
         "data-page-number",
         "data-slide",
         "data-frame",
         "data-source-line",
+        "data-source-start-line",
         "aria-rowindex",
       ];
       const keyOf = (el: HTMLElement) => {
@@ -533,6 +537,7 @@ export async function traceReadingLineThroughResize(
           tracked.getAttribute("data-slide") ??
           tracked.getAttribute("data-frame") ??
           tracked.getAttribute("data-source-line") ??
+          tracked.getAttribute("data-source-start-line") ??
           tracked.getAttribute("aria-rowindex") ??
           null,
         trackedIndex: candidates.indexOf(tracked),
@@ -668,6 +673,7 @@ async function sampleResizePosition(page: Page) {
         el.getAttribute("data-slide") ??
         el.getAttribute("data-frame") ??
         el.getAttribute("data-source-line") ??
+        el.getAttribute("data-source-start-line") ??
         el.getAttribute("aria-rowindex") ??
         null;
       // The SCROLLER remounts too on some formats — a detached scroller's

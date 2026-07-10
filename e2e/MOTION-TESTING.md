@@ -87,11 +87,16 @@ They are encoded in `e2e/helpers/reading-line-trace.ts`; keep them true.
    wrapper.** Window churn (pages mounting/unmounting) reads as content
    drift. Pick the page/frame/slide containing the marker; re-resolve it
    by identity key (`data-page`/`data-frame`/`data-slide`, plus
-   `data-source-line` for text lines and `aria-rowindex` for grid rows)
+   `data-source-line` for text lines, `data-source-start-line` for
+   markdown chunks, and `aria-rowindex` for grid rows)
    across keyed remounts; a detached node's zero-rect at the origin reads
    as a phantom full-viewport excursion. Recycled-pool renderers (text
    lines, csv/xlsx rows) reassign a node while it stays CONNECTED — check
-   the identity attribute every sample, not just connectedness.
+   the identity attribute every sample, not just connectedness. The
+   nuance that moved markdown off its canvas: a scrolled canvas moves
+   rigidly with scrollTop, so it sees scroll drift but is blind to
+   per-chunk placement errors inside the sticky window — still a
+   virtualization wrapper, not the content.
 2. **Probe the line the format actually pins.** Image and the
    fraction-rebase formats pin the viewport top; DOCX and PDF pin the
    reading marker 20% down. At scroll 0 every format pins the top (the

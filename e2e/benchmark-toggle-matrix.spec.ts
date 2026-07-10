@@ -125,13 +125,32 @@ const FORMATS: readonly MatrixFormat[] = [
     markerRatio: 0,
     align: "start",
   },
+  // Markdown joins them: the virtual canvas moves rigidly with scrollTop,
+  // so canvas-tracked cells saw scroll drift but were blind to per-chunk
+  // placement errors inside the sticky window — the old markdown baseline
+  // read 0.0 in EVERY column, X included. Chunks carry
+  // data-source-start-line; they are React-keyed (not pool-recycled), so
+  // detach-rehome is the identity path the tracer must survive. Unlike the
+  // other canvas formats the chunk itself is a CENTERED document
+  // (max-w-4xl, left-1/2 -translate-x-1/2): its X-observable is its
+  // center, which legitimately recenters by half the sidebar delta
+  // (rule 5) — start-align here would read the recenter as a 140px fault.
+  // KNOWN (2026-07-10, unmasked by this retracking): the CLOSE leg recenters
+  // in a single frame — the canvas commits the motion's TARGET width via
+  // minWidth at the click (layoutPolicy "target") and markdown registers no
+  // motion resolver to reproject it, so a widening pane snaps while a
+  // narrowing pane glides on the live width. Single-leg pop reads 0.00
+  // because the snap lands before the first post-click sample; the cycle
+  // leg's continuous sampling records it (pop ~6, ungated). Gate semantics
+  // here score the flight as observed today; the product fix is a separate
+  // change (align-derived translate resolver for the markdown surface).
   {
     id: "markdown",
     ready: '[data-slot="markdown-virtual-canvas"]',
     frameSelector: '[data-slot="markdown-virtual-canvas"]',
-    trackSelector: '[data-slot="markdown-virtual-canvas"]',
+    trackSelector: "section[data-markdown-chunk]",
     markerRatio: 0,
-    align: "start",
+    align: "center",
   },
   {
     id: "code",
