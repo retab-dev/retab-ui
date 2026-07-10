@@ -144,7 +144,11 @@ test.describe("explicit zoom and reduced motion", () => {
     const viewerRoot = page
       .locator('[data-slot="file-viewer-root"]:visible')
       .first();
-    await viewerRoot.getByRole("button", { name: "Zoom in" }).click();
+    // Some formats (pdf/csv/docx) expose a second "Zoom in" in the
+    // document's own controls overlay alongside the header's — an unscoped
+    // role query is a strict-mode violation there. Both drive the shared
+    // zoom state, so take the first.
+    await viewerRoot.getByRole("button", { name: "Zoom in" }).first().click();
     await page.waitForTimeout(800);
     await setViewerScroll(page, IMAGE_TARGET.frameSelector, "quarter");
     await page.waitForTimeout(600);

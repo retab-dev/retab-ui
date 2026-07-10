@@ -171,9 +171,15 @@ test("seeded monkey run stays error-free and bounded", async ({
           break;
         case "zoomIn":
         case "zoomOut": {
-          const zoom = viewerRoot.getByRole("button", {
-            name: action === "zoomIn" ? "Zoom in" : "Zoom out",
-          });
+          // docx (and other formats) render a second zoom control in the
+          // document overlay; without .first() the strict-mode violation
+          // was swallowed by the isVisible catch below and zoom actions
+          // silently no-oped on those formats.
+          const zoom = viewerRoot
+            .getByRole("button", {
+              name: action === "zoomIn" ? "Zoom in" : "Zoom out",
+            })
+            .first();
           if (await zoom.isVisible().catch(() => false)) {
             if (await zoom.isEnabled().catch(() => false)) {
               await zoom.click();
