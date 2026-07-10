@@ -6,8 +6,8 @@ import {
   traceReadingLineThroughToggle,
 } from "./helpers/reading-line-trace";
 
-// Keyboard is the input modality no other gate exercises, and focus is the
-// state no geometry probe can see. Three anomaly classes:
+// Keyboard is the input modality no other gate exercises, and focus and
+// selection are the state no geometry probe can see. Four anomaly classes:
 //
 // - KEYBOARD TOGGLE: Enter/Space on the sidebar trigger must fly the same
 //   trajectory as a click — a divergence means a second activation path
@@ -18,6 +18,9 @@ import {
 // - KEYBOARD SCROLL MID-FLIGHT: PageDown during the flight is the keyboard
 //   twin of the wheel-conflict gate — same binary contract (cleanly
 //   ignored or cleanly applied), different input path.
+// - SELECTION SURVIVAL: a text selection in the document must survive the
+//   toggle — a remount silently destroys ranges, and the reading-line
+//   probes cannot see it.
 //
 // Survey mode (MATRIX_SURVEY=1) prints without failing.
 
@@ -143,6 +146,58 @@ for (const format of FORMATS) {
       }
     }
     sentinel.assertClean();
+  });
+
+  test(`${format.id} text selection survives a toggle`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.goto("/view/file-viewer-sidebar-benchmark");
+    await page.locator(`[data-benchmark-format-option="${format.id}"]`).click();
+    await expect(page.locator(format.ready).first()).toBeVisible({
+      timeout: 60_000,
+    });
+    await page.waitForTimeout(1_500);
+    await setViewerScroll(page, format.frameSelector, "quarter");
+    await page.waitForTimeout(600);
+
+    // Select a word in the document (dblclick), snapshot the selected text.
+    const target = page.locator(format.trackSelector).first();
+    await target.dblclick({ position: { x: 200, y: 120 } });
+    await page.waitForTimeout(200);
+    const before = await page.evaluate(
+      () => window.getSelection()?.toString() ?? "",
+    );
+    // The image canvas has no selectable text — the invariant is vacuous
+    // there; only score formats where a selection actually took.
+    test.skip(
+      before.trim().length === 0,
+      "no selectable text at the probe point",
+    );
+
+    const viewerRoot = page
+      .locator('[data-slot="file-viewer-root"]:visible')
+      .first();
+    const trigger = viewerRoot.getByRole("button", { name: "Toggle sidebar" });
+    await trigger.click();
+    await page.waitForTimeout(900);
+    const afterClose = await page.evaluate(
+      () => window.getSelection()?.toString() ?? "",
+    );
+    await trigger.click();
+    await page.waitForTimeout(900);
+    const afterOpen = await page.evaluate(
+      () => window.getSelection()?.toString() ?? "",
+    );
+
+    console.log(
+      `SELECTION ${format.id}: before=${JSON.stringify(before.slice(0, 40))} afterClose=${JSON.stringify(afterClose.slice(0, 40))} afterOpen=${JSON.stringify(afterOpen.slice(0, 40))}`,
+    );
+    if (!SURVEY) {
+      expect(
+        afterClose,
+        "selection destroyed by the close toggle",
+      ).toBe(before);
+      expect(afterOpen, "selection destroyed by the open toggle").toBe(before);
+    }
   });
 
   test(`${format.id} PageDown mid-flight is cleanly ignored or applied`, async ({
