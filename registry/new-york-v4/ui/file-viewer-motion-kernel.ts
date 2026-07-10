@@ -66,6 +66,7 @@ const FILE_VIEWER_FLIGHT_TICK_LIMIT = 240;
 
 export type FileViewerDocumentSurface = {
   element: HTMLElement;
+  getMotionProbeElement?: (() => HTMLElement | null) | null;
   readSettleSnapshot?: FileViewerDocumentSurfaceSettleSnapshotReader | null;
   resolveMotionStyle?: FileViewerDocumentSurfaceMotionResolver | null;
 };
@@ -193,10 +194,7 @@ export function createFileViewerMotionKernel({
   const recordFlightTick = (frame: FileViewerMotionFrame, now = readNow()) => {
     const record = activeFlightRecord;
     if (!record || frame.motionId !== record.id) return;
-    record.maxTickGapMs = Math.max(
-      record.maxTickGapMs,
-      now - lastFlightTickAt,
-    );
+    record.maxTickGapMs = Math.max(record.maxTickGapMs, now - lastFlightTickAt);
     lastFlightTickAt = now;
     if (frame.phase === "settling") record.settleHoldFrameCount += 1;
     if (record.ticks.length >= FILE_VIEWER_FLIGHT_TICK_LIMIT) return;

@@ -20,6 +20,7 @@ type FileViewerMotionTelemetryMetricId =
   | "blink"
   | "gap-stability"
   | "overshoot"
+  | "content-overshoot"
   | "settle-snap"
   | "scroll-identity"
   | "dom-mutations"
@@ -37,6 +38,10 @@ export type FileViewerMotionTelemetryMetric = {
 };
 
 export type FileViewerMotionTelemetrySample = {
+  contentHeight: number;
+  contentLeft: number;
+  contentTop: number;
+  contentWidth: number;
   elapsedMs: number;
   gapWidth: number;
   motionPhase: string;
@@ -96,6 +101,7 @@ declare global {
 const FILE_VIEWER_TELEMETRY_DEFAULT_SETTLE_FRAMES = 16;
 const FILE_VIEWER_TELEMETRY_GAP_REVERSAL_EPSILON_PX = 1;
 const FILE_VIEWER_TELEMETRY_OVERSHOOT_BUDGET_PX = 1;
+const FILE_VIEWER_TELEMETRY_CONTENT_OVERSHOOT_BUDGET_PX = 1;
 const FILE_VIEWER_TELEMETRY_SETTLE_SNAP_BUDGET_PX = 1.5;
 const FILE_VIEWER_TELEMETRY_SCROLL_IDENTITY_BUDGET_PX = 1;
 const FILE_VIEWER_TELEMETRY_CYCLE_BUDGET_PX = 2;
@@ -173,11 +179,19 @@ async function runFileViewerMotionTelemetry(
   const runs: FileViewerMotionTelemetryRun[] = [];
 
   runs.push(
-    await sampleFileViewerMotionRun({ action: firstAction, hostRef, settleFrameCount }),
+    await sampleFileViewerMotionRun({
+      action: firstAction,
+      hostRef,
+      settleFrameCount,
+    }),
   );
   await waitForFileViewerTelemetryFrames(6);
   runs.push(
-    await sampleFileViewerMotionRun({ action: secondAction, hostRef, settleFrameCount }),
+    await sampleFileViewerMotionRun({
+      action: secondAction,
+      hostRef,
+      settleFrameCount,
+    }),
   );
 
   const metrics = collectFileViewerMotionTelemetryMetrics(runs);
@@ -186,7 +200,10 @@ async function runFileViewerMotionTelemetry(
     durationMs: Math.max(0, performance.now() - startedAt),
     metrics,
     runs,
-    sampledFrameCount: runs.reduce((count, run) => count + run.samples.length, 0),
+    sampledFrameCount: runs.reduce(
+      (count, run) => count + run.samples.length,
+      0,
+    ),
     status: metrics.every((metric) => metric.passed) ? "passed" : "failed",
   };
 }
@@ -245,6 +262,10 @@ async function sampleFileViewerMotionRun({
 
 function createEmptyFileViewerMotionTelemetrySample(): FileViewerMotionTelemetrySample {
   return {
+    contentHeight: 0,
+    contentLeft: 0,
+    contentTop: 0,
+    contentWidth: 0,
     elapsedMs: 0,
     gapWidth: 0,
     motionPhase: "idle",
@@ -274,11 +295,17 @@ function readFileViewerMotionTelemetrySample(
   const gapRect = elements.sidebarGapElement?.getBoundingClientRect();
   const sidebarRect = elements.sidebarElement?.getBoundingClientRect();
   const surfaceRect = surfaceElement.getBoundingClientRect();
+  const contentElement = readFileViewerMotionProbeElement(elements);
+  const contentRect = contentElement?.getBoundingClientRect();
   const scroller = findFileViewerTelemetryScroller(surfaceElement);
   const frame = host.motionKernel.getInteractiveSnapshot();
   const visibleCanvasCount = countFileViewerVisibleCanvases(surfaceElement);
 
   return {
+    contentHeight: contentRect?.height ?? surfaceRect.height,
+    contentLeft: contentRect?.left ?? surfaceRect.left,
+    contentTop: contentRect?.top ?? surfaceRect.top,
+    contentWidth: contentRect?.width ?? surfaceRect.width,
     elapsedMs: Math.max(0, performance.now() - startedAt),
     gapWidth: gapRect?.width ?? 0,
     motionPhase: frame.phase,
@@ -297,6 +324,16 @@ function readFileViewerMotionTelemetrySample(
     timestamp: performance.now(),
     visibleCanvasCount,
   };
+}
+
+function readFileViewerMotionProbeElement(
+  elements: ReturnType<FileViewerElementRegistry["getElements"]>,
+) {
+  try {
+    return elements.getDocumentSurfaceMotionProbeElement?.() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function findFileViewerTelemetryScroller(element: HTMLElement) {
@@ -354,7 +391,8 @@ function createFileViewerMotionTelemetryTrackers(
         if (
           record.type === "attributes" &&
           record.target instanceof HTMLCanvasElement &&
-          (record.attributeName === "width" || record.attributeName === "height")
+          (record.attributeName === "width" ||
+            record.attributeName === "height")
         ) {
           trackers.canvasResizeMutationCount += 1;
         }
@@ -448,12 +486,61 @@ function collectFileViewerMotionTelemetryMetrics(
     collectFileViewerBlinkMetric(runs),
     collectFileViewerGapStabilityMetric(runs),
     collectFileViewerOvershootMetric(runs),
+    collectFileViewerContentOvershootMetric(runs),
     collectFileViewerSettleSnapMetric(runs),
     collectFileViewerScrollIdentityMetric(runs),
     collectFileViewerDomMutationsMetric(runs),
     collectFileViewerLayoutShiftMetric(runs),
     collectFileViewerMainThreadMetric(runs),
     collectFileViewerCycleInvarianceMetric(runs),
+  ];
+}
+
+function collectFileViewerContentOvershootMetric(
+  runs: readonly FileViewerMotionTelemetryRun[],
+): FileViewerMotionTelemetryMetric {
+  let overshootPx = 0;
+
+  for (const run of runs) {
+    const before = getFileViewerTelemetryContentEdges(run.before);
+    const after = getFileViewerTelemetryContentEdges(run.after);
+    if (!before || !after) continue;
+
+    for (const sample of run.samples) {
+      const edges = getFileViewerTelemetryContentEdges(sample);
+      if (!edges) continue;
+      for (let index = 0; index < edges.length; index += 1) {
+        const low = Math.min(before[index]!, after[index]!);
+        const high = Math.max(before[index]!, after[index]!);
+        overshootPx = Math.max(
+          overshootPx,
+          low - edges[index]!,
+          edges[index]! - high,
+        );
+      }
+    }
+  }
+
+  return {
+    budget: `<= ${FILE_VIEWER_TELEMETRY_CONTENT_OVERSHOOT_BUDGET_PX}px`,
+    detail:
+      "The visible content edges must stay inside their endpoint corridor; an excursion outside it is the first-frame back-and-forth wobble.",
+    id: "content-overshoot",
+    label: "Content overshoot",
+    passed: overshootPx <= FILE_VIEWER_TELEMETRY_CONTENT_OVERSHOOT_BUDGET_PX,
+    value: `${formatFileViewerTelemetryNumber(Math.max(0, overshootPx), 2)}px`,
+  };
+}
+
+function getFileViewerTelemetryContentEdges(
+  sample: FileViewerMotionTelemetrySample,
+): readonly [number, number, number, number] | null {
+  if (sample.contentWidth <= 0 || sample.contentHeight <= 0) return null;
+  return [
+    sample.contentLeft,
+    sample.contentTop,
+    sample.contentLeft + sample.contentWidth,
+    sample.contentTop + sample.contentHeight,
   ];
 }
 
@@ -470,7 +557,8 @@ function collectFileViewerBlinkMetric(
       run.after.visibleCanvasCount,
     );
     for (const sample of run.samples) {
-      const surfaceMissing = sample.surfaceWidth <= 0 || sample.surfaceHeight <= 0;
+      const surfaceMissing =
+        sample.surfaceWidth <= 0 || sample.surfaceHeight <= 0;
       const canvasDropout =
         endpointCanvasFloor > 0 && sample.visibleCanvasCount === 0;
       if (surfaceMissing || canvasDropout) blinkFrameCount += 1;
@@ -494,9 +582,7 @@ function collectFileViewerGapStabilityMetric(
   let reversalCount = 0;
   for (const run of runs) {
     const widths = run.samples.map((sample) => sample.gapWidth);
-    const direction = Math.sign(
-      (widths.at(-1) ?? 0) - (widths.at(0) ?? 0),
-    );
+    const direction = Math.sign((widths.at(-1) ?? 0) - (widths.at(0) ?? 0));
     if (direction === 0) continue;
     for (let index = 1; index < widths.length; index += 1) {
       const step = widths[index] - widths[index - 1];
@@ -583,7 +669,10 @@ function collectFileViewerSettleSnapMetric(
       // settling but the last sliding tick's transform is still applied; its
       // box sweeps with the anchor term while the viewport pixels hold. The
       // metric asserts rest AFTER the transform clears.
-      if (sample.surfaceTransform !== "none" && sample.surfaceTransform !== "") {
+      if (
+        sample.surfaceTransform !== "none" &&
+        sample.surfaceTransform !== ""
+      ) {
         continue;
       }
       snapPx = Math.max(
@@ -640,7 +729,10 @@ function collectFileViewerDomMutationsMetric(
     (count, run) => count + run.canvasResizeMutationCount,
     0,
   );
-  const mutationCount = runs.reduce((count, run) => count + run.mutationCount, 0);
+  const mutationCount = runs.reduce(
+    (count, run) => count + run.mutationCount,
+    0,
+  );
 
   return {
     budget: "0 canvas resizes",
@@ -684,7 +776,9 @@ function collectFileViewerMainThreadMetric(
   const sortedGaps = gaps.slice().sort((left, right) => left - right);
   const p95 =
     sortedGaps.length > 0
-      ? sortedGaps[Math.min(sortedGaps.length - 1, Math.floor(sortedGaps.length * 0.95))]
+      ? sortedGaps[
+          Math.min(sortedGaps.length - 1, Math.floor(sortedGaps.length * 0.95))
+        ]
       : 0;
   const max = sortedGaps.at(-1) ?? 0;
   const longTaskDurationMs = runs.reduce(
@@ -753,9 +847,14 @@ function logFileViewerMotionTelemetryResult(
     sampledFrameCount: result.sampledFrameCount,
     status: result.status,
   };
-  console.info(`[file-viewer:motion-telemetry] result ${JSON.stringify(summary)}`);
+  console.info(
+    `[file-viewer:motion-telemetry] result ${JSON.stringify(summary)}`,
+  );
 }
 
-function formatFileViewerTelemetryNumber(value: number, fractionDigits: number) {
+function formatFileViewerTelemetryNumber(
+  value: number,
+  fractionDigits: number,
+) {
   return Number.isFinite(value) ? Number(value.toFixed(fractionDigits)) : 0;
 }

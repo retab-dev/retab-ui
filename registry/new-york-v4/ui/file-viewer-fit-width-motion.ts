@@ -25,6 +25,7 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
   direction = "ltr",
   isFitWidth,
   stageInlineSize,
+  stageInlinePadding = 0,
   stageInlineSlope = 1,
   stageBlockSlope = stageInlineSlope,
 }: {
@@ -33,6 +34,8 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
   direction?: FileViewerInlineDirection;
   isFitWidth: boolean;
   stageInlineSize: number;
+  /** Constant symmetric inline padding inside the transformed stage. */
+  stageInlinePadding?: number;
   stageInlineSlope?: number;
   /**
    * Slope for the BLOCK axis when it differs from the inline one. A stage
@@ -61,6 +64,7 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
         direction,
         frame,
         stageInlineSize,
+        stageInlinePadding,
         stageInlineSlope,
         stageBlockSlope,
       }),
@@ -138,10 +142,7 @@ function getFileViewerAlignTranslateSurfaceMotionTransform({
   // an overflowing canvas itself pins to the pane's start edge — left in
   // LTR, right in RTL — so the stage's pane-space position carries the
   // canvas offset too.
-  const canvasInlineSize = Math.max(
-    frame.layoutInlineSize,
-    frame.toInlineSize,
-  );
+  const canvasInlineSize = Math.max(frame.layoutInlineSize, frame.toInlineSize);
   const stageInlineSize = Math.min(canvasInlineSize, maxStageInlineSize);
   const canvasInlineOffset =
     direction === "rtl"
@@ -222,10 +223,8 @@ export function getFileViewerFitWidthVisualScale({
       ? stageInlineSlope
       : 1;
   return (
-    Math.max(
-      1,
-      stageInlineSize + slope * (liveInlineSize - targetInlineSize),
-    ) / stageInlineSize
+    Math.max(1, stageInlineSize + slope * (liveInlineSize - targetInlineSize)) /
+    stageInlineSize
   );
 }
 
@@ -240,6 +239,7 @@ export function captureFileViewerFitWidthAnchorScreenOffset({
   probeStageOffset,
   scrollTop,
   stageInlineSize,
+  stageInlinePadding = 0,
   stageBlockSlope = 1,
 }: {
   lastAnchorBlock: number | null;
@@ -247,6 +247,7 @@ export function captureFileViewerFitWidthAnchorScreenOffset({
   probeStageOffset: number;
   scrollTop: number;
   stageInlineSize: number;
+  stageInlinePadding?: number;
   /** The BLOCK-axis slope — anchor capture/solve is block-axis math. */
   stageBlockSlope?: number;
 }) {
@@ -255,7 +256,10 @@ export function captureFileViewerFitWidthAnchorScreenOffset({
 
   const liveScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: liveFrame.layoutInlineSize,
-    stageInlineSize,
+    stageInlineSize: getFileViewerFitWidthContentInlineSize({
+      stageInlinePadding,
+      stageInlineSize,
+    }),
     stageInlineSlope: stageBlockSlope,
     targetInlineSize: liveFrame.toInlineSize,
   });
@@ -280,6 +284,7 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
   probeStageOffset,
   scrollTop,
   stageInlineSize,
+  stageInlinePadding = 0,
   stageBlockSlope = 1,
   toInlineSize,
 }: {
@@ -288,6 +293,7 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
   probeStageOffset: number;
   scrollTop: number;
   stageInlineSize: number;
+  stageInlinePadding?: number;
   /** The BLOCK-axis slope — anchor capture/solve is block-axis math. */
   stageBlockSlope?: number;
   toInlineSize: number | null;
@@ -296,14 +302,14 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
 
   const startScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: fromInlineSize,
-    stageInlineSize,
+    stageInlineSize: getFileViewerFitWidthContentInlineSize({
+      stageInlinePadding,
+      stageInlineSize,
+    }),
     stageInlineSlope: stageBlockSlope,
     targetInlineSize: toInlineSize,
   });
-  if (
-    !Number.isFinite(startScale) ||
-    Math.abs(1 - startScale) <= 0.001
-  ) {
+  if (!Number.isFinite(startScale) || Math.abs(1 - startScale) <= 0.001) {
     return null;
   }
 
@@ -319,6 +325,7 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   direction,
   frame,
   stageInlineSize,
+  stageInlinePadding,
   stageInlineSlope,
   stageBlockSlope,
 }: {
@@ -327,6 +334,7 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   direction: FileViewerInlineDirection;
   frame: FileViewerMotionFrame;
   stageInlineSize: number;
+  stageInlinePadding: number;
   stageInlineSlope: number;
   stageBlockSlope: number;
 }) {
@@ -345,19 +353,24 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   // size, and at the last frame to the settled stage — identity. Each axis
   // carries its own slope: they differ when the stage's inline box holds
   // constant padding while its block stack scales with the content.
+  const contentInlineSize = getFileViewerFitWidthContentInlineSize({
+    stageInlinePadding,
+    stageInlineSize,
+  });
   const inlineScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: frame.layoutInlineSize,
-    stageInlineSize,
+    stageInlineSize: contentInlineSize,
     stageInlineSlope,
     targetInlineSize: frame.toInlineSize,
   });
   const blockScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: frame.layoutInlineSize,
-    stageInlineSize,
+    stageInlineSize: contentInlineSize,
     stageInlineSlope: stageBlockSlope,
     targetInlineSize: frame.toInlineSize,
   });
-  const visualStageInlineSize = inlineScale * stageInlineSize;
+  const visualStageInlineSize =
+    inlineScale * contentInlineSize + stageInlinePadding;
   const settledMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,
@@ -370,7 +383,13 @@ function getFileViewerFitWidthSurfaceMotionTransform({
     direction,
     stageInlineSize: visualStageInlineSize,
   });
-  const translateX = visualMargin - settledMargin;
+  // The padding is constant in both endpoint layouts. Scaling the outer stage
+  // would scale that inset too, making the visible page briefly too wide or
+  // narrow on the first frame. Rebase the symmetric start inset so the inner
+  // content edge, not the transparent wrapper edge, is pixel-continuous.
+  const inlinePaddingStart = stageInlinePadding / 2;
+  const translateX =
+    visualMargin - settledMargin + (1 - inlineScale) * inlinePaddingStart;
 
   if (
     Math.abs(inlineScale - 1) <= 0.001 &&
@@ -393,6 +412,19 @@ function getFileViewerFitWidthSurfaceMotionTransform({
       : `${formattedInlineScale}, ${formattedBlockScale}`;
 
   return `translate3d(${formattedTranslateX}px, ${translateY}, 0) scale(${formattedScale})`;
+}
+
+function getFileViewerFitWidthContentInlineSize({
+  stageInlinePadding,
+  stageInlineSize,
+}: {
+  stageInlinePadding: number;
+  stageInlineSize: number;
+}) {
+  const padding = Number.isFinite(stageInlinePadding)
+    ? Math.max(0, stageInlinePadding)
+    : 0;
+  return Math.max(1, stageInlineSize - padding);
 }
 
 // Physical LEFT offset of the stage box inside the available inline size —

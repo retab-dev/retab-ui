@@ -18,6 +18,7 @@ import {
 import { ImageFrameScroller } from "@/components/ui/image-viewer-frame";
 import {
   IMAGE_READING_MARKER_RATIO,
+  IMAGE_VIEWER_HORIZONTAL_PADDING,
   MAX_VIEWER_SCALE,
   MIN_VIEWER_SCALE,
   useFrameListWidth,
@@ -44,6 +45,7 @@ import {
   captureFileViewerFitWidthAnchorScreenOffset,
   createFileViewerFitWidthSurfaceMotionResolver,
   FILE_VIEWER_FIT_WIDTH_ANCHOR_BLOCK_PROPERTY,
+  getFileViewerFitWidthScale,
   resolveFileViewerFitWidthMotionAnchorBlock,
 } from "./file-viewer-fit-width-motion";
 import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
@@ -111,6 +113,21 @@ export function ImageViewerContent({
     onScaleChange,
     frameListLayoutWidth,
   );
+  const rasterInlineSize =
+    rendererFrame.shellInlineSize ??
+    rendererFrame.rasterInlineSize ??
+    frameListLayoutWidth;
+  const rasterScale = isFitWidth
+    ? clamp(
+        getFileViewerFitWidthScale({
+          availableInlineSize: rasterInlineSize ?? frameListLayoutWidth ?? 0,
+          contentInlineSize: widestFrameWidth,
+          stageInlinePadding: IMAGE_VIEWER_HORIZONTAL_PADDING,
+        }),
+        MIN_VIEWER_SCALE,
+        MAX_VIEWER_SCALE,
+      )
+    : scale;
   const frameLayout = React.useMemo(
     () =>
       createImageFrameLayout({
@@ -147,17 +164,6 @@ export function ImageViewerContent({
   const imageDocumentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [imageDocumentSurfaceElement, setImageDocumentSurfaceElement] =
     React.useState<HTMLDivElement | null>(null);
-  // The stage's two axes scale differently: the inline box is the frame
-  // plus CONSTANT horizontal padding (fit subtracts it, so the stage tracks
-  // the pane 1:1 — unit inline slope), while the block stack (frame heights,
-  // gaps, vertical padding) scales with the fit scale, i.e. with the pane
-  // MINUS that padding. A uniform first-frame scale therefore cannot land
-  // both axes; the block slope carries the content ratio.
-  const imageStageBlockSlope =
-    isFitWidth && frameLayout.maxFrameWidth > 0
-      ? (frameLayout.maxFrameWidth + frameLayout.padding * 2) /
-        frameLayout.maxFrameWidth
-      : 1;
   const resolveSurfaceMotionStyle =
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
@@ -166,13 +172,13 @@ export function ImageViewerContent({
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: frameLayout.maxFrameWidth + frameLayout.padding * 2,
+          stageInlinePadding: IMAGE_VIEWER_HORIZONTAL_PADDING,
           stageInlineSlope: 1,
-          stageBlockSlope: imageStageBlockSlope,
+          stageBlockSlope: 1,
         }),
       [
         frameLayout.maxFrameWidth,
         frameLayout.padding,
-        imageStageBlockSlope,
         isFitWidth,
         rendererFrame.align,
         rendererFrame.direction,
@@ -232,7 +238,8 @@ export function ImageViewerContent({
             probeStageOffset: newFrameLayout.offsetTop - logicalDelta,
             scrollTop: physicalScrollTop,
             stageInlineSize: imageStageInlineSize,
-            stageBlockSlope: imageStageBlockSlope,
+            stageInlinePadding: IMAGE_VIEWER_HORIZONTAL_PADDING,
+            stageBlockSlope: 1,
             toInlineSize: rendererFrame.toInlineSize,
           })
         : null;
@@ -245,7 +252,6 @@ export function ImageViewerContent({
   }, [
     frameLayout,
     getScrollMetrics,
-    imageStageBlockSlope,
     imageStageInlineSize,
     rendererFrame.fromInlineSize,
     rendererFrame.toInlineSize,
@@ -274,7 +280,8 @@ export function ImageViewerContent({
             probeStageOffset: frame.offsetTop - logicalDelta,
             scrollTop: physicalScrollTop,
             stageInlineSize: imageStageInlineSize,
-            stageBlockSlope: imageStageBlockSlope,
+            stageInlinePadding: IMAGE_VIEWER_HORIZONTAL_PADDING,
+            stageBlockSlope: 1,
           }),
         }
       : null;
@@ -331,6 +338,24 @@ export function ImageViewerContent({
     },
     [handleBeforeLayoutMotion, writeImageDocumentAnchorBlockOffset],
   );
+  const motionProbeFrameNumberRef = React.useRef(currentFrameNumber);
+  motionProbeFrameNumberRef.current = currentFrameNumber;
+  const getImageMotionProbeElement = React.useCallback(() => {
+    const surface = imageDocumentSurfaceRef.current;
+    if (!surface) return null;
+    const frameNumber =
+      preMotionAnchorRef.current?.frameNumber ??
+      motionProbeFrameNumberRef.current;
+    return (
+      surface.querySelector<HTMLElement>(
+        `[data-slot="image-frame"][data-frame-number="${frameNumber}"]`,
+      ) ??
+      surface.querySelector<HTMLElement>(
+        '[data-slot="image-frame-slot"][data-visible] [data-slot="image-frame"]',
+      ) ??
+      surface.querySelector<HTMLElement>('[data-slot="image-frame"]')
+    );
+  }, []);
   const documentSurfaceKey = imageDocumentSurfaceElement
     ? joinEffectKey([
         "image-document-surface",
@@ -343,6 +368,7 @@ export function ImageViewerContent({
     if (!imageDocumentSurfaceElement) return;
     return rendererEnvironment.registerDocumentSurface({
       element: imageDocumentSurfaceElement,
+      getMotionProbeElement: getImageMotionProbeElement,
       resolveMotionStyle: resolveSurfaceMotionStyle,
     });
   });
@@ -422,6 +448,7 @@ export function ImageViewerContent({
               layout={frameLayout}
               scale={scale}
               rotation={rotation}
+              rasterScale={rasterScale}
               align={rendererFrame.align}
               documentSurfaceRef={setImageDocumentSurfaceRef}
               frameListRef={frameListRef}

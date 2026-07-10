@@ -204,9 +204,7 @@ export function DocxViewerContent({
   // exactly the layout width, so the fit-width resolver's affine unit-slope
   // reprojection hides the slide-start re-fit behind one uniform transform.
   const stageInlineSize =
-    pageWidth != null
-      ? pageWidth * scale + DOCX_STAGE_INLINE_PADDING_PX
-      : null;
+    pageWidth != null ? pageWidth * scale + DOCX_STAGE_INLINE_PADDING_PX : null;
   const resolveSurfaceMotionStyle =
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
@@ -215,8 +213,14 @@ export function DocxViewerContent({
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: stageInlineSize ?? 0,
+          stageInlinePadding: DOCX_STAGE_INLINE_PADDING_PX,
         }),
-      [isFitWidth, rendererFrame.align, rendererFrame.direction, stageInlineSize],
+      [
+        isFitWidth,
+        rendererFrame.align,
+        rendererFrame.direction,
+        stageInlineSize,
+      ],
     );
   const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [documentSurfaceElement, setDocumentSurfaceElementState] =
@@ -267,6 +271,7 @@ export function DocxViewerContent({
             probeStageOffset: DOCX_VIEWER_PADDING_PX + page.top * scale,
             scrollTop: viewport.scrollTop,
             stageInlineSize,
+            stageInlinePadding: DOCX_STAGE_INLINE_PADDING_PX,
             toInlineSize: rendererFrame.toInlineSize,
           })
         : null;
@@ -310,6 +315,7 @@ export function DocxViewerContent({
               probeStageOffset: DOCX_VIEWER_PADDING_PX + page.top * scale,
               scrollTop: viewport.scrollTop,
               stageInlineSize,
+              stageInlinePadding: DOCX_STAGE_INLINE_PADDING_PX,
             }),
           }
         : null;
@@ -341,6 +347,20 @@ export function DocxViewerContent({
     },
     [handleBeforeLayoutMotion, writeDocxDocumentAnchorBlockOffset],
   );
+  const motionProbePageNumberRef = React.useRef(currentPage);
+  motionProbePageNumberRef.current = currentPage;
+  const getDocxMotionProbeElement = React.useCallback(() => {
+    const surface = documentSurfaceRef.current;
+    if (!surface) return null;
+    const pageNumber =
+      preMotionAnchorRef.current?.pageNumber ??
+      motionProbePageNumberRef.current;
+    return (
+      surface.querySelector<HTMLElement>(
+        `.docx-wrapper > section.docx[data-page-number="${pageNumber}"]`,
+      ) ?? surface.querySelector<HTMLElement>(".docx-wrapper > section.docx")
+    );
+  }, []);
   const documentSurfaceKey = documentSurfaceElement
     ? joinEffectKey([
         "docx-document-surface",
@@ -353,6 +373,7 @@ export function DocxViewerContent({
     if (!documentSurfaceElement) return;
     return registerDocumentSurface({
       element: documentSurfaceElement,
+      getMotionProbeElement: getDocxMotionProbeElement,
       resolveMotionStyle: resolveSurfaceMotionStyle,
     });
   });

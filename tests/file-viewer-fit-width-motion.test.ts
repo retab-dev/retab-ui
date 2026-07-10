@@ -112,6 +112,33 @@ describe("file viewer fit-width motion", () => {
     expect(midStyle?.transform).toContain("scale(1.168269)");
   });
 
+  it("keeps content inside constant wrapper padding continuous", () => {
+    // Image and DOCX fit the visible page to pane − 32px, then wrap it in
+    // symmetric 16px padding. Scaling the OUTER stage reproduces the wrapper
+    // width but scales those 16px too, so the visible page first moves the
+    // wrong way. The content scale and inset correction must reproduce both
+    // visible edges exactly at the first frame.
+    const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
+      align: "center",
+      isFitWidth: true,
+      stageInlineSize: 1246,
+      stageInlinePadding: 32,
+    });
+
+    const style = resolveMotionStyle({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 966,
+      layoutInlineSize: 966,
+      phase: "sliding",
+      toInlineSize: 1246,
+    });
+
+    // content scale = (966 − 32) / (1246 − 32) = 934 / 1214
+    expect(style?.transform).toContain("scale(0.769357)");
+    // (1 − scale) × 16px keeps the visible content's left inset at 16px.
+    expect(style?.transform).toContain("translate3d(3.69px,");
+  });
+
   // RTL: the margin model must speak physical-left. The only branch where
   // direction changes the answer for a centered stage is the over-constrained
   // one — the settled stage (laid out for the wider target) overflowing the

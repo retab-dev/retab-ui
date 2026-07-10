@@ -67,6 +67,7 @@ export interface ImageFrameScrollerProps {
   source: FrameSource;
   layout: ImageFrameLayoutModel;
   scale: number;
+  rasterScale?: number;
   rotation: QuarterTurn;
   align?: FileViewerDocumentAlign;
   documentSurfaceRef?: React.Ref<HTMLDivElement>;
@@ -210,7 +211,8 @@ function ImageFrameCanvas({
               backingFrameRect.height / 2,
             );
             ctx.rotate((rotation * Math.PI) / 180);
-            const drawWidth = descriptor.intrinsicSize.width * rasterDeviceScale;
+            const drawWidth =
+              descriptor.intrinsicSize.width * rasterDeviceScale;
             const drawHeight =
               descriptor.intrinsicSize.height * rasterDeviceScale;
             ctx.imageSmoothingQuality = renderQuality;
@@ -276,6 +278,7 @@ export function ImageFrameScroller({
   source,
   layout,
   scale,
+  rasterScale = scale,
   rotation,
   align = "center",
   documentSurfaceRef,
@@ -359,7 +362,7 @@ export function ImageFrameScroller({
   } = useImageFrameRenderScheduler({
     frameNumbers: visibleFrameNumbers,
     lowPriorityFrameNumbers,
-    scale,
+    rasterScale,
     rotation,
     pixelRatio: imageDevicePixelRatio,
     resetKey: layoutResetKey,
@@ -389,6 +392,7 @@ export function ImageFrameScroller({
       renderFrameNumbers,
       resetKey: projectionResetKey,
       rotation,
+      rasterScale,
       scale,
       source,
       sourceKey,
@@ -404,6 +408,7 @@ export function ImageFrameScroller({
     renderedWindow,
     renderFrameNumbers,
     rotation,
+    rasterScale,
     scale,
     freezeVisibleFrameWindow,
     source,
@@ -609,7 +614,7 @@ type ImageFrameRenderRequest = {
 function useImageFrameRenderScheduler({
   frameNumbers,
   lowPriorityFrameNumbers = [],
-  scale,
+  rasterScale,
   rotation,
   pixelRatio,
   resetKey,
@@ -618,14 +623,14 @@ function useImageFrameRenderScheduler({
 }: {
   frameNumbers: readonly number[];
   lowPriorityFrameNumbers?: readonly number[];
-  scale: number;
+  rasterScale: number;
   rotation: QuarterTurn;
   pixelRatio: number;
   resetKey: unknown;
   maxRunning?: number;
   maxLowPriorityRunning?: number;
 }) {
-  const renderScale = scale * pixelRatio;
+  const renderScale = Math.min(rasterScale * pixelRatio, 1);
   const requestedRenders = React.useMemo<ImageFrameRenderRequest[]>(
     () =>
       mergeImageFrameNumbers(frameNumbers).map((frameNumber) => ({
@@ -854,6 +859,7 @@ function projectImageFrames({
   renderFrameNumbers,
   resetKey,
   rotation,
+  rasterScale,
   scale,
   source,
   sourceKey,
@@ -871,6 +877,7 @@ function projectImageFrames({
   renderFrameNumbers: readonly number[];
   resetKey: string;
   rotation: QuarterTurn;
+  rasterScale: number;
   scale: number;
   source: FrameSource;
   sourceKey: number;
@@ -907,18 +914,16 @@ function projectImageFrames({
       shell: projectedFrame.shell,
     });
     if (activeFrameNumberSet.has(frame.frameNumber)) {
-      // Commit-then-relax applies to the raster too: the committed layout
-      // scale IS the motion target, so rastering at it immediately keeps the
-      // slide in minification and leaves nothing to snap at settle. Holding
-      // the old raster instead magnifies dense content mid-slide (text
-      // shimmer) and then visibly sharpens when the held raster releases.
+      // The raster is prepared for the widest shell layout before motion.
+      // Sidebar toggles then change only its CSS box and the shell transform:
+      // the backing store never resizes (or sharpens) inside the flight.
       renderProjectedImageFrame({
         frame,
         onFrameRenderTiming,
         projectedFrame,
         renderFrameOverlay,
         renderQuality,
-        rasterScale: scale,
+        rasterScale,
         rotation,
         scale,
         source,

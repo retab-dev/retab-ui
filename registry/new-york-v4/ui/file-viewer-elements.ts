@@ -25,6 +25,7 @@ export function readFileViewerBeforeLayoutMotionFrame(
 
 export type FileViewerElements = {
   documentSurfaceElement: HTMLElement | null;
+  getDocumentSurfaceMotionProbeElement: (() => HTMLElement | null) | null;
   sidebarElement: HTMLElement | null;
   sidebarGapElement: HTMLDivElement | null;
   sidebarTriggerElement: HTMLElement | null;
@@ -49,6 +50,7 @@ export function createFileViewerElementRegistry({
 }): FileViewerElementRegistry {
   const elements: FileViewerElements = {
     documentSurfaceElement: null,
+    getDocumentSurfaceMotionProbeElement: null,
     sidebarElement: null,
     sidebarGapElement: null,
     sidebarTriggerElement: null,
@@ -62,10 +64,13 @@ export function createFileViewerElementRegistry({
       documentSurfaceRegistration += 1;
       const registration = documentSurfaceRegistration;
       elements.documentSurfaceElement = surface.element;
+      elements.getDocumentSurfaceMotionProbeElement =
+        surface.getMotionProbeElement ?? null;
       motionKernel.setDocumentSurface(surface);
       return () => {
         if (documentSurfaceRegistration !== registration) return;
         elements.documentSurfaceElement = null;
+        elements.getDocumentSurfaceMotionProbeElement = null;
         motionKernel.setDocumentSurface(null);
       };
     },

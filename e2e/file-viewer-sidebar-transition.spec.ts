@@ -196,7 +196,7 @@ test("PDF keeps scroll identity stable while FileViewer sidebar slides", async (
   ).toBeGreaterThanOrEqual((settledOpen.pageWidth ?? 0) - 1);
 });
 
-test("Sources Viewer image and text renderers keep document identity during sidebar toggle", async ({
+test("Sources Viewer image and text renderers keep document and raster identity during sidebar toggle", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -217,9 +217,7 @@ test("Sources Viewer image and text renderers keep document identity during side
   expect(imageCanvasIds.size).toBe(1);
   expect(imageSamples.every((sample) => sample.canvasCount === 1)).toBe(true);
   expect(imageSamples.every((sample) => sample.rendered)).toBe(true);
-  expect(
-    distinctRoundedValues(imageSamples, "canvasWidth").size,
-  ).toBeGreaterThan(1);
+  expect(distinctRoundedValues(imageSamples, "canvasWidth").size).toBe(1);
 
   await page.getByRole("tab", { name: "Text" }).click();
   await expect(page.locator('[data-slot="text-virtual-canvas"]')).toBeVisible();

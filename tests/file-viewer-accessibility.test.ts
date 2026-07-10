@@ -83,6 +83,7 @@ describe("FileViewer accessibility contract", () => {
     restoreFileViewerSidebarFocusOnClose({
       elements: {
         documentSurfaceElement: null,
+        getDocumentSurfaceMotionProbeElement: null,
         sidebarElement,
         sidebarGapElement: null,
         sidebarTriggerElement,
