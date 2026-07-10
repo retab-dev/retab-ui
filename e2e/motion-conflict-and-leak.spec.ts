@@ -78,24 +78,80 @@ const FORMATS = [
     markerRatio: 0,
     align: "start" as const,
   },
+  // The grid renderers scroll a native overflow-auto viewport inside a
+  // style-isolation shadow root and repaint rows with a pooled-row
+  // imperative patcher — a third scroll consumer covered by neither the
+  // page/slide formats nor the text family's transform windows. Their
+  // rows recycle CONNECTED nodes (aria-rowindex rewritten in place), so
+  // both the two-writer contract and the round-trip census need their own
+  // cells.
+  {
+    id: "csv",
+    ready: '[data-slot="csv-cell"]',
+    frameSelector: '[data-slot="csv-grid"]',
+    trackSelector: '[data-slot="csv-row"]',
+    markerRatio: 0,
+    align: "start" as const,
+  },
+  {
+    id: "xlsx",
+    ready: '[data-slot="xlsx-row-window"]',
+    frameSelector: '[data-slot="xlsx-grid"]',
+    trackSelector: '[data-slot="xlsx-row"]',
+    markerRatio: 0,
+    align: "start" as const,
+  },
 ] as const;
 
+// Shadow-piercing, both containment directions — mirrors setViewerScroll
+// in helpers/reading-line-trace.ts. The grids host their real
+// overflow-auto viewport inside an open shadow root NESTED INSIDE the
+// tracked grid element: light-DOM queries never see it and Node.contains
+// does not cross the boundary (rule 6 — the probe blindness that kept
+// every text/csv/xlsx depth cell at scroll zero for the suite's life).
 async function readScroll(
   page: import("@playwright/test").Page,
   frameSelector: string,
 ) {
   return page.evaluate((frameSelector) => {
+    const deepQueryAll = (
+      scope: ParentNode,
+      selector: string,
+    ): HTMLElement[] => {
+      const out = Array.from(scope.querySelectorAll<HTMLElement>(selector));
+      for (const host of scope.querySelectorAll<HTMLElement>("*")) {
+        if (host.shadowRoot)
+          out.push(...deepQueryAll(host.shadowRoot, selector));
+      }
+      return out;
+    };
+    const composedContains = (ancestor: Node, node: Node | null) => {
+      for (let current = node; current; ) {
+        if (current === ancestor) return true;
+        const parent: Node | null = current.parentNode;
+        current = parent instanceof ShadowRoot ? parent.host : parent;
+      }
+      return false;
+    };
     const root = Array.from(
       document.querySelectorAll<HTMLElement>('[data-slot="file-viewer-root"]'),
     ).find((candidate) => candidate.getBoundingClientRect().width > 0)!;
-    const frame = root.querySelector<HTMLElement>(frameSelector);
-    const scroller = Array.from(root.querySelectorAll<HTMLElement>("*")).find(
-      (el) =>
-        el.scrollHeight > el.clientHeight + 4 &&
-        /(auto|scroll)/.test(getComputedStyle(el).overflowY) &&
-        frame != null &&
-        el.contains(frame),
-    );
+    const frame = deepQueryAll(root, frameSelector)[0] ?? null;
+    const isScrollable = (el: HTMLElement) =>
+      el.scrollHeight > el.clientHeight + 4 &&
+      /(auto|scroll)/.test(getComputedStyle(el).overflowY);
+    const everything = deepQueryAll(root, "*");
+    // Ancestor scrollers first; fall through to a scroller nested inside
+    // the frame (the grids) only when no ancestor scrolls.
+    const scroller =
+      everything.find(
+        (el) =>
+          isScrollable(el) && frame != null && composedContains(el, frame),
+      ) ??
+      everything.find(
+        (el) =>
+          isScrollable(el) && frame != null && composedContains(frame, el),
+      );
     return scroller?.scrollTop ?? null;
   }, frameSelector);
 }
@@ -315,14 +371,25 @@ for (const format of FORMATS) {
 
     const census = () =>
       page.evaluate(() => {
+        // Shadow-piercing: the grids keep their pooled rows inside a
+        // style-isolation shadow root — a light-DOM count is blind to
+        // exactly the population their patcher pools. Identical counts
+        // for shadowless formats.
+        const collect = (node: ParentNode): HTMLElement[] =>
+          Array.from(node.querySelectorAll<HTMLElement>("*")).flatMap((el) =>
+            el.shadowRoot ? [el, ...collect(el.shadowRoot)] : [el],
+          );
         const root = Array.from(
           document.querySelectorAll<HTMLElement>(
             '[data-slot="file-viewer-root"]',
           ),
         ).find((candidate) => candidate.getBoundingClientRect().width > 0)!;
-        const canvases = Array.from(root.querySelectorAll("canvas"));
+        const everything = collect(root);
+        const canvases = everything.filter(
+          (el): el is HTMLCanvasElement => el instanceof HTMLCanvasElement,
+        );
         return {
-          nodes: root.querySelectorAll("*").length,
+          nodes: everything.length,
           canvases: canvases.length,
           canvasPixels: canvases.reduce(
             (sum, canvas) => sum + canvas.width * canvas.height,

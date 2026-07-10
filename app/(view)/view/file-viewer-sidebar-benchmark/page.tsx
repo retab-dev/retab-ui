@@ -133,8 +133,13 @@ const BENCHMARK_FIXTURES: readonly BenchmarkFixture[] = [
     align: "start",
     source: {
       kind: "url",
-      url: "/samples/nvidia-financials-fy2024.xlsx",
-      fileName: "nvidia-financials-fy2024.xlsx",
+      // 400-row sheet (~11,000px of grid): the nvidia financials sample
+      // overflows the pane by only ~336px, which saturates every scroll
+      // probe at max — half-scroll wheel/touch conflict deltas clamp and
+      // the rest-state controls run within ~68px of their validity floor
+      // (rule 3's degenerate case baked into the fixture).
+      url: "/samples/warehouse-inventory.xlsx",
+      fileName: "warehouse-inventory.xlsx",
       mimeType:
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     },
