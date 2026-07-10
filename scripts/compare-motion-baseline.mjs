@@ -24,6 +24,26 @@ const TOLERANCE = {
   pop: 0.35,
   settleMs: 150,
 };
+// Some legs are structurally noisier on CI hardware, measured across two
+// same-code CI artifacts (runs 29075983847 and 29083419368/attempt-2 —
+// test-only commits between; 136 shared cells, destination metrics all
+// deterministic to <2px):
+// - rapid: the retarget interrupts the flight at a frame-quantized phase,
+//   so corridorX flips between discrete travel levels (observed max 174px;
+//   every other leg reads 0.0 run-to-run).
+// - close/open/rapid pop: a 2-core runner sometimes swallows the flight
+//   into one starved gap and pop reads ~0.1 instead of ~0.8 (observed
+//   swing 0.7). Cycle pop has zero observed noise — its continuous
+//   sampling is the strong temporal signal, so it keeps the tight band.
+// - cycle settleMs converges in whole-frame steps over a ~3.5-5s trace
+//   (observed max 400ms).
+const LEG_TOLERANCE = {
+  rapid: { corridorX: 200, pop: 0.75 },
+  close: { pop: 0.75 },
+  open: { pop: 0.75 },
+  cycle: { settleMs: 500 },
+};
+const legOf = (key) => key.split(":").pop();
 
 const [runPath, flag] = process.argv.slice(2);
 if (!runPath) {
@@ -68,8 +88,10 @@ for (const [key, values] of Object.entries(baseline)) {
     missing.push(key);
     continue;
   }
-  for (const [metric, tolerance] of Object.entries(TOLERANCE)) {
+  for (const metric of Object.keys(TOLERANCE)) {
     if (!(metric in values) || !(metric in current)) continue;
+    const tolerance =
+      LEG_TOLERANCE[legOf(key)]?.[metric] ?? TOLERANCE[metric];
     const delta = Math.abs(current[metric] - values[metric]);
     if (delta > tolerance) {
       drifted.push(
