@@ -32,6 +32,13 @@ export type ReadingLineTrace = {
   /** Time from the first flight sample to the last one still in motion. */
   settleMs: number;
   samples: number;
+  /**
+   * Per-frame forensics: "t/y/x" per sample (ms from first sample, px).
+   * Print it when a budget fails — the profile says WHERE in the flight
+   * the defect sat (first frames: bad initial transform; mid-flight:
+   * competing writer; tail: settle churn) without a re-instrumented rerun.
+   */
+  profile: string;
 };
 
 export type ReadingLineTarget = {
@@ -94,7 +101,22 @@ export async function setViewerScroll(
 export async function traceReadingLineThroughToggle(
   page: Page,
   { frameSelector, trackSelector, markerRatio, align }: ReadingLineTarget,
-  { rapid = false, cycles = 0 }: { rapid?: boolean; cycles?: number } = {},
+  {
+    rapid = false,
+    cycles = 0,
+    activate = "click",
+  }: {
+    rapid?: boolean;
+    cycles?: number;
+    /**
+     * "click" drives the trigger itself; "none" only observes — the caller
+     * causes the toggle by another input path (keyboard, programmatic)
+     * after the probe is armed. With "none", give the arm a ~400ms lead
+     * before firing the toggle: the probe pre-samples rest frames, which
+     * cost nothing.
+     */
+    activate?: "click" | "none";
+  } = {},
 ): Promise<ReadingLineTrace> {
   return page.evaluate(
     async ({
@@ -104,6 +126,7 @@ export async function traceReadingLineThroughToggle(
       align,
       rapid,
       cycles,
+      activate,
     }) => {
       const root = Array.from(
         document.querySelectorAll<HTMLElement>(
@@ -164,6 +187,34 @@ export async function traceReadingLineThroughToggle(
         }
         return nearest ?? candidates[0] ?? frame;
       };
+      // Arm only after the virtualization window CONVERGES. A deep scroll
+      // jump rebuilds the window asynchronously; toggling 600ms later can
+      // catch it mid-rebuild, so the nearest candidate at arm time is a
+      // page the catching-up window is about to replace — its key never
+      // returns and the whole flight reads zero samples. Require the same
+      // nearest identity for 8 consecutive frames before picking.
+      const identityOf = (el: HTMLElement | undefined) =>
+        el == null
+          ? null
+          : (el.getAttribute("data-page") ??
+            el.getAttribute("data-page-number") ??
+            el.getAttribute("data-slide") ??
+            el.getAttribute("data-frame") ??
+            "@node"); // unkeyed formats: fall through to reference equality
+      let stableFor = 0;
+      let lastPick: HTMLElement | undefined;
+      for (let index = 0; index < 240 && stableFor < 8; index += 1) {
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve()),
+        );
+        const pick = pickTracked();
+        const same =
+          identityOf(pick) === identityOf(lastPick) &&
+          (identityOf(pick) !== "@node" || pick === lastPick);
+        stableFor = same ? stableFor + 1 : 0;
+        lastPick = pick;
+      }
+
       const tracked = pickTracked();
       // Survive keyed remounts (PDF pages re-raster at the committed scale):
       // re-resolve the SAME logical page by its identity attribute when the
@@ -219,6 +270,10 @@ export async function traceReadingLineThroughToggle(
           await sampleFrames(28);
         }
         await sampleFrames(20);
+      } else if (activate === "none") {
+        // Observation only: the caller fires the toggle by its own input
+        // path while this samples. Longer window to cover the lead-in.
+        await sampleFrames(140);
       } else {
         trigger.click();
         if (rapid) {
@@ -279,6 +334,14 @@ export async function traceReadingLineThroughToggle(
           : 0;
       const settleMs = lastMovingT - (times[0] ?? 0);
 
+      const t0 = times[0] ?? 0;
+      const profile = positions
+        .map(
+          (y, index) =>
+            `${Math.round(times[index]! - t0)}/${y.toFixed(1)}/${centersX[index]!.toFixed(1)}`,
+        )
+        .join(" ");
+
       return {
         scrollBefore,
         scrollAfter: scroller?.scrollTop ?? 0,
@@ -290,9 +353,10 @@ export async function traceReadingLineThroughToggle(
         popScoreX,
         settleMs,
         samples: positions.length,
+        profile,
       };
     },
-    { frameSelector, trackSelector, markerRatio, align, rapid, cycles },
+    { frameSelector, trackSelector, markerRatio, align, rapid, cycles, activate },
   );
 }
 

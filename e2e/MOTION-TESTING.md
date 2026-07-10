@@ -37,6 +37,7 @@ Gate all three, always.
 | `verify:motion-conflict-and-leak` | Wheel-during-flight (binary contract: cleanly ignored or cleanly applied) and resource round trips (DOM/canvas census returns to baseline) |
 | `verify:viewer-monkey-fuzz` | Seeded random interleavings incl. mid-flight format switches, under zero-console-error + bounded-resource + bounded-GC'd-heap invariants |
 | `verify:robustness-matrix` | 4x CPU-throttled settles, cold-start toggles (before readiness), RTL trajectory |
+| `verify:keyboard-focus-matrix` | Keyboard toggles fly the click trajectory, focus survives the toggle, PageDown-mid-flight binary contract |
 | `verify:sources-viewer-visual-blink` | Screencast pixel probes + reading-anchor destination + terminal deceleration on the sources page |
 | `verify:file-viewer-visual-blink` | Screencast pixel gate on the benchmark page (whiteout, ink dip, post-motion churn) |
 | `verify:file-viewer-sidebar-motion[:strict]` | The benchmark page's own 21-metric telemetry contracts |

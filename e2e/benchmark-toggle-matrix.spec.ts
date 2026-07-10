@@ -52,19 +52,22 @@ type MatrixFormat = ReadingLineTarget & {
   align: "center" | "start";
 };
 
-// PDF stays parked on THIS page even though the quarter-scroll boundary-
-// anchor fix landed (sources-viewer matrix now gates PDF): the spacex
-// prospectus is 355 pages, and a deep-scroll toggle leaves no mounted
-// [data-slot="pdf-page"] for the whole flight (motion shows the raster
-// layer while every page re-renders at the new scale), so the reading-line
-// probe has zero samples to score — it now throws rather than false-passing.
-//   { id: "pdf",
-//     ready: '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
-//     frameSelector: '[data-slot="pdf-page"]',
-//     trackSelector: '[data-slot="pdf-page"]',
-//     markerRatio: 0.2,
-//     align: "center" }
 const FORMATS: readonly MatrixFormat[] = [
+  // PDF was parked here for a while: deep-scroll toggles once unmounted
+  // every [data-slot="pdf-page"] for the whole flight, leaving the probe
+  // zero samples. The PDF fixes of 2026-07 changed that — a frame census
+  // shows pages mounted and keyed through the entire relax — so the
+  // flagship format is back on the matrix. If zero-sample throws return
+  // here, re-run the flight census before re-parking.
+  {
+    id: "pdf",
+    ready:
+      '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
+    frameSelector: '[data-slot="pdf-page"]',
+    trackSelector: '[data-slot="pdf-page"]',
+    markerRatio: 0.2,
+    align: "center",
+  },
   {
     id: "image",
     ready:
@@ -233,7 +236,9 @@ for (const format of FORMATS) {
           trace.popScoreX > popBudget ||
           (action !== "cycle" && trace.settleMs > SETTLE_MS_BUDGET)
         ) {
-          failures.push(line);
+          // The profile says WHERE in the flight the defect sat — no
+          // re-instrumented repro run needed.
+          failures.push(`${line}\n  profile(t/y/x): ${trace.profile}`);
         }
       }
     }

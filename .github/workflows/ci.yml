@@ -102,6 +102,12 @@ jobs:
       # (before document readiness), and an RTL trajectory survey.
       - name: Robustness matrix gate
         run: pnpm verify:robustness-matrix
+      # Keyboard input path: Enter/Space toggles must fly the click
+      # trajectory, the trigger must keep focus through the toggle it
+      # causes, and PageDown mid-flight obeys the same binary contract as
+      # the wheel-conflict gate.
+      - name: Keyboard and focus gate
+        run: pnpm verify:keyboard-focus-matrix
       # Golden-baseline drift check: static budgets catch breakage, this
       # catches creep — any commit that MOVES a motion metric beyond the
       # run-to-run noise band owns that move explicitly (regenerate the
