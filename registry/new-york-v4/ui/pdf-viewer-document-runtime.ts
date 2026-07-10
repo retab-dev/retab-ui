@@ -141,6 +141,9 @@ export function usePdfDocumentRuntime({
             probeStageOffset: newPageLayout.offsetTop - logicalDelta,
             scrollTop: metrics.physicalScrollTop,
             stageInlineSize: layout.pageLayout.maxPageWidth,
+            // The PDF layout is proportional on both axes, so the block
+            // slope IS the inline slope.
+            stageBlockSlope: layout.stageInlineSlope,
             toInlineSize: layout.rendererFrame.toInlineSize,
           })
         : null;
@@ -155,6 +158,7 @@ export function usePdfDocumentRuntime({
     layout.pageLayout,
     layout.rendererFrame.fromInlineSize,
     layout.rendererFrame.toInlineSize,
+    layout.stageInlineSlope,
     writeAnchorBlockOffsetPx,
     writeDocumentAnchorBlockOffset,
   ]);
@@ -176,12 +180,13 @@ export function usePdfDocumentRuntime({
               probeStageOffset: pageLayout.offsetTop - logicalDelta,
               scrollTop: metrics.physicalScrollTop,
               stageInlineSize: layout.pageLayout.maxPageWidth,
+              stageBlockSlope: layout.stageInlineSlope,
             }),
           }
         : null;
       measureScroll();
     },
-    [getScrollMetrics, layout.pageLayout, measureScroll],
+    [getScrollMetrics, layout.pageLayout, layout.stageInlineSlope, measureScroll],
   );
   const measureBeforeLayoutMotionRef = React.useRef(measureBeforeLayoutMotion);
   measureBeforeLayoutMotionRef.current = measureBeforeLayoutMotion;

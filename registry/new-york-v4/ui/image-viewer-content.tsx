@@ -147,6 +147,17 @@ export function ImageViewerContent({
   const imageDocumentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [imageDocumentSurfaceElement, setImageDocumentSurfaceElement] =
     React.useState<HTMLDivElement | null>(null);
+  // The stage's two axes scale differently: the inline box is the frame
+  // plus CONSTANT horizontal padding (fit subtracts it, so the stage tracks
+  // the pane 1:1 — unit inline slope), while the block stack (frame heights,
+  // gaps, vertical padding) scales with the fit scale, i.e. with the pane
+  // MINUS that padding. A uniform first-frame scale therefore cannot land
+  // both axes; the block slope carries the content ratio.
+  const imageStageBlockSlope =
+    isFitWidth && frameLayout.maxFrameWidth > 0
+      ? (frameLayout.maxFrameWidth + frameLayout.padding * 2) /
+        frameLayout.maxFrameWidth
+      : 1;
   const resolveSurfaceMotionStyle =
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
@@ -155,10 +166,13 @@ export function ImageViewerContent({
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: frameLayout.maxFrameWidth + frameLayout.padding * 2,
+          stageInlineSlope: 1,
+          stageBlockSlope: imageStageBlockSlope,
         }),
       [
         frameLayout.maxFrameWidth,
         frameLayout.padding,
+        imageStageBlockSlope,
         isFitWidth,
         rendererFrame.align,
         rendererFrame.direction,
@@ -218,6 +232,7 @@ export function ImageViewerContent({
             probeStageOffset: newFrameLayout.offsetTop - logicalDelta,
             scrollTop: physicalScrollTop,
             stageInlineSize: imageStageInlineSize,
+            stageBlockSlope: imageStageBlockSlope,
             toInlineSize: rendererFrame.toInlineSize,
           })
         : null;
@@ -230,6 +245,7 @@ export function ImageViewerContent({
   }, [
     frameLayout,
     getScrollMetrics,
+    imageStageBlockSlope,
     imageStageInlineSize,
     rendererFrame.fromInlineSize,
     rendererFrame.toInlineSize,
@@ -258,6 +274,7 @@ export function ImageViewerContent({
             probeStageOffset: frame.offsetTop - logicalDelta,
             scrollTop: physicalScrollTop,
             stageInlineSize: imageStageInlineSize,
+            stageBlockSlope: imageStageBlockSlope,
           }),
         }
       : null;

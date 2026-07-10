@@ -733,12 +733,16 @@ function readSample(runtime: BenchmarkRuntime): BenchmarkSample {
   const visualRect = resolveBenchmarkVisual(
     runtime.root,
   )?.getBoundingClientRect();
-  // Measure the VISIBLE horizontal extent of the surface. The scroll viewport
-  // clips horizontal overflow (overflow-x), so a surface that momentarily
-  // overhangs the viewport — e.g. a document still at its pre-resize width while
-  // the leading-edge inset sweeps toward it — is not something the reader sees;
-  // its off-screen edge must not count as a visual hop. The true vertical extent
-  // is kept, so a genuine vertical jump is still caught.
+  // Measure the VISIBLE extent of the surface on both axes. The scroll
+  // viewport clips overflow, so a surface edge that sits off-screen — a
+  // document still at its pre-resize width while the leading-edge inset
+  // sweeps toward it, or a virtualized PDF stage whose top corner is
+  // hundreds of thousands of pixels above the viewport — is not something
+  // the reader sees, and its motion must not count as a visual hop. (The
+  // unclamped vertical corner once amplified a 0.017% per-page-rounding
+  // layout residue into a 96px "overshoot" at deep scroll while the content
+  // under the marker moved 0.35px; reader-visible vertical jumps are gated
+  // content-space by retarget-continuity and the reading-anchor metrics.)
   const visualLeftClamped =
     visualRect && scrollerRect
       ? Math.max(visualRect.left, scrollerRect.left)
@@ -751,6 +755,14 @@ function readSample(runtime: BenchmarkRuntime): BenchmarkSample {
     visualLeftClamped != null && visualRightClamped != null
       ? Math.max(0, visualRightClamped - visualLeftClamped)
       : null;
+  const visualTopClamped =
+    visualRect && scrollerRect
+      ? Math.max(visualRect.top, scrollerRect.top)
+      : (visualRect?.top ?? null);
+  const visualBottomClamped =
+    visualRect && scrollerRect
+      ? Math.min(visualRect.bottom, scrollerRect.bottom)
+      : (visualRect?.bottom ?? null);
   const rendererAnchors = readRendererAnchors(runtime.root, scroller);
   const activeElement =
     document.activeElement instanceof HTMLElement
@@ -778,10 +790,10 @@ function readSample(runtime: BenchmarkRuntime): BenchmarkSample {
     scrollWidth: scroller?.scrollWidth ?? 0,
     triggerExpanded: runtime.trigger.getAttribute("aria-expanded"),
     triggerState: runtime.trigger.dataset.fileViewerSidebarState ?? null,
-    visualBottom: visualRect?.bottom ?? null,
+    visualBottom: visualBottomClamped,
     visualLeft: visualLeftClamped,
     visualRight: visualRightClamped,
-    visualTop: visualRect?.top ?? null,
+    visualTop: visualTopClamped,
     visualWidth: visualWidthClamped,
     windowScrollY: window.scrollY,
   };

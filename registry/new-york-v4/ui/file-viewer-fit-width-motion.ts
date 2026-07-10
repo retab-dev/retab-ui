@@ -25,12 +25,25 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
   direction = "ltr",
   isFitWidth,
   stageInlineSize,
+  stageInlineSlope = 1,
+  stageBlockSlope = stageInlineSlope,
 }: {
   align: FileViewerDocumentAlign;
   anchorBlockProperty?: string;
   direction?: FileViewerInlineDirection;
   isFitWidth: boolean;
   stageInlineSize: number;
+  stageInlineSlope?: number;
+  /**
+   * Slope for the BLOCK axis when it differs from the inline one. A stage
+   * whose inline box carries constant padding while its block stack scales
+   * with the content (the image viewer: fit subtracts the horizontal
+   * padding, vertical gaps/padding scale) has two different affine models —
+   * X tracks the pane 1:1 while Y scales by the content ratio — and a
+   * uniform scale cannot land both axes exactly. Defaults to the inline
+   * slope (uniform scale) for fully proportional stages like the PDF.
+   */
+  stageBlockSlope?: number;
 }): FileViewerDocumentSurfaceMotionResolver {
   return (frame) => {
     if (!isFitWidth || frame.phase !== "sliding") {
@@ -48,6 +61,8 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
         direction,
         frame,
         stageInlineSize,
+        stageInlineSlope,
+        stageBlockSlope,
       }),
       transformOrigin: "0px 0px",
       willChange: "transform",
@@ -74,16 +89,27 @@ export function getFileViewerFitWidthScale({
 }
 
 // The visual scale the resolver renders for a given live width — the same
-// affine unit-slope reprojection as the transform itself. Renderers use it to
-// reason about the on-screen state (anchor capture/solve) without duplicating
-// the formula.
+// affine reprojection as the transform itself. Renderers use it to reason
+// about the on-screen state (anchor capture/solve) without duplicating the
+// formula.
+//
+// stageInlineSlope is how many stage pixels the settled stage grows per pane
+// pixel. It is 1 whenever the stage IS the fit-width content (image, docx,
+// pptx, uniform-width PDFs: stage = pane − constant padding), but a stage
+// that is WIDER than its fit basis grows faster than the pane — a PDF fits
+// its FIRST page while the stage spans its WIDEST page, so a mixed-width
+// document has slope maxBase/fitBase > 1. A unit-slope assumption there
+// under-scales the first frame by (slope − 1)·delta/stage — measured as a
+// ~7px content step at the anchor-hold frame of a 355-page prospectus.
 export function getFileViewerFitWidthVisualScale({
   liveInlineSize,
   stageInlineSize,
+  stageInlineSlope = 1,
   targetInlineSize,
 }: {
   liveInlineSize: number;
   stageInlineSize: number;
+  stageInlineSlope?: number;
   targetInlineSize: number;
 }) {
   if (
@@ -93,9 +119,15 @@ export function getFileViewerFitWidthVisualScale({
   ) {
     return 1;
   }
+  const slope =
+    Number.isFinite(stageInlineSlope) && stageInlineSlope > 0
+      ? stageInlineSlope
+      : 1;
   return (
-    Math.max(1, stageInlineSize + (liveInlineSize - targetInlineSize)) /
-    stageInlineSize
+    Math.max(
+      1,
+      stageInlineSize + slope * (liveInlineSize - targetInlineSize),
+    ) / stageInlineSize
   );
 }
 
@@ -110,12 +142,15 @@ export function captureFileViewerFitWidthAnchorScreenOffset({
   probeStageOffset,
   scrollTop,
   stageInlineSize,
+  stageBlockSlope = 1,
 }: {
   lastAnchorBlock: number | null;
   liveFrame: FileViewerMotionFrame | null;
   probeStageOffset: number;
   scrollTop: number;
   stageInlineSize: number;
+  /** The BLOCK-axis slope — anchor capture/solve is block-axis math. */
+  stageBlockSlope?: number;
 }) {
   const untransformed = probeStageOffset - scrollTop;
   if (!liveFrame || liveFrame.phase !== "sliding") return untransformed;
@@ -123,6 +158,7 @@ export function captureFileViewerFitWidthAnchorScreenOffset({
   const liveScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: liveFrame.layoutInlineSize,
     stageInlineSize,
+    stageInlineSlope: stageBlockSlope,
     targetInlineSize: liveFrame.toInlineSize,
   });
   if (Math.abs(1 - liveScale) <= 0.001) return untransformed;
@@ -146,6 +182,7 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
   probeStageOffset,
   scrollTop,
   stageInlineSize,
+  stageBlockSlope = 1,
   toInlineSize,
 }: {
   fromInlineSize: number | null;
@@ -153,6 +190,8 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
   probeStageOffset: number;
   scrollTop: number;
   stageInlineSize: number;
+  /** The BLOCK-axis slope — anchor capture/solve is block-axis math. */
+  stageBlockSlope?: number;
   toInlineSize: number | null;
 }) {
   if (fromInlineSize == null || toInlineSize == null) return null;
@@ -160,6 +199,7 @@ export function resolveFileViewerFitWidthMotionAnchorBlock({
   const startScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: fromInlineSize,
     stageInlineSize,
+    stageInlineSlope: stageBlockSlope,
     targetInlineSize: toInlineSize,
   });
   if (
@@ -181,12 +221,16 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   direction,
   frame,
   stageInlineSize,
+  stageInlineSlope,
+  stageBlockSlope,
 }: {
   align: FileViewerDocumentAlign;
   anchorBlockProperty: string;
   direction: FileViewerInlineDirection;
   frame: FileViewerMotionFrame;
   stageInlineSize: number;
+  stageInlineSlope: number;
+  stageBlockSlope: number;
 }) {
   if (
     stageInlineSize <= 0 ||
@@ -197,16 +241,25 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   }
 
   // Fit-width renderers size their stage as an affine function of the
-  // available width with unit slope (stage = width − constant padding), so the
-  // in-flight visual stage is the settled stage plus the live width delta.
-  // At the first frame this resolves to exactly the pre-toggle stage size, and
-  // at the last frame to the settled stage — identity.
-  const scale = getFileViewerFitWidthVisualScale({
+  // available width (stage = slope × width − constant padding), so the
+  // in-flight visual stage is the settled stage plus the scaled live width
+  // delta. At the first frame this resolves to exactly the pre-toggle stage
+  // size, and at the last frame to the settled stage — identity. Each axis
+  // carries its own slope: they differ when the stage's inline box holds
+  // constant padding while its block stack scales with the content.
+  const inlineScale = getFileViewerFitWidthVisualScale({
     liveInlineSize: frame.layoutInlineSize,
     stageInlineSize,
+    stageInlineSlope,
     targetInlineSize: frame.toInlineSize,
   });
-  const visualStageInlineSize = scale * stageInlineSize;
+  const blockScale = getFileViewerFitWidthVisualScale({
+    liveInlineSize: frame.layoutInlineSize,
+    stageInlineSize,
+    stageInlineSlope: stageBlockSlope,
+    targetInlineSize: frame.toInlineSize,
+  });
+  const visualStageInlineSize = inlineScale * stageInlineSize;
   const settledMargin = getFileViewerStageInlineMargin({
     align,
     availableInlineSize: frame.layoutInlineSize,
@@ -221,15 +274,25 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   });
   const translateX = visualMargin - settledMargin;
 
-  if (Math.abs(scale - 1) <= 0.001 && Math.abs(translateX) <= 0.001) {
+  if (
+    Math.abs(inlineScale - 1) <= 0.001 &&
+    Math.abs(blockScale - 1) <= 0.001 &&
+    Math.abs(translateX) <= 0.001
+  ) {
     return "";
   }
 
-  const formattedScale = formatFileViewerMotionScale(scale);
+  const formattedInlineScale = formatFileViewerMotionScale(inlineScale);
+  const formattedBlockScale = formatFileViewerMotionScale(blockScale);
   const formattedTranslateX = formatFileViewerMotionPixel(translateX);
-  // Uniform scale about the stage origin; the anchor term keeps the reading
-  // line fixed: y' = s·y + (1 − s)·anchor equals y at y = anchor.
-  const translateY = `calc((1 - ${formattedScale}) * var(${anchorBlockProperty}, 0px))`;
+  // Scale about the stage origin; the anchor term keeps the reading line
+  // fixed on the block axis: y' = s·y + (1 − s)·anchor equals y at
+  // y = anchor.
+  const translateY = `calc((1 - ${formattedBlockScale}) * var(${anchorBlockProperty}, 0px))`;
+  const formattedScale =
+    formattedInlineScale === formattedBlockScale
+      ? formattedInlineScale
+      : `${formattedInlineScale}, ${formattedBlockScale}`;
 
   return `translate3d(${formattedTranslateX}px, ${translateY}, 0) scale(${formattedScale})`;
 }

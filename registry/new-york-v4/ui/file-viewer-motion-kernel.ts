@@ -100,6 +100,11 @@ export type FileViewerDocumentSurfaceMotionResolver = (
 type FileViewerActiveMotion = {
   durationMs: number;
   from: FileViewerMotionRestFrame;
+  // The clock re-anchors to the first tick's vsync frame time: startedAt is
+  // stamped inside the toggle's task, but the synchronous slide-start commit
+  // can burn 10ms+ before anything paints, and an ease anchored at the click
+  // lands its first painted frame that deep into the curve.
+  hasFrameClockAnchor: boolean;
   id: number;
   startedAt: number;
   to: FileViewerMotionRestFrame;
@@ -321,16 +326,29 @@ export function createFileViewerMotionKernel({
     scheduleSettleRelease(settlingFrame, idleFrame);
   };
 
-  const tick = () => {
+  // Ticks sample the clock at the rAF FRAME timestamp, never the callback's
+  // execution time: the frame time is the vsync the paint belongs to, and a
+  // callback running late in a janky frame would otherwise write a position
+  // ahead of the frame's own time axis — a real paint-side velocity excess
+  // (the probes' rule 11, applied to the writer). The first tick also
+  // re-anchors startedAt to its frame time, so the ease starts at the first
+  // paintable frame rather than at the click that precedes the slide-start
+  // commit.
+  const tick = (frameTime: number) => {
     rafHandle = 0;
     if (!activeMotion) return;
-    const sample = readMotionSample(activeMotion);
+    const now = Number.isFinite(frameTime) ? frameTime : readNow();
+    if (!activeMotion.hasFrameClockAnchor) {
+      activeMotion.hasFrameClockAnchor = true;
+      activeMotion.startedAt = now;
+    }
+    const sample = readMotionSample(activeMotion, now);
     if (sample.motionProgress >= 1) {
       settle();
       return;
     }
     commit(sample, { publish: false });
-    recordFlightTick(sample);
+    recordFlightTick(sample, now);
     scheduleTick();
   };
 
@@ -452,6 +470,7 @@ export function createFileViewerMotionKernel({
     activeMotion = {
       durationMs: plan.resolvedTarget.durationMs,
       from: { ...plan.currentRestFrame, layoutInlineSize: plan.fromInlineSize },
+      hasFrameClockAnchor: false,
       id: motionSequence,
       startedAt: readNow(),
       to: plan.nextRestFrame,

@@ -44,6 +44,14 @@ export type PdfDocumentLayoutState = {
   rotateClockwise: () => void;
   rotation: number;
   resolveSurfaceMotionStyle: FileViewerDocumentSurfaceMotionResolver;
+  /**
+   * Stage pixels the settled stage grows per pane pixel. Fit-width fits the
+   * FIRST page while the stage spans the WIDEST page, so a mixed-width
+   * document grows its stage faster than the pane (maxBase / fitBase > 1);
+   * the fit-width motion model needs this slope or its first frame lands at
+   * a fractionally wrong scale.
+   */
+  stageInlineSlope: number;
   setPageSize: ReturnType<typeof usePdfPageSizes>["setPageSize"];
   transition: ViewerDocumentTransition;
   rendererFrame: FileViewerRendererFrame;
@@ -130,6 +138,10 @@ export function usePdfDocumentLayout({
   // The page layout is already at the motion's target width (commit-then-
   // relax), so the resolver reprojects that settled stage to the in-flight
   // visual width with one uniform transform.
+  const stageInlineSlope =
+    isFitWidth && displayScale > 0 && fitPageWidth > 0
+      ? pageLayout.maxPageWidth / displayScale / fitPageWidth
+      : 1;
   const resolveSurfaceMotionStyle =
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
@@ -138,12 +150,14 @@ export function usePdfDocumentLayout({
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: pageLayout.maxPageWidth,
+          stageInlineSlope,
         }),
       [
         isFitWidth,
         pageLayout.maxPageWidth,
         rendererFrame.align,
         rendererFrame.direction,
+        stageInlineSlope,
       ],
     );
 
@@ -161,6 +175,7 @@ export function usePdfDocumentLayout({
     rotation,
     resolveSurfaceMotionStyle,
     setPageSize,
+    stageInlineSlope,
     transition,
     rendererFrame,
     zoomIn,

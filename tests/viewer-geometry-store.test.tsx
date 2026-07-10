@@ -492,6 +492,10 @@ describe("createViewerGeometryStore", () => {
     expect(documentSurfaceElement.style.willChange).toBe("");
     expect(listener).toHaveBeenCalledTimes(1);
 
+    // The first rAF anchors the motion clock: the ease starts at the first
+    // paintable frame, not at the startMotion call, so a heavy slide-start
+    // commit cannot swallow the head of the curve.
+    frames.advance(0);
     frames.advance(75);
 
     // Half the clock is 87.5% of the eased slide: 1 - (1 - 0.5)^3.
@@ -619,6 +623,7 @@ describe("createViewerGeometryStore", () => {
 
     expect(listener).toHaveBeenCalledTimes(1);
 
+    frames.advance(0);
     frames.advance(75);
 
     expect(store.getInteractiveSnapshot()).toMatchObject({
@@ -663,6 +668,7 @@ describe("createViewerGeometryStore", () => {
     store.subscribe(listener);
 
     store.startMotion(closedTarget);
+    frames.advance(0);
     frames.advance(150);
 
     expect(store.getSnapshot()).toMatchObject({
@@ -719,6 +725,7 @@ describe("createViewerGeometryStore", () => {
     store.setDocumentSurface({ element: documentSurfaceElement });
     store.syncTarget(openTarget);
     store.startMotion(closedTarget);
+    frames.advance(0);
     frames.advance(149.8);
 
     expect(store.getSnapshot()).toMatchObject({
@@ -758,6 +765,7 @@ describe("createViewerGeometryStore", () => {
     store.subscribe(listener);
 
     store.startMotion(closedTarget);
+    frames.advance(0);
     frames.advance(150);
 
     expect(store.getSnapshot()).toMatchObject({
@@ -870,6 +878,7 @@ describe("createViewerGeometryStore", () => {
     expect(sidebarGapElement.style.width).toBe("420px");
     expect(documentSurfaceElement.style.transform).toBe("");
 
+    frames.advance(0);
     frames.advance(75);
 
     expect(store.getInteractiveSnapshot()).toMatchObject({
@@ -1002,6 +1011,7 @@ describe("createViewerGeometryStore", () => {
       },
     });
 
+    frames.advance(0);
     frames.advance(150);
 
     expect(root?.getAttribute("data-file-viewer-sidebar-open")).toBe("false");
@@ -1109,6 +1119,7 @@ describe("createViewerGeometryStore", () => {
       screen.getByTestId("file-trigger").getAttribute("aria-expanded"),
     ).toBe("false");
 
+    frames.advance(0);
     frames.advance(75);
 
     expect(sidebar.getAttribute("aria-hidden")).toBe("true");
