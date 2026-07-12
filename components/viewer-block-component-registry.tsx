@@ -25,6 +25,7 @@ import { SpreadsheetImportCard } from "@/registry/new-york-v4/blocks/dropzone-sp
 import { UploadProgressQueue } from "@/registry/new-york-v4/blocks/dropzone-upload-progress-queue";
 import { ValidationOnly } from "@/registry/new-york-v4/blocks/dropzone-validation-only";
 import { EditViewerBlock } from "@/registry/new-york-v4/blocks/edit-viewer-block";
+import { ExcelSplittingViewerBlock } from "@/registry/new-york-v4/blocks/excel-splitting-viewer-block";
 import { ExtractViewerBlock } from "@/registry/new-york-v4/blocks/extract-viewer-block";
 import { FileSystemBlock } from "@/registry/new-york-v4/blocks/file-system-block";
 import { FsLightBlock } from "@/registry/new-york-v4/blocks/fslight-block";
@@ -41,7 +42,9 @@ import { SplitConsensusDiagramVerticalViewerBlock } from "@/registry/new-york-v4
 import { SplitConsensusLukasViewerBlock } from "@/registry/new-york-v4/blocks/split-consensus-lukas-viewer-block";
 import { SplitViewerBlock } from "@/registry/new-york-v4/blocks/split-viewer-block";
 import { TextSourcesBlock } from "@/registry/new-york-v4/blocks/text-sources-block";
+import { TxtSplittingViewerBlock } from "@/registry/new-york-v4/blocks/txt-splitting-viewer-block";
 import { XlsxSourcesBlock } from "@/registry/new-york-v4/blocks/xlsx-sources-block";
+import { SHOWCASE_PANELS } from "@/components/showcase-panels";
 
 export type ViewerBlockComponent = ComponentType;
 export type ViewerBlockWithComponent = ViewerBlockMetadata & {
@@ -54,6 +57,8 @@ export const VIEWER_BLOCK_COMPONENTS = {
   partition: PartitionViewerBlock,
   parse: ParseViewerBlock,
   edit: EditViewerBlock,
+  "excel-splitting": ExcelSplittingViewerBlock,
+  "txt-splitting": TxtSplittingViewerBlock,
   "sources-viewer": SourcesViewerBlock,
   extract: ExtractViewerBlock,
   "image-sources": ImageSourcesBlock,
@@ -89,6 +94,11 @@ export const VIEWER_BLOCK_COMPONENTS = {
     SplitConsensusDiagramHorizontalViewerBlock,
   "split-consensus-lukas": SplitConsensusLukasViewerBlock,
   "classify-consensus": ClassifyConsensusViewerBlock,
+  "file-thumbnail": SHOWCASE_PANELS["file-thumbnail"],
+  "file-viewer": SHOWCASE_PANELS["file-viewer"],
+  "schema-builder": SHOWCASE_PANELS["schema-builder"],
+  "json-form": SHOWCASE_PANELS["json-form"],
+  "json-table": SHOWCASE_PANELS["json-table"],
 } satisfies Record<ViewerBlockId, ViewerBlockComponent>;
 
 export function getViewerBlockComponent(blockId: ViewerBlockId) {

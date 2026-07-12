@@ -25,6 +25,9 @@ import type {
   PdfPageSize,
 } from "./pdf-viewer-types";
 import type { PdfDocument } from "./pdf-viewer-document-resource";
+import { PDF_PAGE_HORIZONTAL_PADDING } from "./pdf-viewer-scale";
+
+const PDF_PAGE_RING_OUTSET_PX = 1;
 
 export type PdfDocumentPagesLayerProps = {
   activeRenderPageNumbers: readonly number[];
@@ -142,7 +145,10 @@ export function PdfDocumentPagesLayer({
   } satisfies React.CSSProperties;
   const visualClipStyle = {
     contain: "paint style",
+    left: -PDF_PAGE_RING_OUTSET_PX,
     overflow: "clip",
+    paddingInline: PDF_PAGE_RING_OUTSET_PX,
+    right: -PDF_PAGE_RING_OUTSET_PX,
   } satisfies React.CSSProperties;
   const visualStageStyle = {
     height: physicalScrollHeight,
@@ -236,6 +242,7 @@ export function PdfDocumentPagesLayer({
         "relative min-w-0",
         isInsideDocumentFrame && "h-full w-full",
       )}
+      style={{ paddingInline: PDF_PAGE_HORIZONTAL_PADDING / 2 }}
     >
       {documentContent}
     </div>

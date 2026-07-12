@@ -3,7 +3,7 @@ import {
   PageHeaderDescription,
   PageHeaderHeading,
 } from "@/components/page-header";
-import { ViewerBlockTabs } from "@/components/viewer-blocks";
+import { ExamplesShowcase } from "@/components/examples-showcase";
 
 export default function ExamplesLayout({
   children,
@@ -22,12 +22,7 @@ export default function ExamplesLayout({
           the install command.
         </PageHeaderDescription>
       </PageHeader>
-      <div className="container-wrapper flex-1">
-        <div className="container max-w-5xl space-y-8 py-8">
-          <ViewerBlockTabs />
-          {children}
-        </div>
-      </div>
+      <ExamplesShowcase>{children}</ExamplesShowcase>
     </div>
   );
 }

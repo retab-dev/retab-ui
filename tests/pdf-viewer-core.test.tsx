@@ -54,6 +54,7 @@ import {
   getPdfPageLayout,
 } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import { PdfPage } from "@/registry/new-york-v4/ui/pdf-viewer-page";
+import { PdfViewerFallback } from "@/registry/new-york-v4/ui/pdf-viewer-states";
 import {
   PdfThumbnailRail,
   PdfViewerThumbnails,
@@ -382,6 +383,21 @@ class TestMetricErrorBoundary extends React.Component<
 
 
 describe("PdfViewer core", () => {
+  it("uses known page geometry for the loading skeleton", () => {
+    render(
+      <PdfViewerFallback
+        controls={false}
+        fallbackPageSize={{ width: 1275, height: 1804 }}
+      />,
+    );
+
+    expect(
+      document.querySelector<HTMLElement>(
+        '[data-slot="pdf-page-skeleton"]',
+      )?.style.aspectRatio,
+    ).toBe("1275 / 1804");
+  });
+
   it("lets FileViewerHeader children replace default file header parts", () => {
     const source = pdfUrlSource("/custom-header.pdf", "default-label.pdf");
 
@@ -1049,6 +1065,11 @@ describe("PdfViewer core", () => {
         '[data-slot="file-viewer-header"] [aria-label="Zoom in"]',
       ),
     ).toBeTruthy();
+    expect(
+      root?.querySelector<HTMLElement>(
+        '[data-slot="pdf-viewer-fit-width-measure"]',
+      )?.style.paddingInline,
+    ).toBe("16px");
   });
 
   it("fits width from the document frame instead of the scaled document", async () => {
@@ -1074,7 +1095,7 @@ describe("PdfViewer core", () => {
       render(<PdfViewer source={pdfUrlSource("/stable-fit-width.pdf")} />);
     });
 
-    expect(await screen.findByText("150%")).toBeTruthy();
+    expect(await screen.findByText("142%")).toBeTruthy();
   });
 
   it("preserves the visible page when fit-width changes after a surface resize", async () => {
@@ -1123,7 +1144,7 @@ describe("PdfViewer core", () => {
       render(<PdfViewer source={pdfUrlSource("/fit-width-anchor.pdf")} />);
     });
 
-    expect(await screen.findByText("50%")).toBeTruthy();
+    expect(await screen.findByText("42%")).toBeTruthy();
 
     const viewport = document.querySelector<HTMLElement>(
       "[data-slot='scroll-area-viewport']",
@@ -1156,15 +1177,15 @@ describe("PdfViewer core", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(await screen.findByText("100%")).toBeTruthy();
+    expect(await screen.findByText("92%")).toBeTruthy();
     expect(await findByTextContent("Page 3 of 5")).toBeTruthy();
     expect(viewport!.scrollTop).toBe(
       getExpectedPreservedPdfScrollTop({
         pageNumber: 3,
         pageSize: { width: 400, height: 800 },
         pageCount: 5,
-        previousScale: 0.5,
-        nextScale: 1,
+        previousScale: 0.42,
+        nextScale: 0.92,
         scrollTop: 908,
         viewportHeight: viewport!.clientHeight,
       }),
@@ -1188,7 +1209,7 @@ describe("PdfViewer core", () => {
     expect(await screen.findByText("120%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Fit width"));
-    expect(await screen.findByText("208%")).toBeTruthy();
+    expect(await screen.findByText("200%")).toBeTruthy();
   });
 
   it("preserves the visible page when manual zoom changes the layout", async () => {
@@ -1255,11 +1276,11 @@ describe("PdfViewer core", () => {
       render(<PdfViewer source={pdfUrlSource("/rotated-fit-width.pdf")} />);
     });
 
-    expect(await screen.findByText("208%")).toBeTruthy();
+    expect(await screen.findByText("200%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Rotate"));
 
-    expect(await screen.findByText("104%")).toBeTruthy();
+    expect(await screen.findByText("100%")).toBeTruthy();
   });
 
   it("clamps invalid controlled scale values before rendering and requesting zoom", async () => {

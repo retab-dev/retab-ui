@@ -36,6 +36,7 @@
     "verify:markdown-viewer:performance": "node scripts/verify-markdown-viewer-performance.mjs",
     "verify:text-viewer:performance": "node scripts/verify-text-viewer-performance.mjs",
     "verify:viewer-skeletons": "node scripts/verify-viewer-skeletons.mjs",
+    "verify:frame-viewer-geometry": "playwright test e2e/frame-viewer-geometry.spec.ts --project=chromium --project=webkit",
     "verify:file-viewer-visual-blink": "playwright test e2e/file-viewer-visual-blink.spec.ts --project=chromium",
     "verify:sources-viewer-visual-blink": "playwright test e2e/sources-viewer-visual-probe.spec.ts e2e/sources-viewer-reading-anchor.spec.ts --project=chromium",
     "verify:sources-viewer-toggle-matrix": "playwright test e2e/sources-viewer-toggle-matrix.spec.ts --project=chromium",

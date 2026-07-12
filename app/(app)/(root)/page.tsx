@@ -8,7 +8,9 @@ import {
   PageHeaderDescription,
   PageHeaderHeading,
 } from "@/components/page-header";
-import { HomeShowcase } from "./showcase";
+import { ExamplesShowcase } from "@/components/examples-showcase";
+import { ViewerBlocks } from "@/components/viewer-blocks";
+import { DEFAULT_VIEWER_BLOCK_TAB_ID } from "@/lib/viewer-blocks";
 
 const title = "The Foundation for your Document Workflows";
 const description =
@@ -71,7 +73,9 @@ export default function IndexPage() {
           </Button>
         </PageActions>
       </PageHeader>
-      <HomeShowcase />
+      <ExamplesShowcase>
+        <ViewerBlocks blockId={DEFAULT_VIEWER_BLOCK_TAB_ID} />
+      </ExamplesShowcase>
     </div>
   );
 }

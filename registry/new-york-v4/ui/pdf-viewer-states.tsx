@@ -3,15 +3,23 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewerControlsSkeleton } from "@/components/ui/viewer-controls";
+import type { PdfPageSize } from "./pdf-viewer-types";
+
+const DEFAULT_PDF_FALLBACK_PAGE_SIZE: PdfPageSize = {
+  width: 8.5,
+  height: 11,
+};
 
 export function PdfViewerFallback({
   className,
   bare = false,
   controls = true,
+  fallbackPageSize,
 }: {
   className?: string;
   bare?: boolean;
   controls?: boolean;
+  fallbackPageSize?: PdfPageSize;
 }) {
   return (
     <div
@@ -27,7 +35,7 @@ export function PdfViewerFallback({
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col items-center p-4">
-          <PageAspectSkeleton />
+          <PageAspectSkeleton pageSize={fallbackPageSize} />
         </div>
       </div>
     </div>
@@ -44,13 +52,24 @@ export function PageSkeleton() {
   );
 }
 
-function PageAspectSkeleton() {
+function PageAspectSkeleton({ pageSize }: { pageSize?: PdfPageSize }) {
+  const resolvedPageSize =
+    pageSize &&
+    Number.isFinite(pageSize.width) &&
+    pageSize.width > 0 &&
+    Number.isFinite(pageSize.height) &&
+    pageSize.height > 0
+      ? pageSize
+      : DEFAULT_PDF_FALLBACK_PAGE_SIZE;
+
   return (
     <Skeleton
       aria-hidden
       className="ring-border w-full rounded-none shadow-sm ring-1"
       data-slot="pdf-page-skeleton"
-      style={{ aspectRatio: "8.5 / 11" }}
+      style={{
+        aspectRatio: `${resolvedPageSize.width} / ${resolvedPageSize.height}`,
+      }}
     />
   );
 }

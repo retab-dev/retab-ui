@@ -25,6 +25,7 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
   direction = "ltr",
   isFitWidth,
   stageInlineSize,
+  stageOuterInlinePadding = 0,
   stageInlinePadding = 0,
   stageInlineSlope = 1,
   stageBlockSlope = stageInlineSlope,
@@ -34,6 +35,8 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
   direction?: FileViewerInlineDirection;
   isFitWidth: boolean;
   stageInlineSize: number;
+  /** Constant symmetric padding around the transformed stage. */
+  stageOuterInlinePadding?: number;
   /** Constant symmetric inline padding inside the transformed stage. */
   stageInlinePadding?: number;
   stageInlineSlope?: number;
@@ -64,6 +67,7 @@ export function createFileViewerFitWidthSurfaceMotionResolver({
         direction,
         frame,
         stageInlineSize,
+        stageOuterInlinePadding,
         stageInlinePadding,
         stageInlineSlope,
         stageBlockSlope,
@@ -325,6 +329,7 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   direction,
   frame,
   stageInlineSize,
+  stageOuterInlinePadding,
   stageInlinePadding,
   stageInlineSlope,
   stageBlockSlope,
@@ -334,6 +339,7 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   direction: FileViewerInlineDirection;
   frame: FileViewerMotionFrame;
   stageInlineSize: number;
+  stageOuterInlinePadding: number;
   stageInlinePadding: number;
   stageInlineSlope: number;
   stageBlockSlope: number;
@@ -371,15 +377,19 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   });
   const visualStageInlineSize =
     inlineScale * contentInlineSize + stageInlinePadding;
+  const availableStageInlineSize = Math.max(
+    1,
+    frame.layoutInlineSize - Math.max(0, stageOuterInlinePadding),
+  );
   const settledMargin = getFileViewerStageInlineMargin({
     align,
-    availableInlineSize: frame.layoutInlineSize,
+    availableInlineSize: availableStageInlineSize,
     direction,
     stageInlineSize,
   });
   const visualMargin = getFileViewerStageInlineMargin({
     align,
-    availableInlineSize: frame.layoutInlineSize,
+    availableInlineSize: availableStageInlineSize,
     direction,
     stageInlineSize: visualStageInlineSize,
   });

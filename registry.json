@@ -4154,6 +4154,57 @@
       "categories": ["primitives"]
     },
     {
+      "name": "excel-splitting-viewer-block",
+      "type": "registry:block",
+      "title": "Excel Splitting",
+      "description": "One Excel workbook fanned out into several clean CSVs — each reconstructed table rendered in the viewer, with a sidebar listing every CSV the splitter emitted, the sheet it was carved from, and how it was reconstructed. Selecting one opens that CSV.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "@retab/file-viewer",
+        "@retab/csv-viewer",
+        "@retab/xlsx-viewer",
+        "@retab/segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/excel-splitting-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/excel-splitting-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/excel-splitting.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/excel-splitting.json"
+        }
+      ],
+      "categories": ["primitives"]
+    },
+    {
+      "name": "txt-splitting-viewer-block",
+      "type": "registry:block",
+      "title": "Text Splitting",
+      "description": "One plain-text batch file separated into several documents — each carved-out document rendered in the viewer, with a left sidebar listing the source file first, then every document the splitter emitted, its type, line count, and the boundary cue that detected it. Selecting one opens that document.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "@retab/file-viewer",
+        "@retab/text-viewer",
+        "@retab/segments"
+      ],
+      "files": [
+        {
+          "path": "registry/new-york-v4/blocks/txt-splitting-viewer-block.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/txt-splitting-viewer-block.tsx"
+        },
+        {
+          "path": "components/viewers/sample-data/txt-splitting.json",
+          "type": "registry:file",
+          "target": "@components/viewers/sample-data/txt-splitting.json"
+        }
+      ],
+      "categories": ["primitives"]
+    },
+    {
       "name": "extract-viewer-block",
       "type": "registry:block",
       "title": "Extract Viewer",

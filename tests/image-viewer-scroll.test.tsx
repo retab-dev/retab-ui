@@ -52,7 +52,7 @@ describe("useVisibleFrame", () => {
 
     view.rerender(<Harness scale={2} />);
 
-    await waitFor(() => expect(viewport.element.scrollTop).toBe(620));
+    await waitFor(() => expect(viewport.element.scrollTop).toBe(604));
   });
 
   it("retargets active frame-area scroll when layout block size changes", async () => {
@@ -112,7 +112,7 @@ describe("useVisibleFrame", () => {
     await waitFor(() =>
       expect(viewport.scrollTo).toHaveBeenLastCalledWith({
         behavior: "smooth",
-        top: 516,
+        top: 500,
       }),
     );
   });

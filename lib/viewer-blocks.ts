@@ -7,18 +7,24 @@ type ViewerBlockCategoryId =
   | "primitives"
   | "dropzone"
   | "file-system"
+  | "document-analysis"
   | "run-cards";
 
 type ViewerBlockConfig = {
   id: string;
   /** Registry item name — `pnpm dlx shadcn@latest add @retab/<registryName>`. */
-  registryName: string;
+  registryName?: string;
   title: string;
   badge?: string;
   description: string;
-  command: string;
+  /** Install command shown as a copy button; omit to hide it (e.g. primitives
+   * documented in /docs whose Code view shows a demo source instead). */
+  command?: string;
   docsHref: string;
-  viewHref: string;
+  viewHref?: string;
+  /** Explicit source files for the Code view, relative to the app root. When
+   * set, these are read directly instead of resolving `registryName` files. */
+  sourceFiles?: readonly string[];
   previewHeightClassName?: string;
   /** Surfaced under the "Featured" tab. */
   featured?: boolean;
@@ -90,6 +96,32 @@ export const VIEWER_BLOCKS = [
     command: getRegistryAddCommand("edit-viewer-block"),
     docsHref: "/docs/components/edit-viewer",
     viewHref: "/view/blocks/edit",
+    categories: ["primitives"],
+  },
+  {
+    id: "excel-splitting",
+    registryName: "excel-splitting-viewer-block",
+    title: "Excel Splitting",
+    description:
+      "One Excel workbook fanned out into several clean CSVs — each reconstructed table rendered in the viewer, with a sidebar listing every CSV the splitter emitted, the sheet it came from, its row × column shape, and how it was reconstructed. Selecting one opens that CSV.",
+    command: getRegistryAddCommand("excel-splitting-viewer-block"),
+    docsHref: "/docs/components/split-viewer",
+    viewHref: "/view/blocks/excel-splitting",
+    previewHeightClassName: "h-[724px]",
+    featured: true,
+    categories: ["primitives"],
+  },
+  {
+    id: "txt-splitting",
+    registryName: "txt-splitting-viewer-block",
+    title: "Text Splitting",
+    description:
+      "One plain-text batch file separated into several documents — each carved-out document rendered in the viewer, with a left sidebar listing the source file first, then every document the splitter emitted, its type, line count, and the boundary cue that detected it. Selecting one opens that document.",
+    command: getRegistryAddCommand("txt-splitting-viewer-block"),
+    docsHref: "/docs/components/split-viewer",
+    viewHref: "/view/blocks/txt-splitting",
+    previewHeightClassName: "h-[724px]",
+    featured: true,
     categories: ["primitives"],
   },
   {
@@ -526,6 +558,58 @@ export const VIEWER_BLOCKS = [
     previewHeightClassName: "h-[680px]",
     categories: ["primitives"],
   },
+  {
+    id: "file-thumbnail",
+    title: "File Thumbnail",
+    description:
+      "Real first-page previews for PDFs, Office files, images, and text, rendered client-side.",
+    command: getRegistryAddCommand("file-thumbnail"),
+    docsHref: "/docs/components/file-thumbnail",
+    sourceFiles: ["components/file-thumbnail-formats-demo.tsx"],
+    categories: ["document-analysis"],
+    isStandaloneTab: false,
+  },
+  {
+    id: "file-viewer",
+    title: "File Viewer",
+    description:
+      "One viewer shell that switches between document, image, spreadsheet, text, code, and archive-backed formats.",
+    command: getRegistryAddCommand("file-viewer"),
+    docsHref: "/docs/components/file-viewer",
+    sourceFiles: ["components/file-viewer-demo.tsx"],
+    categories: ["document-analysis"],
+    isStandaloneTab: false,
+  },
+  {
+    id: "schema-builder",
+    title: "Schema Builder",
+    description:
+      "Visual JSON Schema editing for shaping the structure your extractions follow.",
+    command: getRegistryAddCommand("schema-builder"),
+    docsHref: "/docs/components/schema-builder",
+    sourceFiles: ["components/retab-schema-builder-demo.tsx"],
+    categories: ["document-analysis"],
+    isStandaloneTab: false,
+  },
+  {
+    id: "json-form",
+    title: "JSON Form Field",
+    description:
+      "Schema-driven, virtualized form fields that stay responsive across thousands of fields.",
+    docsHref: "/docs/components/json-form",
+    sourceFiles: ["components/json-form-demo.tsx"],
+    categories: ["document-analysis"],
+    isStandaloneTab: false,
+  },
+  {
+    id: "json-table",
+    title: "JSON Table",
+    description: "Renders JSON data inside virtualized, editable tables.",
+    docsHref: "/docs/components/json-table",
+    sourceFiles: ["components/json-table/json-table-demo.tsx"],
+    categories: ["document-analysis"],
+    isStandaloneTab: false,
+  },
 ] as const satisfies readonly ViewerBlockConfig[];
 
 export type ViewerBlockId = (typeof VIEWER_BLOCKS)[number]["id"];
@@ -556,7 +640,7 @@ export function getViewerBlockTab(
 
 export function getViewerBlockHrefForRegistryName(registryName: string) {
   const block = VIEWER_BLOCKS.find(
-    (item) => item.registryName === registryName,
+    (item: ViewerBlockConfig) => item.registryName === registryName,
   );
   if (!block) return "/examples";
   const metadata: ViewerBlockConfig = block;

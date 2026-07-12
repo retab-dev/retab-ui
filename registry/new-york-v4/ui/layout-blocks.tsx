@@ -96,6 +96,12 @@ export function OcrLayoutBlocks({
     [layoutDocument],
   );
   const pdfSource = useLayoutPdfSource(layoutDocument, pageImages);
+  const fallbackPageSize = layoutDocument.pages[0]
+    ? {
+        width: layoutDocument.pages[0].width,
+        height: layoutDocument.pages[0].height,
+      }
+    : undefined;
   const [lowConfidenceOnly, setLowConfidenceOnly] = React.useState(false);
   const model = React.useMemo(
     () =>
@@ -120,6 +126,7 @@ export function OcrLayoutBlocks({
     <SegmentedDocumentProvider model={segmentedDocumentModel}>
       <OcrLayoutBlocksContent
         className={className}
+        fallbackPageSize={fallbackPageSize}
         heightClassName={heightClassName}
         inspectedLevels={inspectedLevels}
         lowConfidenceOnly={lowConfidenceOnly}
@@ -159,6 +166,7 @@ export function DocumentAiLayoutBlocks({
 
 function OcrLayoutBlocksContent({
   className,
+  fallbackPageSize,
   heightClassName,
   inspectedLevels,
   lowConfidenceOnly,
@@ -167,6 +175,7 @@ function OcrLayoutBlocksContent({
   setLowConfidenceOnly,
 }: {
   className?: string;
+  fallbackPageSize?: { width: number; height: number };
   heightClassName: string;
   inspectedLevels: readonly LayoutLevel[];
   lowConfidenceOnly: boolean;
@@ -275,6 +284,7 @@ function OcrLayoutBlocksContent({
                           ref={setPdfViewerHandle}
                           bare
                           className="h-full"
+                          fallbackPageSize={fallbackPageSize}
                           onScrollProgressChange={
                             segmentedViewport.documentHandlers
                               .onScrollProgressChange

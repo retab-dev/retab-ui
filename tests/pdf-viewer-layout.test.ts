@@ -41,10 +41,9 @@ describe("pdf viewer layout", () => {
 
   it("creates scaled page offsets and document dimensions", () => {
     const scale = 2;
-    // Gap and padding scale with the document, so the layout is a single
-    // linear function of scale.
+    // Gaps scale with the document; the outer skeleton/page inset is fixed.
     const gap = PDF_PAGE_GAP * scale;
-    const padding = PDF_PAGE_PADDING * scale;
+    const padding = PDF_PAGE_PADDING;
     const layout = createPdfPageLayout({
       pageCount: 3,
       defaultPageSize: pageSize,
@@ -127,7 +126,7 @@ describe("pdf viewer layout", () => {
     expect(getPdfPageLayout(layout, 1)).toMatchObject({
       width: 300,
       height: 150,
-      offsetTop: PDF_PAGE_PADDING * 1.5,
+      offsetTop: PDF_PAGE_PADDING,
     });
     expect(layout.maxPageWidth).toBe(300);
   });

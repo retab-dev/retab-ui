@@ -139,6 +139,31 @@ describe("file viewer fit-width motion", () => {
     expect(style?.transform).toContain("translate3d(3.69px,");
   });
 
+  it("keeps an overflowing stage inside constant outer frame padding", () => {
+    // PDF pages are outside the 16px frame inset, not wrapped inside the
+    // transformed stage. On the opening leg the old widest page can overflow
+    // the newly committed stage; margin resolution must still happen inside
+    // the padded content box or the stage escapes left by exactly 16px.
+    const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
+      align: "center",
+      isFitWidth: true,
+      stageInlineSize: 1140,
+      stageOuterInlinePadding: 32,
+      stageInlineSlope: 1.028571,
+    });
+
+    const style = resolveMotionStyle({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 1406,
+      layoutInlineSize: 1406,
+      phase: "sliding",
+      toInlineSize: 1126,
+    });
+
+    expect(style?.transform).toContain("translate3d(-117px,");
+    expect(style?.transform).toContain("scale(1.252631)");
+  });
+
   // RTL: the margin model must speak physical-left. The only branch where
   // direction changes the answer for a centered stage is the over-constrained
   // one — the settled stage (laid out for the wider target) overflowing the

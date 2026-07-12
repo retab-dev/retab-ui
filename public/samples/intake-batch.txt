@@ -1,0 +1,82 @@
+ACME LOGISTICS — VENDOR DOCUMENT PACKET
+Batch export 2026-06-11 · 4 documents · plain-text OCR dump
+================================================================
+
+COVER LETTER
+
+Atlas Freight Solutions
+118 Harbor Way, Oakland, CA 94607
+
+June 8, 2026
+
+To the Accounts Payable team at Acme Logistics,
+
+Please find enclosed our invoice for the May haulage window,
+the matching delivery receipt, and the original purchase order
+your team issued in April. All three reference PO-4471.
+
+We have applied the 2% early-settlement discount agreed in the
+master services agreement. Payment terms remain net 30 from the
+invoice date. Reach out to billing@atlasfreight.example with any
+questions.
+
+Kind regards,
+Dana Whitfield
+Billing Lead, Atlas Freight Solutions
+
+================================================================
+
+INVOICE
+
+Atlas Freight Solutions            Invoice #: INV-2026-0559
+118 Harbor Way                     Invoice date: 2026-06-08
+Oakland, CA 94607                  Terms: Net 30
+                                   Reference: PO-4471
+
+Bill to:
+  Acme Logistics
+  900 Cannery Row, Monterey, CA 93940
+
+Line items:
+  Long-haul freight, Oakland to Reno       12 loads    $ 9,600.00
+  Fuel surcharge                            12 loads    $ 1,140.00
+  Detention time                            6 hours     $   450.00
+  Pallet exchange fee                       220 units   $   330.00
+
+  Subtotal                                              $11,520.00
+  Early-settlement discount (2%)                        $  -230.40
+  Tax (8.5%)                                            $   959.42
+  Total due                                             $12,249.02
+
+================================================================
+
+DELIVERY RECEIPT
+
+Received by: Acme Logistics receiving dock 3
+Date/time:   2026-05-29 14:12 PDT
+Driver:      M. Okonkwo, unit 22
+Reference:   PO-4471 / INV-2026-0559
+
+Condition on arrival: 12 of 12 loads intact, seals unbroken.
+Two pallets flagged for re-wrap, noted on gate pass.
+Temperature log within range for the full transit window.
+
+Receiving signature: J. Alvarez
+Gate pass: GP-88231
+
+================================================================
+
+PURCHASE ORDER
+
+Purchase Order: PO-4471            Issued: 2026-04-15
+Buyer:  Acme Logistics            Approved by: R. Nguyen
+Vendor: Atlas Freight Solutions   Cost center: LOG-WEST
+
+Scope:
+  Contracted long-haul freight, Oakland to Reno corridor,
+  up to 12 loads for the May 2026 window, with fuel surcharge
+  billed at the published monthly index.
+
+Not-to-exceed amount: $13,000.00
+Delivery-by: 2026-05-31
+Special terms: 2% discount if settled within 10 days of invoice.

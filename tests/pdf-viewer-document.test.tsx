@@ -590,10 +590,10 @@ describe("PdfViewer document lifecycle", () => {
       );
     });
 
-    expect(await screen.findByText("208%")).toBeTruthy();
+    expect(await screen.findByText("200%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Zoom in"));
-    expect(await screen.findByText("250%")).toBeTruthy();
+    expect(await screen.findByText("240%")).toBeTruthy();
 
     await act(async () => {
       view.rerender(
@@ -601,7 +601,7 @@ describe("PdfViewer document lifecycle", () => {
       );
     });
 
-    expect(await screen.findByText("416%")).toBeTruthy();
+    expect(await screen.findByText("400%")).toBeTruthy();
   });
 
   it("does not render a new document with the previous document rotation", async () => {
@@ -809,7 +809,7 @@ describe("PdfViewer document lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump" }));
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 1362,
+      top: 1298,
       behavior: "auto",
     });
   });
@@ -869,7 +869,7 @@ describe("PdfViewer document lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump past page" }));
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 2112,
+      top: 2048,
       behavior: "auto",
     });
   });
@@ -932,7 +932,7 @@ describe("PdfViewer document lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Jump before page" }));
 
     expect(scrollTo).toHaveBeenCalledWith({
-      top: 1112,
+      top: 1048,
       behavior: "auto",
     });
   });
@@ -978,8 +978,8 @@ describe("PdfViewer document lifecycle", () => {
   });
 
   it.each([
-    ["NaN", Number.NaN, 1112],
-    ["Infinity", Number.POSITIVE_INFINITY, 2112],
+    ["NaN", Number.NaN, 1048],
+    ["Infinity", Number.POSITIVE_INFINITY, 2048],
   ])(
     "normalizes %s imperative target offsets before scrolling",
     async (label, targetTop, expectedTop) => {

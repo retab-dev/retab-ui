@@ -208,18 +208,19 @@ needs the vertical target.
 
 ## API Reference
 
-| Prop                     | Type                                     | Description                                                                  |
-| ------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------- |
-| `source`                 | `UrlViewerSource \| BlobViewerSource`    | Canonical PDF source. URL sources preserve PDF.js range-loading behavior.    |
-| `scale`                  | `number`                                 | Controlled rendered scale. Omit for fit-to-width/uncontrolled zoom.          |
-| `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                           |
-| `onScaleChange`          | `(scale: number \| null) => void`        | Fired when zoom controls request a scale change; `null` means fit width.     |
-| `controls`               | `boolean`                                | Show the zoom/rotate/download controls. Defaults to `true`.                  |
-| `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`. |
-| `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                 |
-| `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                      |
-| `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.          |
-| `className`              | `string`                                 | Optional class on the viewer root element.                                   |
+| Prop                     | Type                                     | Description                                                                           |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| `source`                 | `UrlViewerSource \| BlobViewerSource`    | Canonical PDF source. URL sources preserve PDF.js range-loading behavior.             |
+| `scale`                  | `number`                                 | Controlled rendered scale. Omit for fit-to-width/uncontrolled zoom.                   |
+| `defaultScale`           | `number`                                 | Initial uncontrolled scale. Omit for fit-to-width.                                    |
+| `fallbackPageSize`       | `{ width: number; height: number }`      | Known first-page geometry for an exact loading skeleton before PDF metadata resolves. |
+| `onScaleChange`          | `(scale: number \| null) => void`        | Fired when zoom controls request a scale change; `null` means fit width.              |
+| `controls`               | `boolean`                                | Show the zoom/rotate/download controls. Defaults to `true`.                           |
+| `renderPageOverlay`      | `(props: PageOverlayProps) => ReactNode` | Per-page overlay; receives `{ pageNumber, width, height, scale, rotation }`.          |
+| `onVisiblePageChange`    | `(page: number) => void`                 | Fired with the 1-based page nearest the top of the viewport.                          |
+| `onScrollProgressChange` | `(progress: number) => void`             | Fired with scroll progress in `[0, 1]`.                                               |
+| `bare`                   | `boolean`                                | Drop the outer border/background so the viewer fills its container.                   |
+| `className`              | `string`                                 | Optional class on the viewer root element.                                            |
 
 ## Source
 

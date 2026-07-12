@@ -18,6 +18,7 @@ import { PdfDocumentPagesLayer } from "./pdf-viewer-pages-layer";
 import { PdfViewerFallback } from "./pdf-viewer-states";
 import type {
   PageOverlayProps,
+  PdfPageSize,
   PdfPageRenderTiming,
   PdfViewerHandle,
   PdfViewerPerformanceOptions,
@@ -32,6 +33,8 @@ export type PdfViewerContentProps = {
   scale?: number;
   /** Initial uncontrolled scale. Leave unset for fit-to-width. */
   defaultScale?: number;
+  /** Page geometry used by the loading skeleton before PDF metadata resolves. */
+  fallbackPageSize?: PdfPageSize;
   /** Called when controls request a scale change. `null` means fit width. */
   onScaleChange?: (scale: number | null) => void;
   controls?: boolean;
@@ -68,6 +71,7 @@ export const PdfResourceContent = React.forwardRef<
         className={props.className}
         bare={props.bare}
         controls={props.controls}
+        fallbackPageSize={props.fallbackPageSize}
       />
     );
   }
@@ -91,6 +95,7 @@ export const PdfResourceContent = React.forwardRef<
             className={props.className}
             bare={props.bare}
             controls={props.controls}
+            fallbackPageSize={props.fallbackPageSize}
           />
         }
       >

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Braces, Files, FileCode2, FileText } from "lucide-react";
+import { ArrowRight, Braces, Files, FileCode2 } from "lucide-react";
 
 import { siteConfig } from "@/lib/config";
 import { FilesHeroDemo } from "@/components/files-hero-demo";
@@ -85,42 +85,6 @@ const renderingModel = [
     title: "No blank frame",
     description:
       "The viewer never exposes an empty viewport while the next pages catch up.",
-  },
-];
-
-const sourceExamples = [
-  {
-    title: "Stored file",
-    code: `const source = {
-  kind: "url",
-  url: "/samples/spacex-prospectus.pdf",
-  fileName: "spacex-prospectus.pdf",
-  mimeType: "application/pdf",
-}`,
-  },
-  {
-    title: "Generated text",
-    code: `const source = {
-  kind: "text",
-  text: reviewNotes,
-  fileName: "review-notes.txt",
-  mimeType: "text/plain",
-}`,
-  },
-];
-
-const sourceOptions = [
-  {
-    label: "Viewer choice",
-    value: "fileName + mimeType",
-  },
-  {
-    label: "Preview sizing",
-    value: "fallbackFrameSize / fallbackSlideSize",
-  },
-  {
-    label: "Document CSS",
-    value: "isolateStyles",
   },
 ];
 
@@ -221,14 +185,6 @@ export default function FilesPage() {
               />
             </div>
           </section>
-
-          <section className="pt-10 pb-16 md:pt-12">
-            <SectionHeader
-              title="Pass the file as data"
-              description="Give FileViewer the source and metadata. The renderer, fallback sizing, and style isolation stay explicit at the call site."
-            />
-            <SourceObjectDemo />
-          </section>
         </div>
       </div>
     </div>
@@ -294,24 +250,20 @@ function FormatCoverageDemo() {
 
 function RenderingModelDemo() {
   return (
-    <div className="overflow-hidden rounded-lg border">
-      <div className="text-muted-foreground flex items-center justify-between gap-3 border-b px-4 py-3 font-mono text-xs">
-        <span>scroll model</span>
-        <span>large documents stay filled</span>
-      </div>
-      <div className="grid divide-y md:grid-cols-3 md:divide-x md:divide-y-0">
-        {renderingModel.map((item) => (
-          <div key={item.title} className="p-4">
-            <div className="text-foreground text-sm font-medium">
-              {item.title}
-            </div>
-            <p className="text-muted-foreground mt-2 text-sm leading-6">
-              {item.description}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <ul className="space-y-3">
+      {renderingModel.map((item) => (
+        <li key={item.title} className="flex gap-3">
+          <span
+            className="bg-muted-foreground/60 mt-2 size-1.5 shrink-0 rounded-full"
+            aria-hidden="true"
+          />
+          <p className="text-muted-foreground text-sm leading-6">
+            <span className="text-foreground font-medium">{item.title}.</span>{" "}
+            {item.description}
+          </p>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -347,44 +299,3 @@ function CompositionCode() {
   );
 }
 
-function SourceObjectDemo() {
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-      <div className="grid gap-4 md:grid-cols-2">
-        {sourceExamples.map((example) => (
-          <div
-            key={example.title}
-            className="bg-muted/25 overflow-hidden rounded-lg border"
-          >
-            <div className="flex h-10 items-center gap-2 border-b px-3 text-xs">
-              <FileText
-                className="text-muted-foreground size-4"
-                aria-hidden="true"
-              />
-              <span className="font-mono">{example.title}</span>
-            </div>
-            <pre className="overflow-x-auto p-4 text-xs leading-6">
-              <code>{example.code}</code>
-            </pre>
-          </div>
-        ))}
-      </div>
-      <div className="overflow-hidden rounded-lg border">
-        {sourceOptions.map((option) => (
-          <div
-            key={option.label}
-            className="grid gap-2 border-b p-4 last:border-b-0"
-          >
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Braces className="size-4" aria-hidden="true" />
-              {option.label}
-            </div>
-            <code className="text-muted-foreground font-mono text-xs">
-              {option.value}
-            </code>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

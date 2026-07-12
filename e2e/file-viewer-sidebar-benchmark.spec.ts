@@ -525,6 +525,11 @@ test.describe("FileViewer sidebar motion benchmark", () => {
       );
     })) as FileViewerSidebarBenchmarkTelemetryResult | null;
 
+    await test.info().attach("pdf-deep-telemetry.json", {
+      body: Buffer.from(JSON.stringify(result, null, 2)),
+      contentType: "application/json",
+    });
+
     expect(result).not.toBeNull();
     expect(result?.format).toBe("pdf");
     expect(result?.scrollTarget).toBe("deep");

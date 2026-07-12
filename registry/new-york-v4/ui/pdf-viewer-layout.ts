@@ -1,11 +1,8 @@
 import type { PdfPageSize } from "./pdf-viewer-types";
 
-// Base gap/padding at scale 1. The layout scales these with `displayScale`
-// (see createPdfPageLayout) so the whole document is a single linear function
-// of scale — page heights AND the space between them grow/shrink together.
-// That linearity is what makes the fit-width sidebar transform reproduce the
-// pre-toggle frame exactly (gaps included), and it makes zoom feel like a
-// camera rather than pages drifting apart on a fixed grid.
+// The inter-page gap scales with the document so zoom behaves like a camera.
+// The outer padding stays fixed because it is the loaded page's shared frame
+// contract with the p-4 fallback skeleton.
 export const PDF_PAGE_GAP = 16;
 export const PDF_PAGE_PADDING = 16;
 export const PDF_RENDER_FIT_PERFECTLY_OVERSCAN_PX =
@@ -90,7 +87,7 @@ export function createPdfPageLayout({
   // reading anchor (which pins the transform to the visible page's actual
   // offset), exactly as page-height rounding already is.
   const gap = Math.round(PDF_PAGE_GAP * scale);
-  const padding = Math.round(PDF_PAGE_PADDING * scale);
+  const padding = PDF_PAGE_PADDING;
   const estimatedSize = getRenderedPageSize(defaultPageSize, scale, rotation);
   const measuredPages = Array.from(pageSizeByNumber.entries())
     .filter(([pageNumber]) => pageNumber >= 1 && pageNumber <= pageCount)

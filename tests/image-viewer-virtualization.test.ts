@@ -19,6 +19,19 @@ import {
 const frame = { intrinsicSize: { width: 100, height: 200 } };
 
 describe("image viewer virtualization", () => {
+  it("keeps the outer frame inset aligned with the skeleton at every scale", () => {
+    const layout = createImageFrameLayout({
+      frames: [frame],
+      scale: 2,
+      rotation: 0,
+    });
+
+    expect(layout.frames[0]?.offsetTop).toBe(IMAGE_FRAME_PADDING);
+    expect(layout.totalHeight).toBe(
+      IMAGE_FRAME_PADDING * 2 + frame.intrinsicSize.height * 2,
+    );
+  });
+
   it("creates a centered pixel render window", () => {
     expect(
       createImageWindowFromScrollPosition({

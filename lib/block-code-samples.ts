@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { VIEWER_BLOCKS } from "@/lib/viewer-blocks";
+import { getViewerBlock } from "@/lib/viewer-blocks";
 
 type RegistryFile = {
   path: string;
@@ -28,9 +28,18 @@ const appRoot = process.cwd();
 export async function getLoadedBlockCodeFiles(
   blockId: string,
 ): Promise<LoadedBlockCodeFile[] | null> {
-  const block = VIEWER_BLOCKS.find((item) => item.id === blockId);
+  const block = getViewerBlock(blockId);
   if (!block) return null;
 
+  // Blocks with explicit source files show those directly (e.g. the
+  // /docs-documented primitives whose Code view is their demo source).
+  if (block.sourceFiles?.length) {
+    return Promise.all(
+      block.sourceFiles.map((path: string) => loadBlockCodeFile({ path })),
+    );
+  }
+
+  if (!block.registryName) return [];
   const itemsByName = await getRegistryItemsByName();
   const files = itemsByName.get(block.registryName)?.files ?? [];
   return Promise.all(orderBlockFiles(files).map(loadBlockCodeFile));

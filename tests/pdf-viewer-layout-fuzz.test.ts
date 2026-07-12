@@ -99,11 +99,9 @@ describe("createPdfPageLayout — property fuzz", () => {
           expect(Number.isInteger(page!.offsetTop), ctx).toBe(true);
         }
 
-        // Gap and padding scale with the document (rounded to whole pixels).
+        // Gaps scale with the document; the outer frame inset stays fixed.
         expect(layout.gap, ctx).toBe(Math.round(PDF_PAGE_GAP * config.scale));
-        expect(layout.padding, ctx).toBe(
-          Math.round(PDF_PAGE_PADDING * config.scale),
-        );
+        expect(layout.padding, ctx).toBe(PDF_PAGE_PADDING);
 
         // Adjacent pages are stacked with exactly one scaled gap between them.
         for (let i = 1; i < pages.length; i++) {
@@ -112,7 +110,7 @@ describe("createPdfPageLayout — property fuzz", () => {
           );
         }
 
-        // First page sits below the scaled top padding.
+        // First page sits below the fixed skeleton-matching top padding.
         expect(pages[0]!.offsetTop, ctx).toBe(layout.padding);
 
         // The last page's bottom edge plus padding is the total height.

@@ -2672,9 +2672,9 @@ describe("ImageViewer scale semantics", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy();
     expect(await screen.findByText("Page 3 of 5")).toBeTruthy();
-    // Gap scales unrounded with the image (fractional heights), so the
-    // restored scroll target is fractional; the browser rounds on apply.
-    expect(viewport.scrollTop).toBeCloseTo(2073.6, 1);
+    // The gap scales unrounded with the image while the outer 16px frame inset
+    // remains fixed, so the restored target stays skeleton-aligned.
+    expect(viewport.scrollTop).toBeCloseTo(2070.4, 1);
   });
 
   it("normalizes invalid controlled scale values before rendering frame geometry", async () => {

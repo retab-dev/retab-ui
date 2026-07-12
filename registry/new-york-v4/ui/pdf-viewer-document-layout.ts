@@ -20,6 +20,7 @@ import { usePdfPageSizes } from "./pdf-viewer-page-sizes";
 import {
   getPdfFitWidthScale,
   getPdfPageDevicePixelRatio,
+  PDF_PAGE_HORIZONTAL_PADDING,
   useMeasuredElementWidth,
   usePdfScale,
 } from "./pdf-viewer-scale";
@@ -90,12 +91,11 @@ export function usePdfDocumentLayout({
     defaultScale,
     onScaleChange,
     containerWidth: logicalInlineSize,
-    fitWidthInlinePadding: 0,
     pageWidth: fitPageWidth,
     resetKey: document,
   });
   const fitWidthDisplayScale = isFitWidth
-    ? getPdfFitWidthScale(logicalInlineSize, fitPageWidth, 0)
+    ? getPdfFitWidthScale(logicalInlineSize, fitPageWidth)
     : resolvedScale;
   const displayScale = isFitWidth ? fitWidthDisplayScale : resolvedScale;
   const renderScale = getPdfPreparedFitWidthRenderScale({
@@ -150,6 +150,7 @@ export function usePdfDocumentLayout({
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: pageLayout.maxPageWidth,
+          stageOuterInlinePadding: PDF_PAGE_HORIZONTAL_PADDING,
           stageInlineSlope,
         }),
       [
@@ -220,7 +221,7 @@ function getPdfPreparedFitWidthRenderScale({
   // backing canvas for the largest width the motion touches so the already-
   // rendered bitmap only ever CSS-rescales — never blanks — while the
   // target-resolution render is pending.
-  return getPdfFitWidthScale(rasterInlineSize, pageWidth, 0);
+  return getPdfFitWidthScale(rasterInlineSize, pageWidth);
 }
 
 function getPdfPreparedFitWidthRasterInlineSize(

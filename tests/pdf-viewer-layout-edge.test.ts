@@ -143,10 +143,10 @@ describe("pdf layout — degenerate scales", () => {
     expect(page.width).toBe(0);
     expect(page.height).toBe(0);
     expect(Number.isFinite(page.offsetTop)).toBe(true);
-    // Padding and gap scale with the (zero) scale too, so nothing remains.
+    // The page and gap collapse; the shared skeleton/page frame remains.
     expect(layout.gap).toBe(0);
-    expect(layout.padding).toBe(0);
-    expect(layout.totalHeight).toBe(0);
+    expect(layout.padding).toBe(PDF_PAGE_PADDING);
+    expect(layout.totalHeight).toBe(PDF_PAGE_PADDING * 2);
   });
 });
 

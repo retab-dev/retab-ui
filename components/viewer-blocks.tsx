@@ -6,11 +6,8 @@ import { usePathname } from "next/navigation";
 import { Code, FileCode, Loader2, Terminal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import {
-  VIEWER_BLOCK_TABS,
-  VIEWER_BLOCKS,
-  type ViewerBlockId,
-} from "@/lib/viewer-blocks";
+import { VIEWER_BLOCKS, type ViewerBlockId } from "@/lib/viewer-blocks";
+import { EXAMPLE_SECTIONS } from "@/lib/example-sections";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useMounted } from "@/hooks/use-mounted";
 import { Button } from "@/components/ui/button";
@@ -47,7 +44,6 @@ const BLOCK_VIEWPORT_HEIGHT_CLASS = "h-[680px]";
 const BLOCK_PREVIEW_LAZY_ROOT_MARGIN = "900px 0px";
 
 const viewerBlocks = VIEWER_BLOCKS.map(withViewerBlockComponent);
-const viewerBlockTabs = VIEWER_BLOCK_TABS.map(withViewerBlockComponent);
 
 export function ViewerBlocks({ blockId }: { blockId: ViewerBlockId }) {
   const activeBlock = viewerBlocks.find((block) => block.id === blockId);
@@ -67,42 +63,42 @@ export function ViewerBlocks({ blockId }: { blockId: ViewerBlockId }) {
 
 export function ViewerBlockTabs() {
   const pathname = usePathname();
-  const activeBlock = viewerBlockTabs.find(
-    (block) => pathname === getBlockHref(block.id),
-  );
 
   return (
-    <div className="flex flex-wrap items-start gap-x-6 gap-y-3 pb-3">
-      <nav
-        aria-label="Block categories"
-        className="w-full max-w-none min-w-0 flex-1 justify-start"
-      >
-        <ul className="grid w-full list-none grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] items-start gap-x-8 gap-y-2">
-          {viewerBlockTabs.map((block) => {
-            const isActive = activeBlock?.id === block.id;
-            return (
-              <li key={block.id}>
-                <Link
-                  href={getBlockHref(block.id)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "block rounded-none bg-transparent p-0 text-left text-base font-medium tracking-tight transition-colors",
-                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none",
-                    isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {block.title}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <Button variant="secondary" size="sm" className="ml-auto" asChild>
-        <Link href="/docs/components">Browse components</Link>
-      </Button>
+    <div className="flex flex-col gap-6 pb-3">
+      {EXAMPLE_SECTIONS.map((section) => (
+        <nav
+          key={section.id}
+          aria-label={section.title}
+          className="w-full max-w-none min-w-0"
+        >
+          <h2 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+            {section.title}
+          </h2>
+          <ul className="grid w-full list-none grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] items-start gap-x-8 gap-y-2">
+            {section.tabs.map((tab) => {
+              const isActive = pathname === tab.href;
+              return (
+                <li key={tab.id}>
+                  <Link
+                    href={tab.href}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "block rounded-none bg-transparent p-0 text-left text-base font-medium tracking-tight transition-colors",
+                      "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:outline-none",
+                      isActive
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {tab.title}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      ))}
     </div>
   );
 }
@@ -142,6 +138,10 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
   const isPreviewFrameless = block.categories.some(
     (category) => category === "dropzone" || category === "file-system",
   );
+  // Document-analysis primitives bring their own framing/height (they reuse the
+  // homepage showcase panels), so let them size naturally instead of forcing the
+  // fixed-height viewport surface used by the file-viewer blocks.
+  const isPreviewNatural = block.categories.includes("document-analysis");
 
   function setBlockView(nextView: BlockView) {
     if (nextView === "code") {
@@ -211,6 +211,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
   });
 
   async function copyInstallCommand() {
+    if (!block.command) return;
     const copied = await copyToClipboardWithMeta(block.command);
     if (copied) setIsCommandCopied(true);
   }
@@ -242,33 +243,44 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
               </span>
             ) : null}
           </div>
-          <div className="ml-auto flex min-w-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="hidden max-w-[24rem] min-w-0 gap-1 px-2 shadow-none lg:flex"
-              aria-label={
-                isCommandCopied
-                  ? "Copied install command"
-                  : "Copy install command"
-              }
-              onClick={copyInstallCommand}
-            >
-              <CopyButtonIcon
-                copied={isCommandCopied}
-                icon={Terminal}
-                className="shrink-0"
-              />
-              <span className="truncate font-mono text-xs">
-                {block.command}
-              </span>
-            </Button>
-          </div>
+          {block.command ? (
+            <div className="ml-auto flex min-w-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="hidden max-w-[24rem] min-w-0 gap-1 px-2 shadow-none lg:flex"
+                aria-label={
+                  isCommandCopied
+                    ? "Copied install command"
+                    : "Copy install command"
+                }
+                onClick={copyInstallCommand}
+              >
+                <CopyButtonIcon
+                  copied={isCommandCopied}
+                  icon={Terminal}
+                  className="shrink-0"
+                />
+                <span className="truncate font-mono text-xs">
+                  {block.command}
+                </span>
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <div className={view === "preview" ? "block" : "hidden"}>
-          {isPreviewFrameless ? (
+          {isPreviewNatural ? (
+            <div className="bg-background hidden min-w-0 md:block">
+              <BlockPreviewSurface
+                Preview={Preview}
+                isMounted={isMounted}
+                previewKey={previewKey}
+                shouldRenderPreview={isDesktopViewport && shouldMountPreview}
+              />
+            </div>
+          ) : isPreviewFrameless ? (
             <div
               className={cn(
                 "bg-background hidden min-w-0 overflow-hidden md:block",
@@ -300,7 +312,7 @@ function ViewerBlockPreview({ block }: { block: ViewerBlockWithComponent }) {
               </div>
             </div>
           )}
-          {isPreviewFrameless ? (
+          {isPreviewNatural || isPreviewFrameless ? (
             <div className="bg-background overflow-hidden md:hidden">
               <BlockPreviewSurface
                 Preview={Preview}

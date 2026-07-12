@@ -2,13 +2,13 @@
   "title": "Components",
   "pages": [
     "index",
+    "---File Viewer---",
+    "file-viewer",
     "---Forms & Data---",
     "json-form",
     "json-table",
     "schema-builder",
     "dropzone",
-    "file-thumbnail",
-    "---File Viewer---",
-    "file-viewer"
+    "file-thumbnail"
   ]
 }

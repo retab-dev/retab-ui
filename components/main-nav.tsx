@@ -29,11 +29,7 @@ export function MainNav({
               <Button variant="ghost" size="sm" className="px-2.5" asChild>
                 <Link
                   href={item.href}
-                  data-active={
-                    item.href === "/examples"
-                      ? pathname.startsWith(item.href)
-                      : pathname === item.href
-                  }
+                  data-active={pathname === item.href}
                   className="relative items-center"
                 >
                   {item.label}
