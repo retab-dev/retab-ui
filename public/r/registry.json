@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "retab-ui",
-  "homepage": "https://github.com/retab-dev/ui",
+  "homepage": "https://ui.retab.com",
   "items": [
     {
       "name": "viewer-controls",

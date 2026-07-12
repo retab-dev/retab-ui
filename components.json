@@ -19,7 +19,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@retab": "https://retab.com/ui/r/{name}.json",
+    "@retab": "https://ui.retab.com/r/{name}.json",
     "@coss": "https://coss.com/ui/r/{name}.json"
   }
 }
