@@ -25,6 +25,7 @@ import {
   FileViewerContent,
   FileViewerHeader,
   FileViewerSidebar,
+  FileViewerSidebarTrigger,
   FileViewerInset,
   FileViewerViewport,
 } from "@/registry/new-york-v4/ui/file-viewer";
@@ -381,7 +382,6 @@ class TestMetricErrorBoundary extends React.Component<
   }
 }
 
-
 describe("PdfViewer core", () => {
   it("uses known page geometry for the loading skeleton", () => {
     render(
@@ -392,9 +392,8 @@ describe("PdfViewer core", () => {
     );
 
     expect(
-      document.querySelector<HTMLElement>(
-        '[data-slot="pdf-page-skeleton"]',
-      )?.style.aspectRatio,
+      document.querySelector<HTMLElement>('[data-slot="pdf-page-skeleton"]')
+        ?.style.aspectRatio,
     ).toBe("1275 / 1804");
   });
 
@@ -411,6 +410,48 @@ describe("PdfViewer core", () => {
 
     expect(screen.getByText("Custom PDF header")).toBeTruthy();
     expect(screen.queryByText("default-label.pdf")).toBeNull();
+  });
+
+  it("releases the PDF paint clip while the sidebar counter-transform is active", async () => {
+    pdfjsMock.docs.set("/sidebar-motion-clip.pdf", makeDoc([[100, 200]]));
+
+    render(
+      <FileViewer
+        source={pdfUrlSource("/sidebar-motion-clip.pdf")}
+        defaultOpen={false}
+        inlineBreakpoint={640}
+      >
+        <PdfViewerProvider>
+          <FileViewerHeader>
+            <FileViewerSidebarTrigger />
+          </FileViewerHeader>
+          <FileViewerContent>
+            <FileViewerSidebar width="128px" />
+            <FileViewerInset align="center">
+              <FileViewerViewport>
+                <PdfViewerPages bare />
+              </FileViewerViewport>
+            </FileViewerInset>
+          </FileViewerContent>
+        </PdfViewerProvider>
+      </FileViewer>,
+    );
+
+    const visualClip = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(
+        '[data-slot="pdf-viewer-visual-clip"]',
+      );
+      expect(element).toBeTruthy();
+      return element!;
+    });
+    expect(visualClip.style.contain).toBe("paint style");
+    expect(visualClip.style.overflow).toBe("clip");
+
+    fireEvent.click(screen.getByLabelText("Toggle sidebar"));
+
+    expect(visualClip.getAttribute("data-layout-transitioning")).toBe("");
+    expect(visualClip.style.contain).toBe("style");
+    expect(visualClip.style.overflow).toBe("visible");
   });
 
   it("builds page-size-aware thumbnail layout with deterministic fallbacks", () => {
@@ -1373,9 +1414,7 @@ describe("PdfViewer core", () => {
     expect(renderWindow?.getAttribute("style")).toContain(
       "contain: layout style",
     );
-    expect(renderWindow?.getAttribute("style")).toContain(
-      "isolation: isolate",
-    );
+    expect(renderWindow?.getAttribute("style")).toContain("isolation: isolate");
 
     fireEvent.scroll(viewport!);
     expect(renderWindow?.style.pointerEvents).toBe("none");

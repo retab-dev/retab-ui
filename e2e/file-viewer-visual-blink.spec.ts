@@ -113,13 +113,17 @@ test.describe("FileViewer sidebar visual blink gate", () => {
       const telemetry = await runtime.run();
       if (!telemetry) return null;
       return {
+        contentStartSnap: telemetry.metrics.find(
+          (metric) => metric.id === "content-start-snap",
+        ),
         failed: telemetry.metrics
           .filter((metric) => !metric.passed)
           // Timing metrics are environment-bound; the geometry budgets are
           // the hard gate. CI machines may drop frames without a visual bug.
           .filter((metric) => metric.id !== "main-thread")
           .map(
-            (metric) => `${metric.id}: ${metric.value} exceeds ${metric.budget}`,
+            (metric) =>
+              `${metric.id}: ${metric.value} exceeds ${metric.budget}`,
           ),
         flightRecords: runtime.getFlightRecords().length,
         sampledFrameCount: telemetry.sampledFrameCount,
@@ -130,6 +134,13 @@ test.describe("FileViewer sidebar visual blink gate", () => {
     expect(result).not.toBeNull();
     expect(result?.sampledFrameCount ?? 0).toBeGreaterThan(10);
     expect(result?.flightRecords ?? 0).toBeGreaterThan(0);
-    expect(result?.failed ?? ["telemetry unavailable"], (result?.failed ?? []).join("\n")).toEqual([]);
+    expect(result?.contentStartSnap).toMatchObject({
+      passed: true,
+      value: "0px",
+    });
+    expect(
+      result?.failed ?? ["telemetry unavailable"],
+      (result?.failed ?? []).join("\n"),
+    ).toEqual([]);
   });
 });

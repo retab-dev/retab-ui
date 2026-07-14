@@ -20,6 +20,7 @@ type FileViewerMotionTelemetryMetricId =
   | "blink"
   | "gap-stability"
   | "overshoot"
+  | "content-start-snap"
   | "content-overshoot"
   | "settle-snap"
   | "scroll-identity"
@@ -101,6 +102,7 @@ declare global {
 const FILE_VIEWER_TELEMETRY_DEFAULT_SETTLE_FRAMES = 16;
 const FILE_VIEWER_TELEMETRY_GAP_REVERSAL_EPSILON_PX = 1;
 const FILE_VIEWER_TELEMETRY_OVERSHOOT_BUDGET_PX = 1;
+const FILE_VIEWER_TELEMETRY_CONTENT_START_SNAP_BUDGET_PX = 1.5;
 const FILE_VIEWER_TELEMETRY_CONTENT_OVERSHOOT_BUDGET_PX = 1;
 const FILE_VIEWER_TELEMETRY_SETTLE_SNAP_BUDGET_PX = 1.5;
 const FILE_VIEWER_TELEMETRY_SCROLL_IDENTITY_BUDGET_PX = 1;
@@ -296,7 +298,9 @@ function readFileViewerMotionTelemetrySample(
   const sidebarRect = elements.sidebarElement?.getBoundingClientRect();
   const surfaceRect = surfaceElement.getBoundingClientRect();
   const contentElement = readFileViewerMotionProbeElement(elements);
-  const contentRect = contentElement?.getBoundingClientRect();
+  const contentRect = contentElement
+    ? readFileViewerMotionProbeRect(contentElement, elements.viewerShellElement)
+    : null;
   const scroller = findFileViewerTelemetryScroller(surfaceElement);
   const frame = host.motionKernel.getInteractiveSnapshot();
   const visibleCanvasCount = countFileViewerVisibleCanvases(surfaceElement);
@@ -334,6 +338,52 @@ function readFileViewerMotionProbeElement(
   } catch {
     return null;
   }
+}
+
+function readFileViewerMotionProbeRect(
+  element: HTMLElement,
+  boundaryElement: HTMLElement | null,
+) {
+  const rect = element.getBoundingClientRect();
+  let left = rect.left;
+  let right = rect.right;
+
+  // getBoundingClientRect reports the transformed content box even when an
+  // ancestor removes part of it at paint. Intersect horizontal clipping
+  // ancestors so telemetry measures the pixels a sidebar resize can actually
+  // show, while leaving vertical viewport clipping (ordinary document
+  // scrolling) out of this horizontal motion signal.
+  let ancestor = element.parentElement;
+  while (ancestor) {
+    const style = getComputedStyle(ancestor);
+    if (clipsFileViewerMotionProbeInline(style)) {
+      const ancestorRect = ancestor.getBoundingClientRect();
+      left = Math.max(left, ancestorRect.left);
+      right = Math.min(right, ancestorRect.right);
+    }
+    if (ancestor === boundaryElement) break;
+    ancestor = ancestor.parentElement;
+  }
+
+  return {
+    height: rect.height,
+    left,
+    top: rect.top,
+    width: Math.max(0, right - left),
+  };
+}
+
+function clipsFileViewerMotionProbeInline(style: CSSStyleDeclaration) {
+  const contain = style.contain.split(/\s+/);
+  return (
+    style.overflowX === "auto" ||
+    style.overflowX === "clip" ||
+    style.overflowX === "hidden" ||
+    style.overflowX === "scroll" ||
+    contain.includes("content") ||
+    contain.includes("paint") ||
+    contain.includes("strict")
+  );
 }
 
 function findFileViewerTelemetryScroller(element: HTMLElement) {
@@ -486,6 +536,7 @@ function collectFileViewerMotionTelemetryMetrics(
     collectFileViewerBlinkMetric(runs),
     collectFileViewerGapStabilityMetric(runs),
     collectFileViewerOvershootMetric(runs),
+    collectFileViewerContentStartSnapMetric(runs),
     collectFileViewerContentOvershootMetric(runs),
     collectFileViewerSettleSnapMetric(runs),
     collectFileViewerScrollIdentityMetric(runs),
@@ -494,6 +545,33 @@ function collectFileViewerMotionTelemetryMetrics(
     collectFileViewerMainThreadMetric(runs),
     collectFileViewerCycleInvarianceMetric(runs),
   ];
+}
+
+function collectFileViewerContentStartSnapMetric(
+  runs: readonly FileViewerMotionTelemetryRun[],
+): FileViewerMotionTelemetryMetric {
+  let snapPx = 0;
+
+  for (const run of runs) {
+    const before = getFileViewerTelemetryContentEdges(run.before);
+    const first = run.samples[0]
+      ? getFileViewerTelemetryContentEdges(run.samples[0])
+      : null;
+    if (!before || !first) continue;
+    for (let index = 0; index < before.length; index += 1) {
+      snapPx = Math.max(snapPx, Math.abs(first[index]! - before[index]!));
+    }
+  }
+
+  return {
+    budget: `<= ${FILE_VIEWER_TELEMETRY_CONTENT_START_SNAP_BUDGET_PX}px`,
+    detail:
+      "The synchronous target-layout commit must paint exactly where the pre-toggle content was; any first-sample deviation is an opening snap or ancestor clip.",
+    id: "content-start-snap",
+    label: "Content start snap",
+    passed: snapPx <= FILE_VIEWER_TELEMETRY_CONTENT_START_SNAP_BUDGET_PX,
+    value: `${formatFileViewerTelemetryNumber(snapPx, 2)}px`,
+  };
 }
 
 function collectFileViewerContentOvershootMetric(

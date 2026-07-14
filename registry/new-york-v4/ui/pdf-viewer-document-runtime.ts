@@ -98,6 +98,24 @@ export function usePdfDocumentRuntime({
     pageNumber: number;
     screenRelTop: number;
   } | null>(null);
+  const motionProbePageNumberRef = React.useRef(currentPage);
+  motionProbePageNumberRef.current = layout.rendererFrame.isTransitioning
+    ? (preMotionAnchorRef.current?.pageNumber ?? currentPage)
+    : currentPage;
+  const getDocumentMotionProbeElement = React.useCallback(() => {
+    const surface = documentSurfaceElementRef.current;
+    if (!surface) return null;
+    const pageNumber = motionProbePageNumberRef.current;
+    return (
+      surface.querySelector<HTMLElement>(
+        `[data-slot="pdf-page"][data-page="${pageNumber}"]`,
+      ) ??
+      surface.querySelector<HTMLElement>(
+        '[data-slot="pdf-page-slot"][data-visible] [data-slot="pdf-page"]',
+      ) ??
+      surface.querySelector<HTMLElement>('[data-slot="pdf-page"]')
+    );
+  }, []);
   const lastAnchorBlockRef = React.useRef<number | null>(null);
   const writeAnchorBlockOffsetPx = React.useCallback((anchorBlock: number) => {
     const documentSurfaceElement = documentSurfaceElementRef.current;
@@ -186,7 +204,12 @@ export function usePdfDocumentRuntime({
         : null;
       measureScroll();
     },
-    [getScrollMetrics, layout.pageLayout, layout.stageInlineSlope, measureScroll],
+    [
+      getScrollMetrics,
+      layout.pageLayout,
+      layout.stageInlineSlope,
+      measureScroll,
+    ],
   );
   const measureBeforeLayoutMotionRef = React.useRef(measureBeforeLayoutMotion);
   measureBeforeLayoutMotionRef.current = measureBeforeLayoutMotion;
@@ -408,6 +431,7 @@ export function usePdfDocumentRuntime({
       document,
       documentAlign: layout.rendererFrame.align,
       documentKey,
+      getMotionProbeElement: getDocumentMotionProbeElement,
       isLayoutTransitioning: layout.rendererFrame.isTransitioning,
       layout: layout.pageLayout,
       onPageRenderTiming: handlePageRenderTiming,

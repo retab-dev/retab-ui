@@ -36,6 +36,7 @@ export type PdfDocumentPagesLayerProps = {
   document: PdfDocument;
   documentAlign: FileViewerDocumentAlign | null;
   documentKey: string;
+  getMotionProbeElement: () => HTMLElement | null;
   isLayoutTransitioning: boolean;
   layout: PdfPageLayoutModel;
   onPageRenderTiming?: (timing: PdfPageRenderTiming) => void;
@@ -63,6 +64,7 @@ export function PdfDocumentPagesLayer({
   document,
   documentAlign,
   documentKey,
+  getMotionProbeElement,
   isLayoutTransitioning,
   layout,
   onPageRenderTiming,
@@ -102,6 +104,7 @@ export function PdfDocumentPagesLayer({
   const documentSurfaceKey = visualStageElement
     ? joinEffectKey([
         registerDocumentSurface,
+        getMotionProbeElement,
         readSettleSnapshot,
         resolveSurfaceMotionStyle,
         visualStageElement,
@@ -111,6 +114,7 @@ export function PdfDocumentPagesLayer({
     if (!visualStageElement) return;
     return registerDocumentSurface({
       element: visualStageElement,
+      getMotionProbeElement,
       readSettleSnapshot,
       resolveMotionStyle: resolveSurfaceMotionStyle,
     });
@@ -144,9 +148,15 @@ export function PdfDocumentPagesLayer({
     width: layout.maxPageWidth,
   } satisfies React.CSSProperties;
   const visualClipStyle = {
-    contain: "paint style",
+    // The motion surface commits the target page width before the first
+    // paint, then counter-scales back to the previous width. A target-sized
+    // paint clip would cut off that enlarged opening frame even though the
+    // page geometry itself is continuous. Relinquish paint containment only
+    // while the counter-transform is active; identity fits the clip again at
+    // settle, so restoring it cannot move a pixel.
+    contain: isLayoutTransitioning ? "style" : "paint style",
     left: -PDF_PAGE_RING_OUTSET_PX,
-    overflow: "clip",
+    overflow: isLayoutTransitioning ? "visible" : "clip",
     paddingInline: PDF_PAGE_RING_OUTSET_PX,
     right: -PDF_PAGE_RING_OUTSET_PX,
   } satisfies React.CSSProperties;
