@@ -55,6 +55,26 @@ describe("file viewer fit-width motion", () => {
     expect(style?.transform).toBe("");
   });
 
+  it("keeps the counter-transform until the live pane reaches its target", () => {
+    const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
+      align: "center",
+      isFitWidth: true,
+      stageInlineSize: 1412,
+      stageOuterInlinePadding: 32,
+      stageInlineSlope: 1.028571,
+    });
+
+    const style = resolveMotionStyle({
+      ...DEFAULT_FILE_VIEWER_MOTION_FRAME,
+      fromInlineSize: 1126,
+      layoutInlineSize: 1404.75,
+      phase: "sliding",
+      toInlineSize: 1406,
+    });
+
+    expect(style?.transform).toContain("scale(0.999089)");
+  });
+
   it("clears every motion style outside the sliding phase", () => {
     const resolveMotionStyle = createFileViewerFitWidthSurfaceMotionResolver({
       align: "center",

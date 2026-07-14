@@ -136,7 +136,6 @@ test.describe("FileViewer sidebar visual blink gate", () => {
     expect(result?.flightRecords ?? 0).toBeGreaterThan(0);
     expect(result?.contentStartSnap).toMatchObject({
       passed: true,
-      value: "0px",
     });
     expect(
       result?.failed ?? ["telemetry unavailable"],

@@ -1,14 +1,17 @@
 # Repository Guidelines
 
 ## Response Instructions
+
 - When asked to write a blueprint, create or update a Markdown file instead of writing the blueprint in chat.
-- If a requested task needs a dev server and it is not already running, do not start it. Ask the user to start it. Never kill, stop, restart, or otherwise interfere with a running dev server unless the user explicitly asks.
+- Manage project dev servers autonomously when they are needed for the requested work. Reuse a responsive server, start one when absent, and restart one when it is unresponsive or stale. Before stopping a process, verify that it belongs to this repository and is listening on the project’s configured port; never interfere with unrelated processes. Track servers started during the task and stop them when they are no longer needed unless the user asks to leave them running.
 
 ## Git Workflow
+
 - Always work directly on `main`. Never create branches.
 - Commit and push to `main`. After any merge or push, remain on `main`.
 
 ## Design Principles
+
 - Aim for the platonic ideal of every component: the version that feels complete, inevitable, and exact.
 - Platonic ideal means perfection. The implementation should be simple, fast, complete, and free of anything unnecessary.
 - Simplicity is a feature. Prefer direct code, clear data flow, and the smallest API that can fully express the behavior.

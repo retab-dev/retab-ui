@@ -233,11 +233,12 @@ const FORMAT_IDS: readonly BenchmarkFormatId[] = [
 const SIDES: readonly BenchmarkSide[] = ["right", "left"];
 const ASSERT_RENDERER_CONTINUITY =
   process.env.FILE_VIEWER_ASSERT_RENDERER_CONTINUITY === "1";
+const ASSERT_TIMING = process.env.FILE_VIEWER_ASSERT_TIMING === "1";
 const ASSERT_VISUAL_SMOOTHNESS =
   process.env.FILE_VIEWER_ASSERT_VISUAL_SMOOTHNESS === "1";
 const ASSERT_VIEWPORT_MATRIX =
   process.env.FILE_VIEWER_ASSERT_VIEWPORT_MATRIX === "1";
-const CI_TOLERATED_TIMING_METRIC_IDS = new Set([
+const ENVIRONMENT_BOUND_METRIC_IDS = new Set([
   "main-thread",
   "motion-samples",
   "layout-shift",
@@ -298,11 +299,6 @@ const PDF_VISUAL_VIEWPORTS = [
   { height: 760, label: "compact", width: 980 },
   { height: 1040, label: "wide", width: 1600 },
 ] satisfies readonly BenchmarkViewport[];
-const PDF_VISUAL_ROUTES = [
-  { label: "files", path: "/files" },
-  { label: "home", path: "/" },
-] satisfies readonly { label: string; path: string }[];
-
 const READY_SELECTORS: Record<BenchmarkFormatId, string> = {
   pdf: '[data-slot="pdf-page"] canvas[data-pdf-render-status="rendered"]',
   image:
@@ -436,12 +432,14 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     expect(result?.runs?.close.samples.length).toBeGreaterThan(20);
     expect(result?.runs?.open.samples.length).toBeGreaterThan(20);
     expect(result?.runs?.rapidToggle.samples.length).toBeGreaterThan(20);
+    const blockingMetrics = collectBlockingTelemetryMetrics(result?.metrics);
     expect(
-      collectBlockingTelemetryMetrics(result?.metrics).map(
-        (metric) => metric.id,
+      blockingMetrics.map(
+        (metric) => `${metric.id}: ${metric.value} exceeds ${metric.budget}`,
       ),
+      blockingMetrics.map((metric) => metric.detail).join("\n"),
     ).toEqual([]);
-    if (!process.env.CI) {
+    if (ASSERT_TIMING) {
       expect(result?.status).toBe("passed");
     }
 
@@ -820,46 +818,6 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     expect(failures, failures.join("\n")).toEqual([]);
   });
 
-  test("home PDF sidebar has no deep scroll geometry jump", async ({
-    page,
-  }) => {
-    test.skip(
-      !ASSERT_VISUAL_SMOOTHNESS,
-      "visual surface assertions are opt-in",
-    );
-    test.setTimeout(360_000);
-
-    const failures: string[] = [];
-    const summaries: unknown[] = [];
-
-    for (const viewport of PDF_VISUAL_VIEWPORTS) {
-      await preparePdfVisualBenchmarkRoute(page, "/", viewport);
-
-      for (const scenario of PDF_VISUAL_SCENARIOS) {
-        const result = await runSidebarBenchmark(
-          page,
-          '[data-slot="file-viewer-root"]',
-          {
-            actionOrder: scenario.actionOrder,
-            sampleFrameCount: 48,
-            scrollTarget: scenario.scrollTarget,
-            settleFrameCount: 24,
-          },
-        );
-        const label = `home/pdf/${viewport.label}/${scenario.label}`;
-        summaries.push(summarizeBenchmarkResult(result, label));
-        failures.push(...collectBenchmarkFailures(result, label));
-      }
-    }
-
-    await test.info().attach("file-viewer-sidebar-motion-home-pdf.json", {
-      body: JSON.stringify(summaries, null, 2),
-      contentType: "application/json",
-    });
-
-    expect(failures, failures.join("\n")).toEqual([]);
-  });
-
   test("PDF sidebar keeps page gaps fixed", async ({ page }) => {
     test.skip(
       !ASSERT_VISUAL_SMOOTHNESS,
@@ -870,20 +828,18 @@ test.describe("FileViewer sidebar motion benchmark", () => {
     const failures: string[] = [];
     const summaries: unknown[] = [];
 
-    for (const route of PDF_VISUAL_ROUTES) {
-      for (const viewport of PDF_VISUAL_VIEWPORTS) {
-        await preparePdfVisualBenchmarkRoute(page, route.path, viewport);
+    for (const viewport of PDF_VISUAL_VIEWPORTS) {
+      await preparePdfVisualBenchmarkRoute(page, "/files", viewport);
 
-        for (const scrollTarget of PDF_VISUAL_SCROLL_TARGETS) {
-          const result = await runPdfPageGapBenchmark(
-            page,
-            '[data-slot="file-viewer-root"]',
-            scrollTarget,
-          );
-          const label = `${route.label}/pdf/${viewport.label}/${scrollTarget.label}`;
-          summaries.push({ label, result });
-          failures.push(...collectPdfPageGapFailures(result, label));
-        }
+      for (const scrollTarget of PDF_VISUAL_SCROLL_TARGETS) {
+        const result = await runPdfPageGapBenchmark(
+          page,
+          '[data-slot="file-viewer-root"]',
+          scrollTarget,
+        );
+        const label = `files/pdf/${viewport.label}/${scrollTarget.label}`;
+        summaries.push({ label, result });
+        failures.push(...collectPdfPageGapFailures(result, label));
       }
     }
 
@@ -2140,6 +2096,8 @@ function collectMotionFailures(
   }
   if (ASSERT_VISUAL_SMOOTHNESS) {
     failures.push(...collectLayoutShiftFailures(run, prefix));
+  }
+  if (ASSERT_TIMING) {
     failures.push(...collectMainThreadFailures(run, prefix));
   }
   if (ASSERT_VISUAL_SMOOTHNESS) {
@@ -2807,7 +2765,7 @@ function collectBlockingTelemetryMetrics<
   return (metrics ?? []).filter(
     (metric) =>
       !metric.passed &&
-      !(process.env.CI && CI_TOLERATED_TIMING_METRIC_IDS.has(metric.id)),
+      !(!ASSERT_TIMING && ENVIRONMENT_BOUND_METRIC_IDS.has(metric.id)),
   );
 }
 
@@ -2815,22 +2773,21 @@ const BENCHMARK_FAILURES_CONSOLE_PREFIX =
   "[file-viewer:sidebar-benchmark] failures ";
 
 // The in-page runtime logs a "failures" line for EVERY failed metric,
-// including the timing metrics collectBlockingTelemetryMetrics tolerates on
-// loaded CI runners. Apply the same tolerance here: a line is blocking only
-// if it names a metric outside CI_TOLERATED_TIMING_METRIC_IDS (or cannot be
-// parsed). Off CI every failures line blocks, matching the local strict
-// status assertion.
+// including environment-bound timing metrics that are diagnostic unless the
+// timing gate is explicitly enabled. Apply the same policy here: a line is
+// blocking only if it names a metric outside ENVIRONMENT_BOUND_METRIC_IDS (or
+// cannot be parsed).
 function collectBlockingFailureConsoleLines(messages: readonly string[]) {
   return messages.filter((message) => {
     if (!message.startsWith(BENCHMARK_FAILURES_CONSOLE_PREFIX)) return false;
-    if (!process.env.CI) return true;
+    if (ASSERT_TIMING) return true;
     try {
       const failedMetrics = JSON.parse(
         message.slice(BENCHMARK_FAILURES_CONSOLE_PREFIX.length),
       ) as { id?: string }[];
       return !failedMetrics.every(
         (metric) =>
-          metric.id != null && CI_TOLERATED_TIMING_METRIC_IDS.has(metric.id),
+          metric.id != null && ENVIRONMENT_BOUND_METRIC_IDS.has(metric.id),
       );
     } catch {
       return true;

@@ -401,11 +401,7 @@ function getFileViewerFitWidthSurfaceMotionTransform({
   const translateX =
     visualMargin - settledMargin + (1 - inlineScale) * inlinePaddingStart;
 
-  if (
-    Math.abs(inlineScale - 1) <= 0.001 &&
-    Math.abs(blockScale - 1) <= 0.001 &&
-    Math.abs(translateX) <= 0.001
-  ) {
+  if (Math.abs(frame.layoutInlineSize - frame.toInlineSize) <= 0.001) {
     return "";
   }
 

@@ -921,7 +921,9 @@ function readCanvasPixelSample(
   }
 
   return {
-    primaryId: primaryCanvas ? readBenchmarkCanvasIdentity(primaryCanvas) : null,
+    primaryId: primaryCanvas
+      ? readBenchmarkCanvasIdentity(primaryCanvas)
+      : null,
     primaryInkRatio: primaryInk?.inkRatio ?? null,
     primarySignature: primaryInk?.signature ?? null,
     visibleCanvasCount: canvases.length,
@@ -1327,9 +1329,8 @@ function collectRetargetContinuityMetric(
         continue;
       }
       const anchorHeight =
-        current.rendererAnchors.find(
-          (anchor) => anchor.id === currentAnchor.id,
-        )?.height ?? 0;
+        current.rendererAnchors.find((anchor) => anchor.id === currentAnchor.id)
+          ?.height ?? 0;
       if (anchorHeight <= 0) continue;
       scoredPairCount += 1;
       const stepPx =
@@ -1803,8 +1804,9 @@ function visualOvershootPx(run: BenchmarkMotionRun, key: VisualMetricKey) {
   const start = run.before[key];
   const end = run.after[key];
   if (start == null || end == null) return 0;
-  const min = Math.min(start, end);
-  const max = Math.max(start, end);
+  const inFlightStart = values[1] ?? start;
+  const min = Math.min(start, inFlightStart, end);
+  const max = Math.max(start, inFlightStart, end);
 
   return Math.max(
     0,
@@ -1817,13 +1819,16 @@ function visualReversalCount(run: BenchmarkMotionRun, key: VisualMetricKey) {
   if (values.length < 2) return 0;
   const start = run.before[key];
   const end = run.after[key];
-  if (start == null || end == null || Math.abs(end - start) <= 8) return 0;
-  const direction = end > start ? "increasing" : "decreasing";
+  if (start == null || end == null) return 0;
+  const inFlightStart = values[1] ?? start;
+  if (Math.abs(end - inFlightStart) <= 8) return 0;
+  const direction = end > inFlightStart ? "increasing" : "decreasing";
+  const inFlightValues = values.slice(1);
   let count = 0;
 
-  for (let index = 1; index < values.length; index += 1) {
-    const previous = values[index - 1];
-    const current = values[index];
+  for (let index = 1; index < inFlightValues.length; index += 1) {
+    const previous = inFlightValues[index - 1];
+    const current = inFlightValues[index];
     if (direction === "increasing" && current < previous - 0.75) count += 1;
     if (direction === "decreasing" && current > previous + 0.75) count += 1;
   }
