@@ -81,6 +81,7 @@ const TYPE_ORDER = Array.from(TYPE_COLORS.keys());
 
 /** Floor for the diff shading so a single dissenting vote still reads clearly. */
 const DIFF_MIN_PERCENT = 40;
+const VERTICAL_LANE_WIDTH = 32;
 
 const VOTE_SEGMENTS: Segment[][] = [
   [
@@ -228,7 +229,7 @@ export function SplitConsensusSegmentDiagramViewer({
                     ? "Horizontal split consensus diagram"
                     : "Vertical split consensus diagram"
                 }
-                width={isHorizontal ? "42rem" : "24rem"}
+                width={isHorizontal ? "42rem" : "19rem"}
                 className="border-r"
               >
                 {isHorizontal ? (
@@ -365,7 +366,7 @@ function VerticalSegmentDiagram({
         <div
           className="grid gap-1"
           style={{
-            gridTemplateColumns: `repeat(${rows.length}, 44px) 1rem`,
+            gridTemplateColumns: `repeat(${rows.length}, ${VERTICAL_LANE_WIDTH}px) 1rem`,
           }}
         >
           {doc.rows.map((row) => (
@@ -394,6 +395,7 @@ function VerticalSegmentDiagram({
           interaction={interaction}
           onSelectPage={onJumpToPage}
           showTicks
+          rowThickness={VERTICAL_LANE_WIDTH}
           className="min-h-0 flex-1"
         />
       </div>
@@ -506,7 +508,9 @@ function createDiffRibbonRow({
     // Proportional to the dissent share, but floored so even a single
     // dissenting vote stays clearly visible rather than reading as empty.
     const normalized = Math.min(1, dissent / maxDissent);
-    const percent = Math.round(DIFF_MIN_PERCENT + normalized * (100 - DIFF_MIN_PERCENT));
+    const percent = Math.round(
+      DIFF_MIN_PERCENT + normalized * (100 - DIFF_MIN_PERCENT),
+    );
     const bucket = pagesByPercent.get(percent) ?? [];
     bucket.push(page);
     pagesByPercent.set(percent, bucket);
