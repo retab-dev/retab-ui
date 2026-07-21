@@ -7,7 +7,7 @@ export const siteConfig = {
   description:
     "Open source UI primitives for document AI products — viewers for Retab parses, extractions, edits, classifications, partitions, and splits.",
   links: {
-    github: "https://github.com/retab-dev/ui",
+    github: "https://github.com/retab-dev/retab-ui",
   },
   navItems: [
     {

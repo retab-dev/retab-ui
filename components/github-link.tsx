@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const GITHUB_REPO = "retab-dev/ui";
+const GITHUB_REPO = "retab-dev/retab-ui";
 
 export function GitHubLink() {
   return (

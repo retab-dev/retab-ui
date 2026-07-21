@@ -1,6 +1,6 @@
 # Retab UI
 
-[Retab UI](https://retab.com/ui) is a shadcn registry for products where files,
+[Retab UI](https://ui.retab.com) is a shadcn registry for products where files,
 schemas, citations, and extracted data need to live in the same interface.
 Install the pieces you need as local React and Tailwind source, then adapt them
 inside your own design system.
@@ -12,9 +12,9 @@ parse, extract, split, and partition results.
 
 ## Project Map
 
-- Documentation: [https://retab.com/ui/docs](https://retab.com/ui/docs)
-- Components: [https://retab.com/ui/docs/components](https://retab.com/ui/docs/components)
-- Examples: [https://retab.com/ui/examples](https://retab.com/ui/examples)
+- Documentation: [https://ui.retab.com/docs](https://ui.retab.com/docs)
+- Components: [https://ui.retab.com/docs/components](https://ui.retab.com/docs/components)
+- Examples: [https://ui.retab.com/examples](https://ui.retab.com/examples)
 - GitHub: [retab-dev/retab-ui](https://github.com/retab-dev/retab-ui)
 - Registry namespace: `@retab/*`
 
