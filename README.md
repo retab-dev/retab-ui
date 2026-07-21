@@ -5,11 +5,6 @@ schemas, citations, and extracted data need to live in the same interface.
 Install the pieces you need as local React and Tailwind source, then adapt them
 inside your own design system.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="public/images/root-components-showcase-dark-v2.png">
-  <img alt="Retab UI component showcase" src="public/images/root-components-showcase-light-v2.png">
-</picture>
-
 The library focuses on the awkward surfaces generic UI kits usually skip:
 multi-format file rendering, OCR layout review, source-backed JSON fields,
 upload intake, thumbnail generation, schema editing, and workflow blocks for
@@ -20,7 +15,7 @@ parse, extract, split, and partition results.
 - Documentation: [https://retab.com/ui/docs](https://retab.com/ui/docs)
 - Components: [https://retab.com/ui/docs/components](https://retab.com/ui/docs/components)
 - Examples: [https://retab.com/ui/examples](https://retab.com/ui/examples)
-- GitHub: [retab-dev/ui](https://github.com/retab-dev/ui)
+- GitHub: [retab-dev/retab-ui](https://github.com/retab-dev/retab-ui)
 - Registry namespace: `@retab/*`
 
 ## Install One Surface
