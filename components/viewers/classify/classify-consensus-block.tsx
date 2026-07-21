@@ -112,7 +112,7 @@ function ClassifyConsensusLegend({ result }: { result: ClassifyResult }) {
               className={cn(
                 "flex max-w-full min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs",
                 isActive
-                  ? "border-emerald-500 bg-white text-black"
+                  ? "text-foreground border-emerald-500 bg-emerald-500/10"
                   : "border-border bg-muted/30 text-muted-foreground",
               )}
               key={candidate.category}
@@ -121,7 +121,7 @@ function ClassifyConsensusLegend({ result }: { result: ClassifyResult }) {
               {isActive ? (
                 <CheckCircle2
                   aria-hidden="true"
-                  className="size-3.5 shrink-0 text-emerald-600"
+                  className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
                 />
               ) : null}
               <span className="min-w-0 font-medium break-words">
