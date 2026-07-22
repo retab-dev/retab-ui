@@ -38,6 +38,8 @@ export type PdfDocumentPagesLayerProps = {
   documentKey: string;
   getMotionProbeElement: () => HTMLElement | null;
   isLayoutTransitioning: boolean;
+  /** A toolbar zoom step's FLIP relax is in flight (pdf-viewer-zoom-motion). */
+  isZoomTransitioning: boolean;
   layout: PdfPageLayoutModel;
   onPageRenderTiming?: (timing: PdfPageRenderTiming) => void;
   physicalScrollHeight: number;
@@ -66,6 +68,7 @@ export function PdfDocumentPagesLayer({
   documentKey,
   getMotionProbeElement,
   isLayoutTransitioning,
+  isZoomTransitioning,
   layout,
   onPageRenderTiming,
   physicalScrollHeight,
@@ -141,6 +144,11 @@ export function PdfDocumentPagesLayer({
     ],
   );
   const isInsideDocumentFrame = documentAlign !== null;
+  // Shell motion counter-transforms the visual stage; a zoom step relaxes a
+  // FLIP on the visual clip itself. Either way the in-flight paint is larger
+  // than the committed box on at least one leg, so the clip must let go for
+  // the duration.
+  const isVisualClipReleased = isLayoutTransitioning || isZoomTransitioning;
   const scrollRangeStyle = {
     contain: "layout size style",
     height: physicalScrollHeight,
@@ -154,9 +162,9 @@ export function PdfDocumentPagesLayer({
     // page geometry itself is continuous. Relinquish paint containment only
     // while the counter-transform is active; identity fits the clip again at
     // settle, so restoring it cannot move a pixel.
-    contain: isLayoutTransitioning ? "style" : "paint style",
+    contain: isVisualClipReleased ? "style" : "paint style",
     left: -PDF_PAGE_RING_OUTSET_PX,
-    overflow: isLayoutTransitioning ? "visible" : "clip",
+    overflow: isVisualClipReleased ? "visible" : "clip",
     paddingInline: PDF_PAGE_RING_OUTSET_PX,
     right: -PDF_PAGE_RING_OUTSET_PX,
   } satisfies React.CSSProperties;

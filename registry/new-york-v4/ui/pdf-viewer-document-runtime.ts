@@ -31,6 +31,7 @@ import {
   usePdfPageRenderScheduler,
 } from "./pdf-viewer-render-scheduler";
 import { PDF_READING_MARKER_RATIO, usePdfScroll } from "./pdf-viewer-scroll";
+import { PDF_ZOOM_MOTION_TOTAL_MS } from "./pdf-viewer-zoom-motion";
 import type {
   PageOverlayProps,
   PdfPageRenderTiming,
@@ -48,6 +49,11 @@ export type PdfDocumentRuntimeState = {
   handleViewportScroll: () => void;
   pagesLayerProps: PdfDocumentPagesLayerProps;
   setViewportElement: (element: HTMLDivElement | null) => void;
+  zoomControls: {
+    fitWidth: () => void;
+    zoomIn: () => void;
+    zoomOut: () => void;
+  };
 };
 
 export function usePdfDocumentRuntime({
@@ -70,6 +76,7 @@ export function usePdfDocumentRuntime({
   renderPageOverlay?: (props: PageOverlayProps) => React.ReactNode;
 }): PdfDocumentRuntimeState {
   const {
+    captureZoomIntent,
     currentPage,
     viewportElement,
     setViewportElement,
@@ -88,6 +95,44 @@ export function usePdfDocumentRuntime({
     onVisiblePageChange,
     onScrollProgressChange,
   });
+  // Toolbar zoom steps re-anchor the viewport center and relax a FLIP over
+  // the commit (pdf-viewer-zoom-motion). The sequence must flip in the zoom
+  // gesture's own render so the visual clip is already released when the
+  // enlarged opening frame paints; rapid steps re-arm the release timer.
+  const [zoomMotionSequence, setZoomMotionSequence] = React.useState(0);
+  const isZoomTransitioning = zoomMotionSequence > 0;
+  useKeyedMountEffect(joinEffectKey([zoomMotionSequence]), () => {
+    if (zoomMotionSequence === 0) return;
+    const timeout = setTimeout(
+      () => setZoomMotionSequence(0),
+      PDF_ZOOM_MOTION_TOTAL_MS,
+    );
+    return () => clearTimeout(timeout);
+  });
+  const beginZoomMotion = React.useCallback(() => {
+    captureZoomIntent();
+    setZoomMotionSequence((sequence) => sequence + 1);
+  }, [captureZoomIntent]);
+  const layoutFitWidth = layout.fitWidth;
+  const layoutZoomIn = layout.zoomIn;
+  const layoutZoomOut = layout.zoomOut;
+  const zoomControls = React.useMemo(
+    () => ({
+      fitWidth: () => {
+        beginZoomMotion();
+        layoutFitWidth();
+      },
+      zoomIn: () => {
+        beginZoomMotion();
+        layoutZoomIn();
+      },
+      zoomOut: () => {
+        beginZoomMotion();
+        layoutZoomOut();
+      },
+    }),
+    [beginZoomMotion, layoutFitWidth, layoutZoomIn, layoutZoomOut],
+  );
   const documentSurfaceElementRef = React.useRef<HTMLElement | null>(null);
   // The transform's anchor line, in the visual stage's own (physical scroll)
   // coordinates. The idle write is the live reading-marker offset; the
@@ -433,6 +478,7 @@ export function usePdfDocumentRuntime({
       documentKey,
       getMotionProbeElement: getDocumentMotionProbeElement,
       isLayoutTransitioning: layout.rendererFrame.isTransitioning,
+      isZoomTransitioning,
       layout: layout.pageLayout,
       onPageRenderTiming: handlePageRenderTiming,
       physicalScrollHeight: getPdfPhysicalScrollHeight({
@@ -455,6 +501,7 @@ export function usePdfDocumentRuntime({
       visiblePageNumbers,
     },
     setViewportElement,
+    zoomControls,
   };
 }
 

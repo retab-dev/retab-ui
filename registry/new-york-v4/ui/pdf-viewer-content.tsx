@@ -145,12 +145,12 @@ function PdfViewerInner({
     currentPage: runtime.currentPage,
     download,
     downloadAction: resource.originalDownload,
-    fitWidth: layout.fitWidth,
+    fitWidth: runtime.zoomControls.fitWidth,
     pageCount: document.numPages,
     resolvedScale: layout.resolvedScale,
     rotateClockwise: layout.rotateClockwise,
-    zoomIn: layout.zoomIn,
-    zoomOut: layout.zoomOut,
+    zoomIn: runtime.zoomControls.zoomIn,
+    zoomOut: runtime.zoomControls.zoomOut,
   });
 
   usePdfDocumentControlsRegistration(controlsState);

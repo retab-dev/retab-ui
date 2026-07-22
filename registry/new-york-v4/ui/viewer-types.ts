@@ -99,6 +99,27 @@ export type ViewerDocumentScrollTargetResolver<Anchor, Target> = (input: {
   viewportElement: HTMLDivElement;
 }) => ViewerDocumentResolvedScrollTarget | null;
 
+// A zoom step is the one geometry change whose intent is "zoom the camera",
+// not "keep my reading position": it re-anchors the viewport CENTER on both
+// axes and relaxes a FLIP about that fixed point. `capture` runs in the zoom
+// gesture's own task against the pre-zoom layout and painted DOM;
+// `resolveScrollTarget` and `play` run inside the geometry commit against the
+// post-zoom layout (commit-then-relax).
+export type ViewerDocumentZoomMotionController<Transaction = unknown> = {
+  capture: (input: {
+    scrollTop: number;
+    viewportElement: HTMLDivElement;
+  }) => Transaction | null;
+  resolveScrollTarget: (input: {
+    transaction: Transaction;
+    viewportElement: HTMLDivElement;
+  }) => ViewerDocumentResolvedScrollTarget | null;
+  play: (input: {
+    transaction: Transaction;
+    viewportElement: HTMLDivElement;
+  }) => (() => void) | null;
+};
+
 export type ViewerGeometrySnapshot = {
   bodyInlineSize: number;
   documentInlineSize: number;

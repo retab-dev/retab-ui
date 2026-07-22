@@ -1137,6 +1137,11 @@
           "target": "@ui/pdf-viewer-scroll.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/pdf-viewer-zoom-motion.ts",
+          "type": "registry:ui",
+          "target": "@ui/pdf-viewer-zoom-motion.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/viewer-document-scroll.ts",
           "type": "registry:ui",
           "target": "@ui/viewer-document-scroll.ts"

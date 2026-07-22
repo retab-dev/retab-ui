@@ -159,6 +159,10 @@ function getExpectedPreservedPdfScrollTop({
   nextScale,
   scrollTop,
   viewportHeight,
+  // 0.2 mirrors capturePdfReadingAnchor (re-fits, resizes); 0.5 mirrors
+  // capturePdfZoomTransaction (toolbar zoom steps anchor the viewport
+  // center on both axes).
+  markerRatio = 0.2,
 }: {
   pageCount: number;
   pageNumber: number;
@@ -167,6 +171,7 @@ function getExpectedPreservedPdfScrollTop({
   nextScale: number;
   scrollTop: number;
   viewportHeight: number;
+  markerRatio?: number;
 }) {
   const previousLayout = createPdfPageLayout({
     pageCount,
@@ -188,10 +193,10 @@ function getExpectedPreservedPdfScrollTop({
     throw new Error("Expected test page layout to exist.");
   }
 
-  const readingMarkerOffset = viewportHeight * 0.2;
+  const readingMarkerOffset = viewportHeight * markerRatio;
 
-  // Mirrors capturePdfReadingAnchor: the marker's page-relative fraction is
-  // the sole reading identity — scale-invariant, so it survives re-fits.
+  // The marker's page-relative fraction is the sole anchor identity —
+  // scale-invariant, so it survives re-fits and zoom steps alike.
   const pageAnchorRatio =
     (scrollTop + readingMarkerOffset - previousPage.offsetTop) /
     previousPage.height;
@@ -1297,6 +1302,8 @@ describe("PdfViewer core", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy();
     expect(await findByTextContent("Page 3 of 5")).toBeTruthy();
+    // Toolbar zoom anchors the viewport CENTER (Apple Preview semantics),
+    // unlike passive re-fits which preserve the 20% reading marker.
     expect(viewport!.scrollTop).toBeCloseTo(
       getExpectedPreservedPdfScrollTop({
         pageNumber: 3,
@@ -1306,6 +1313,7 @@ describe("PdfViewer core", () => {
         nextScale: 1.2,
         scrollTop: 1708,
         viewportHeight: viewport!.clientHeight,
+        markerRatio: 0.5,
       }),
     );
   });

@@ -12,6 +12,7 @@ import type {
   ViewerDocumentScrollMapper,
   ViewerDocumentScrollMetrics,
   ViewerDocumentScrollTargetResolver,
+  ViewerDocumentZoomMotionController,
 } from "./viewer-types";
 import { useViewerDocumentGeometryTransaction } from "./viewer-document-geometry";
 
@@ -19,6 +20,11 @@ const VIEWER_DOCUMENT_SCROLL_IDLE_MS = 120;
 const VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON = 1;
 const VIEWER_DOCUMENT_SCROLL_RESTORE_MAX_FRAMES = 45;
 const VIEWER_DOCUMENT_INTERNAL_SCROLL_SUPPRESS_MS = 120;
+// A zoom intent is consumed by the geometry commit its gesture causes; if no
+// commit claims it in this window (scale already clamped, controlled scale
+// ignored by the owner), it is stale and must not re-anchor a later,
+// unrelated geometry change.
+const VIEWER_DOCUMENT_ZOOM_INTENT_MAX_AGE_MS = 400;
 
 type ViewerDocumentScrollIntent<Target> =
   | {
@@ -46,21 +52,28 @@ type ViewerDocumentScrollEventResult = {
   source: "internal" | "programmatic" | "user";
 };
 
-export function useViewerDocumentScroll<Anchor, Target>({
+export function useViewerDocumentScroll<Anchor, Target, ZoomTransaction = unknown>({
   copyScrollTarget,
   layout,
   resetKey,
   resolveScrollTarget,
   scrollMapper,
+  zoomMotion,
 }: {
   copyScrollTarget?: (target: Target) => Target;
   layout: ViewerDocumentLayoutModel<Anchor>;
   resetKey?: unknown;
   resolveScrollTarget?: ViewerDocumentScrollTargetResolver<Anchor, Target>;
   scrollMapper: ViewerDocumentScrollMapper;
+  zoomMotion?: ViewerDocumentZoomMotionController<ZoomTransaction>;
 }) {
   const viewportElementRef = React.useRef<HTMLDivElement | null>(null);
   const scrollPageOffsetRef = React.useRef(0);
+  const pendingZoomIntentRef = React.useRef<{
+    capturedAt: number;
+    transaction: ZoomTransaction;
+  } | null>(null);
+  const activeZoomMotionCancelRef = React.useRef<(() => void) | null>(null);
   const pendingScrollRestoreRef =
     React.useRef<PendingViewerDocumentScrollRestore | null>(null);
   const pendingScrollRestoreFrameRef = React.useRef(0);
@@ -99,6 +112,38 @@ export function useViewerDocumentScroll<Anchor, Target>({
     pendingScrollRestoreFrameRef.current = 0;
   }, []);
 
+  // Interrupting a zoom relax snaps to its committed endpoint: the layout and
+  // scroll landed in the zoom's own commit, so clearing the transform is
+  // always safe and never moves the settled geometry.
+  const cancelZoomMotion = React.useCallback(() => {
+    pendingZoomIntentRef.current = null;
+    const cancelActiveZoomMotion = activeZoomMotionCancelRef.current;
+    activeZoomMotionCancelRef.current = null;
+    cancelActiveZoomMotion?.();
+  }, []);
+
+  const captureZoomIntent = React.useCallback(() => {
+    const viewportElement = viewportElementRef.current;
+    if (!viewportElement || !zoomMotion) {
+      pendingZoomIntentRef.current = null;
+      return;
+    }
+    const metrics = readViewerDocumentScrollMetrics({
+      layout,
+      scrollMapper,
+      scrollPageOffset: scrollPageOffsetRef.current,
+      viewportElement,
+    });
+    const transaction = zoomMotion.capture({
+      scrollTop: metrics.scrollTop,
+      viewportElement,
+    });
+    pendingZoomIntentRef.current =
+      transaction == null
+        ? null
+        : { capturedAt: readViewerDocumentNow(), transaction };
+  }, [layout, scrollMapper, zoomMotion]);
+
   const clearInternalScrollWrite = React.useCallback(() => {
     isInternalScrollWriteRef.current = false;
     if (internalScrollWriteTimeoutRef.current === null) return;
@@ -120,6 +165,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
   const resetViewportForKey = React.useCallback(
     (element: HTMLDivElement, key: unknown) => {
       cancelPendingScrollRestore();
+      cancelZoomMotion();
       viewportResetKeyRef.current = key;
       scrollPageOffsetRef.current = 0;
       resetGeometryTransaction(element);
@@ -130,6 +176,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
     },
     [
       cancelPendingScrollRestore,
+      cancelZoomMotion,
       markInternalScrollWrite,
       resetGeometryTransaction,
       scrollIntent,
@@ -463,13 +510,16 @@ export function useViewerDocumentScroll<Anchor, Target>({
 
   useKeyedLayoutEffect(
     joinEffectKey([
+      applyLogicalScrollTop,
       copyScrollTarget,
       cacheAnchor,
       cacheReadingAnchor,
       cacheVisualLayerRect,
+      cancelZoomMotion,
       classifyLayoutChange,
       commit,
       layout,
+      markInternalScrollWrite,
       prepare,
       recordStableState,
       resetKey,
@@ -480,6 +530,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
       scrollViewportToLogicalTop,
       scrollViewportToResolvedTarget,
       syncViewportScrollPosition,
+      zoomMotion,
     ]),
     () => {
       const previousLayout = committedLayoutRef.current;
@@ -495,6 +546,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
         previousResetKey,
       });
       if (layoutChange === "reset") {
+        cancelZoomMotion();
         resetGeometryTransaction(viewportElement);
         return;
       }
@@ -516,8 +568,50 @@ export function useViewerDocumentScroll<Anchor, Target>({
         return;
       }
 
-      const activeIntent = scrollIntent.current();
+      // A fresh geometry commit owns the visual layer; an in-flight zoom
+      // relax against the previous geometry can no longer settle correctly.
+      const pendingZoomIntent = pendingZoomIntentRef.current;
+      cancelZoomMotion();
+
       const transition = layout.transition;
+      if (
+        pendingZoomIntent &&
+        zoomMotion &&
+        transition?.source !== "viewer-shell" &&
+        readViewerDocumentNow() - pendingZoomIntent.capturedAt <=
+          VIEWER_DOCUMENT_ZOOM_INTENT_MAX_AGE_MS
+      ) {
+        const zoomTarget = zoomMotion.resolveScrollTarget({
+          transaction: pendingZoomIntent.transaction,
+          viewportElement,
+        });
+        if (zoomTarget) {
+          // Commit-then-relax: land the centered scroll inside this commit
+          // (never deferred), then relax the painted FLIP over it.
+          applyLogicalScrollTop(
+            viewportElement,
+            zoomTarget.top,
+            { behavior: "auto" },
+            { allowDefer: false },
+          );
+          if (zoomTarget.left != null) {
+            markInternalScrollWrite();
+            setViewportPhysicalScrollLeft(viewportElement, zoomTarget.left);
+          }
+          cacheReadingAnchor({
+            scrollTop: zoomTarget.top,
+            viewportBlockSize: viewportElement.clientHeight,
+          });
+          cacheVisualLayerRect(viewportElement);
+          activeZoomMotionCancelRef.current = zoomMotion.play({
+            transaction: pendingZoomIntent.transaction,
+            viewportElement,
+          });
+          return;
+        }
+      }
+
+      const activeIntent = scrollIntent.current();
       if (
         activeIntent.kind === "programmatic" &&
         resolveScrollTarget &&
@@ -620,10 +714,16 @@ export function useViewerDocumentScroll<Anchor, Target>({
   ]);
 
   const markUserScrollIntent = React.useCallback(() => {
+    cancelZoomMotion();
     materializeScrollPageOffset();
     cancelPendingScrollRestore();
     scrollIntent.markUser();
-  }, [cancelPendingScrollRestore, materializeScrollPageOffset, scrollIntent]);
+  }, [
+    cancelPendingScrollRestore,
+    cancelZoomMotion,
+    materializeScrollPageOffset,
+    scrollIntent,
+  ]);
 
   useKeyedMountEffect(joinEffectKey([resetKey, resetViewportForKey]), () => {
     if (!didMountResetEffectRef.current) {
@@ -693,6 +793,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
       if (!viewportElement || !resolvedTarget) return;
 
       cancelPendingScrollRestore();
+      cancelZoomMotion();
       const behavior = options?.behavior ?? "smooth";
       const intent = scrollIntent.startProgrammatic({
         behavior,
@@ -708,6 +809,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
     },
     [
       cancelPendingScrollRestore,
+      cancelZoomMotion,
       copyScrollTarget,
       layout,
       readScrollMetrics,
@@ -724,12 +826,14 @@ export function useViewerDocumentScroll<Anchor, Target>({
   useMountEffect(() => () => {
     clearInternalScrollWrite();
     cancelPendingScrollRestore();
+    cancelZoomMotion();
     cancelGeometryTransaction();
     scrollIntent.clearProgrammaticTimeout();
   });
 
   return React.useMemo(
     () => ({
+      captureZoomIntent,
       getScrollMetrics: readScrollMetrics,
       getViewportElement,
       handleScroll,
@@ -740,6 +844,7 @@ export function useViewerDocumentScroll<Anchor, Target>({
       viewportElement,
     }),
     [
+      captureZoomIntent,
       getViewportElement,
       handleScroll,
       readScrollMetrics,
@@ -968,4 +1073,29 @@ function setViewportPhysicalScrollTop(
   }
 
   viewportElement.scrollTop = targetTop;
+}
+
+// Raw assignment on purpose: the browser clamps to the live scrollable range
+// (including RTL's negative coordinate space), which is exactly the clamp the
+// centered zoom wants at the document's inline edges.
+function setViewportPhysicalScrollLeft(
+  viewportElement: HTMLDivElement,
+  targetLeft: number,
+) {
+  if (
+    !Number.isFinite(targetLeft) ||
+    Math.abs(viewportElement.scrollLeft - targetLeft) <=
+      VIEWER_DOCUMENT_SCROLL_POSITION_EPSILON
+  ) {
+    return;
+  }
+
+  viewportElement.scrollLeft = targetLeft;
+}
+
+function readViewerDocumentNow() {
+  return typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
 }

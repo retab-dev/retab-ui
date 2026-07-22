@@ -10,6 +10,7 @@ import {
   type PdfPageLayoutModel,
 } from "./pdf-viewer-layout";
 import { clamp } from "./pdf-viewer-scale";
+import { createPdfZoomMotionController } from "./pdf-viewer-zoom-motion";
 import type { PdfPageAreaTarget } from "./pdf-viewer-types";
 import type {
   ViewerDocumentScrollMapper,
@@ -188,12 +189,17 @@ export function usePdfScroll({
       ),
     [layout, pageCount],
   );
+  const zoomMotion = React.useMemo(
+    () => createPdfZoomMotionController(layout),
+    [layout],
+  );
   const documentScroll = useViewerDocumentScroll({
     copyScrollTarget: copyPdfPageAreaTarget,
     layout: documentLayout,
     resetKey,
     resolveScrollTarget,
     scrollMapper: PDF_DOCUMENT_SCROLL_MAPPER,
+    zoomMotion,
   });
   const getScrollMetrics = React.useCallback(() => {
     const metrics = documentScroll.getScrollMetrics();
@@ -308,6 +314,7 @@ export function usePdfScroll({
   });
 
   return {
+    captureZoomIntent: documentScroll.captureZoomIntent,
     currentPage,
     viewportElement,
     setViewportElement: documentScroll.setViewportElement,
