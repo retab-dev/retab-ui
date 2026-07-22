@@ -36,11 +36,12 @@ export type PdfDocumentPagesLayerProps = {
   document: PdfDocument;
   documentAlign: FileViewerDocumentAlign | null;
   documentKey: string;
-  getMotionProbeElement: () => HTMLElement | null;
   isLayoutTransitioning: boolean;
   /** A toolbar zoom step's FLIP relax is in flight (pdf-viewer-zoom-motion). */
   isZoomTransitioning: boolean;
   layout: PdfPageLayoutModel;
+  /** The page the motion kernel should probe for on-screen telemetry. */
+  motionProbePageNumber: number;
   onPageRenderTiming?: (timing: PdfPageRenderTiming) => void;
   physicalScrollHeight: number;
   renderCache?: PdfRenderedPageCache;
@@ -66,10 +67,10 @@ export function PdfDocumentPagesLayer({
   document,
   documentAlign,
   documentKey,
-  getMotionProbeElement,
   isLayoutTransitioning,
   isZoomTransitioning,
   layout,
+  motionProbePageNumber,
   onPageRenderTiming,
   physicalScrollHeight,
   renderCache,
@@ -104,6 +105,24 @@ export function PdfDocumentPagesLayer({
     },
     [setDocumentSurfaceElement],
   );
+  const motionProbePageNumberRef = React.useRef(motionProbePageNumber);
+  motionProbePageNumberRef.current = motionProbePageNumber;
+  // Probe the marker page's element; while a motion is in flight the marker
+  // page may sit outside the rendered window, so fall back to any visible
+  // page, then any rendered page.
+  const getMotionProbeElement = React.useCallback(() => {
+    if (!visualStageElement) return null;
+    const pageNumber = motionProbePageNumberRef.current;
+    return (
+      visualStageElement.querySelector<HTMLElement>(
+        `[data-slot="pdf-page"][data-page="${pageNumber}"]`,
+      ) ??
+      visualStageElement.querySelector<HTMLElement>(
+        '[data-slot="pdf-page-slot"][data-visible] [data-slot="pdf-page"]',
+      ) ??
+      visualStageElement.querySelector<HTMLElement>('[data-slot="pdf-page"]')
+    );
+  }, [visualStageElement]);
   const documentSurfaceKey = visualStageElement
     ? joinEffectKey([
         registerDocumentSurface,

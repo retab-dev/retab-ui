@@ -143,24 +143,9 @@ export function usePdfDocumentRuntime({
     pageNumber: number;
     screenRelTop: number;
   } | null>(null);
-  const motionProbePageNumberRef = React.useRef(currentPage);
-  motionProbePageNumberRef.current = layout.rendererFrame.isTransitioning
+  const motionProbePageNumber = layout.rendererFrame.isTransitioning
     ? (preMotionAnchorRef.current?.pageNumber ?? currentPage)
     : currentPage;
-  const getDocumentMotionProbeElement = React.useCallback(() => {
-    const surface = documentSurfaceElementRef.current;
-    if (!surface) return null;
-    const pageNumber = motionProbePageNumberRef.current;
-    return (
-      surface.querySelector<HTMLElement>(
-        `[data-slot="pdf-page"][data-page="${pageNumber}"]`,
-      ) ??
-      surface.querySelector<HTMLElement>(
-        '[data-slot="pdf-page-slot"][data-visible] [data-slot="pdf-page"]',
-      ) ??
-      surface.querySelector<HTMLElement>('[data-slot="pdf-page"]')
-    );
-  }, []);
   const lastAnchorBlockRef = React.useRef<number | null>(null);
   const writeAnchorBlockOffsetPx = React.useCallback((anchorBlock: number) => {
     const documentSurfaceElement = documentSurfaceElementRef.current;
@@ -476,10 +461,10 @@ export function usePdfDocumentRuntime({
       document,
       documentAlign: layout.rendererFrame.align,
       documentKey,
-      getMotionProbeElement: getDocumentMotionProbeElement,
       isLayoutTransitioning: layout.rendererFrame.isTransitioning,
       isZoomTransitioning,
       layout: layout.pageLayout,
+      motionProbePageNumber,
       onPageRenderTiming: handlePageRenderTiming,
       physicalScrollHeight: getPdfPhysicalScrollHeight({
         totalHeight: layout.pageLayout.totalHeight,
