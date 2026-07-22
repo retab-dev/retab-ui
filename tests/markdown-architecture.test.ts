@@ -86,6 +86,7 @@ const markdownFiles = [
 const markdownViewerSupportFiles = [
   "registry/new-york-v4/ui/file-viewer-context.tsx",
   "registry/new-york-v4/ui/file-viewer-elements.ts",
+  "registry/new-york-v4/ui/file-viewer-fit-width-motion.ts",
   "registry/new-york-v4/ui/file-viewer-motion-kernel.ts",
   "registry/new-york-v4/ui/file-viewer-renderer-contract.ts",
   "registry/new-york-v4/ui/file-viewer-renderer-frame.tsx",
