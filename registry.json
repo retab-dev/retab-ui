@@ -1492,6 +1492,11 @@
           "target": "@ui/image-viewer-virtualization.ts"
         },
         {
+          "path": "registry/new-york-v4/ui/image-viewer-zoom-motion.ts",
+          "type": "registry:ui",
+          "target": "@ui/image-viewer-zoom-motion.ts"
+        },
+        {
           "path": "registry/new-york-v4/ui/image-viewer-frame.tsx",
           "type": "registry:ui",
           "target": "@ui/image-viewer-frame.tsx"

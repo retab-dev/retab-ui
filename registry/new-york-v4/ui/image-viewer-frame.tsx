@@ -74,6 +74,8 @@ export interface ImageFrameScrollerProps {
   frameListRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
   freezeVisibleFrameWindow?: boolean;
+  /** A toolbar zoom step's FLIP relax is in flight (image-viewer-zoom-motion). */
+  isZoomTransitioning?: boolean;
   viewportRef: React.Ref<HTMLDivElement>;
   onScroll: () => void;
   renderFrameOverlay?: ImageViewerProps["renderFrameOverlay"];
@@ -285,6 +287,7 @@ export function ImageFrameScroller({
   frameListRef,
   getScrollMetrics,
   freezeVisibleFrameWindow = false,
+  isZoomTransitioning = false,
   viewportRef,
   onScroll,
   renderFrameOverlay,
@@ -506,63 +509,94 @@ export function ImageFrameScroller({
       >
         {/* The margin class must mirror the fit-width motion resolver's
             align-margin model: the counter-transform's translateX assumes the
-            surface's DOM margins follow the renderer frame's align, so a
+            stage's DOM margins follow the renderer frame's align, so a
             hardcoded mx-auto under align="start" leaves the auto-margin
             re-centering uncompensated mid-slide. */}
         <div
-          ref={documentSurfaceRef}
+          data-slot="image-viewer-scroll-range"
           className={`relative ${getImageDocumentAlignClass(align)}`}
-          data-slot="image-viewer-document"
           style={{
-            contain: "layout style",
+            contain: "layout size style",
             height: physicalScrollHeight,
             minWidth: documentInlineSize,
             width: documentInlineSize,
           }}
         >
-          {renderedWindow ? (
-            <>
-              <div
-                aria-hidden
-                data-slot="image-frame-window-before"
-                style={{
-                  contain: "layout size",
-                  height: renderedWindow.beforeHeight,
-                }}
-              />
-              <div
-                className="sticky"
-                data-slot="image-frame-sticky-window"
-                style={{
-                  bottom: renderedWindow.stickyBottomInset,
-                  contain: "layout style inline-size",
-                  height: renderedWindow.height,
-                  isolation: "isolate",
-                  top: renderedWindow.stickyTopInset,
-                }}
-              >
-                <div
-                  ref={setCanvasRef}
-                  className="relative mx-auto h-full w-full"
-                  data-slot="image-frame-virtual-canvas"
-                  style={{
-                    contain: "layout style",
-                    height: renderedWindow.height,
-                    minWidth: documentInlineSize,
-                    width: documentInlineSize,
-                  }}
-                />
-              </div>
-              <div
-                aria-hidden
-                data-slot="image-frame-window-after"
-                style={{
-                  contain: "layout size",
-                  height: renderedWindow.afterHeight,
-                }}
-              />
-            </>
-          ) : null}
+          {/* Shell motion counter-transforms the document surface; a zoom
+              step relaxes a FLIP on the visual clip itself. Either way the
+              in-flight paint is larger than the committed box on at least one
+              leg, so the clip must let go for the duration. Identity fits the
+              clip again at settle, so restoring it cannot move a pixel. */}
+          <div
+            data-slot="image-viewer-visual-clip"
+            className="absolute inset-0"
+            style={{
+              contain:
+                freezeVisibleFrameWindow || isZoomTransitioning
+                  ? "style"
+                  : "paint style",
+              overflow:
+                freezeVisibleFrameWindow || isZoomTransitioning
+                  ? "visible"
+                  : "clip",
+            }}
+          >
+            <div
+              ref={documentSurfaceRef}
+              className="relative"
+              data-slot="image-viewer-document"
+              style={{
+                contain: "layout style",
+                height: physicalScrollHeight,
+                minWidth: documentInlineSize,
+                width: documentInlineSize,
+              }}
+            >
+              {renderedWindow ? (
+                <>
+                  <div
+                    aria-hidden
+                    data-slot="image-frame-window-before"
+                    style={{
+                      contain: "layout size",
+                      height: renderedWindow.beforeHeight,
+                    }}
+                  />
+                  <div
+                    className="sticky"
+                    data-slot="image-frame-sticky-window"
+                    style={{
+                      bottom: renderedWindow.stickyBottomInset,
+                      contain: "layout style inline-size",
+                      height: renderedWindow.height,
+                      isolation: "isolate",
+                      top: renderedWindow.stickyTopInset,
+                    }}
+                  >
+                    <div
+                      ref={setCanvasRef}
+                      className="relative mx-auto h-full w-full"
+                      data-slot="image-frame-virtual-canvas"
+                      style={{
+                        contain: "layout style",
+                        height: renderedWindow.height,
+                        minWidth: documentInlineSize,
+                        width: documentInlineSize,
+                      }}
+                    />
+                  </div>
+                  <div
+                    aria-hidden
+                    data-slot="image-frame-window-after"
+                    style={{
+                      contain: "layout size",
+                      height: renderedWindow.afterHeight,
+                    }}
+                  />
+                </>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </ScrollArea>

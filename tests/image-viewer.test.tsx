@@ -2672,9 +2672,12 @@ describe("ImageViewer scale semantics", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy();
     expect(await screen.findByText("Page 3 of 5")).toBeTruthy();
-    // The gap scales unrounded with the image while the outer 16px frame inset
-    // remains fixed, so the restored target stays skeleton-aligned.
-    expect(viewport.scrollTop).toBeCloseTo(2070.4, 1);
+    // Toolbar zoom anchors the viewport CENTER (Apple Preview semantics),
+    // unlike passive re-fits which preserve the 20% reading marker: the
+    // center marker at 1708 + 300 sits 45% into frame 3, and at 1.2x the
+    // gap scales unrounded while the outer 16px frame inset stays fixed, so
+    // frame 3 starts at 1974.4 → 1974.4 + 0.45 * 960 - 300.
+    expect(viewport.scrollTop).toBeCloseTo(2106.4, 1);
   });
 
   it("normalizes invalid controlled scale values before rendering frame geometry", async () => {

@@ -60,6 +60,7 @@ import {
   getCurrentImageFrameNumber,
   getImageFrameLayout,
 } from "./image-viewer-virtualization";
+import { IMAGE_ZOOM_MOTION_TOTAL_MS } from "./image-viewer-zoom-motion";
 import { joinEffectKey } from "@/lib/effect-key";
 
 export function ImageViewerContent({
@@ -138,6 +139,7 @@ export function ImageViewerContent({
     [frameSource.frames, rotation, scale],
   );
   const {
+    captureZoomIntent,
     currentFrameNumber,
     getScrollMetrics,
     getViewportElement,
@@ -152,14 +154,38 @@ export function ImageViewerContent({
   );
   useImageViewerHandle(forwardedRef, getViewportElement, scrollToFrameArea);
 
+  // Toolbar zoom steps re-anchor the viewport center and relax a FLIP over
+  // the commit (image-viewer-zoom-motion). The sequence must flip in the zoom
+  // gesture's own render so the visual clip is already released when the
+  // enlarged opening frame paints; rapid steps re-arm the release timer.
+  const [zoomMotionSequence, setZoomMotionSequence] = React.useState(0);
+  const isZoomTransitioning = zoomMotionSequence > 0;
+  useKeyedMountEffect(joinEffectKey([zoomMotionSequence]), () => {
+    if (zoomMotionSequence === 0) return;
+    const timeout = setTimeout(
+      () => setZoomMotionSequence(0),
+      IMAGE_ZOOM_MOTION_TOTAL_MS,
+    );
+    return () => clearTimeout(timeout);
+  });
+  const beginZoomMotion = React.useCallback(() => {
+    captureZoomIntent();
+    setZoomMotionSequence((sequence) => sequence + 1);
+  }, [captureZoomIntent]);
+
   // Preserve the reading position when the image re-fits to a new width (the
   // sidebar toggle). The fit scale is the layout key; capture the fraction on
-  // scroll and restore it the instant the scale changes.
+  // scroll and restore it the instant the scale changes. A toolbar zoom step
+  // must NOT take this path: its geometry commit already restored the
+  // viewport-CENTER anchor (image-viewer-zoom-motion), and the fraction
+  // restore would overwrite that scroll in the same commit. The sequence
+  // flips in the zoom gesture's own render, so the zoom's re-fit lands with
+  // the rebase disabled while the key still advances.
   const scrollerRef = React.useRef<HTMLElement | null>(null);
   const { captureReadingFraction } = useReadingFractionRebase({
     scrollerRef,
     layoutKey: scale,
-    enabled: rendererEnvironment.usesShellGeometry,
+    enabled: rendererEnvironment.usesShellGeometry && !isZoomTransitioning,
   });
   const imageDocumentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [imageDocumentSurfaceElement, setImageDocumentSurfaceElement] =
@@ -389,20 +415,18 @@ export function ImageViewerContent({
     frameSource.kind === "tiff"
       ? `Page ${Math.min(currentFrameNumber, frameCount)} of ${frameCount}`
       : `${frameCount} image${frameCount === 1 ? "" : "s"}`;
-  const zoomOut = React.useCallback(
-    () =>
-      setViewerScale(clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)),
-    [scale, setViewerScale],
-  );
-  const zoomIn = React.useCallback(
-    () =>
-      setViewerScale(clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE)),
-    [scale, setViewerScale],
-  );
-  const fitWidth = React.useCallback(
-    () => setViewerScale(null),
-    [setViewerScale],
-  );
+  const zoomOut = React.useCallback(() => {
+    beginZoomMotion();
+    setViewerScale(clamp(scale / 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE));
+  }, [beginZoomMotion, scale, setViewerScale]);
+  const zoomIn = React.useCallback(() => {
+    beginZoomMotion();
+    setViewerScale(clamp(scale * 1.2, MIN_VIEWER_SCALE, MAX_VIEWER_SCALE));
+  }, [beginZoomMotion, scale, setViewerScale]);
+  const fitWidth = React.useCallback(() => {
+    beginZoomMotion();
+    setViewerScale(null);
+  }, [beginZoomMotion, setViewerScale]);
   useImageControlsRegistration({
     countLabel,
     download,
@@ -454,6 +478,7 @@ export function ImageViewerContent({
               frameListRef={frameListRef}
               getScrollMetrics={getScrollMetrics}
               freezeVisibleFrameWindow={freezeVisibleFrameWindow}
+              isZoomTransitioning={isZoomTransitioning}
               viewportRef={setScrollViewportRefWithRebase}
               onScroll={handleScrollWithRebase}
               renderFrameOverlay={renderFrameOverlay}

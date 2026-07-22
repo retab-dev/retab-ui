@@ -26,6 +26,7 @@ import type {
   ViewerDocumentScrollTargetResolver,
 } from "./viewer-types";
 import { useViewerDocumentScroll } from "./viewer-document-scroll";
+import { createImageZoomMotionController } from "./image-viewer-zoom-motion";
 import { getFileViewerFitWidthScale } from "./file-viewer-fit-width-motion";
 import { joinEffectKey } from "@/lib/effect-key";
 
@@ -225,12 +226,17 @@ export function useVisibleFrame(
   const resolveScrollTarget = React.useCallback<
     ViewerDocumentScrollTargetResolver<ImageReadingAnchor, ImageFrameAreaTarget>
   >(({ target }) => getImageFrameAreaScrollTarget(layout, target), [layout]);
+  const zoomMotion = React.useMemo(
+    () => createImageZoomMotionController(layout),
+    [layout],
+  );
   const documentScroll = useViewerDocumentScroll({
     copyScrollTarget: copyImageFrameAreaTarget,
     layout: documentLayout,
     resetKey,
     resolveScrollTarget,
     scrollMapper: IMAGE_DOCUMENT_SCROLL_MAPPER,
+    zoomMotion,
   });
   const getScrollMetrics = React.useCallback(
     () =>
@@ -289,6 +295,7 @@ export function useVisibleFrame(
   });
 
   return {
+    captureZoomIntent: documentScroll.captureZoomIntent,
     currentFrameNumber,
     getScrollMetrics,
     getViewportElement: documentScroll.getViewportElement,
