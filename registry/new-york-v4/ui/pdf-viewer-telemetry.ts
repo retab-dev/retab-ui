@@ -7,6 +7,10 @@ import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 
 import type { FileViewerRendererFrame } from "./file-viewer-renderer-contract";
 import type { PdfPageLayoutModel } from "./pdf-viewer-layout";
+import {
+  getPdfZoomMotionFlightRecords,
+  type PdfZoomMotionFlightRecord,
+} from "./pdf-viewer-zoom-motion";
 
 type PdfViewerTelemetryMetricId =
   | "blink"
@@ -119,6 +123,8 @@ type PdfViewerTelemetryState = {
 
 type PdfViewerTelemetryRuntime = {
   getLastResult: () => PdfViewerTelemetryResult | null;
+  /** Flight recorder for toolbar zoom relaxes (pdf-viewer-zoom-motion). */
+  getZoomFlightRecords: () => readonly PdfZoomMotionFlightRecord[];
   readSample: () => PdfViewerTelemetrySample | null;
   runShellMotion: (
     options?: PdfViewerTelemetryRunOptions,
@@ -150,6 +156,7 @@ export function usePdfViewerTelemetry(state: PdfViewerTelemetryState) {
       const previousRuntime = window.__pdfViewerTelemetry;
       const runtime: PdfViewerTelemetryRuntime = {
         getLastResult: () => lastResultRef.current,
+        getZoomFlightRecords: () => getPdfZoomMotionFlightRecords(),
         readSample: () =>
           readPdfViewerTelemetrySample({
             startedAt: performance.now(),

@@ -31,7 +31,10 @@ import {
   usePdfPageRenderScheduler,
 } from "./pdf-viewer-render-scheduler";
 import { PDF_READING_MARKER_RATIO, usePdfScroll } from "./pdf-viewer-scroll";
-import { PDF_ZOOM_MOTION_TOTAL_MS } from "./pdf-viewer-zoom-motion";
+import {
+  notePdfZoomMotionPageRender,
+  PDF_ZOOM_MOTION_TOTAL_MS,
+} from "./pdf-viewer-zoom-motion";
 import type {
   PageOverlayProps,
   PdfPageRenderTiming,
@@ -266,6 +269,20 @@ export function usePdfDocumentRuntime({
     },
     [handleBeforeLayoutMotion, writeDocumentAnchorBlockOffset],
   );
+  // While a zoom relax is in flight, the raster world freezes at its
+  // pre-zoom settled state: renderScale holds (no page re-registers a new
+  // render signature), the scheduler pauses, and the virtualized page window
+  // holds. pdf.js raster work is main-thread heavy — letting it land
+  // mid-flight is exactly what stutters the relax's clock. Everything
+  // sharpens at settle instead (the zoom analogue of the shell motion's
+  // render pause, on the relax's much shorter envelope).
+  const settledZoomRenderScaleRef = React.useRef(layout.renderScale);
+  if (!isZoomTransitioning) {
+    settledZoomRenderScaleRef.current = layout.renderScale;
+  }
+  const effectiveRenderScale = isZoomTransitioning
+    ? settledZoomRenderScaleRef.current
+    : layout.renderScale;
   const [shouldHoldPageWindowForRaster, setShouldHoldPageWindowForRaster] =
     React.useState(false);
   const {
@@ -291,7 +308,7 @@ export function usePdfDocumentRuntime({
     layout.rendererFrame.phase !== "idle" ||
     layout.transition.source === "viewer-shell";
   const isPageRenderingPaused =
-    usePdfShellMotionRenderPause(isShellMotionActive);
+    usePdfShellMotionRenderPause(isShellMotionActive) || isZoomTransitioning;
   const {
     activePageNumbers: activeRenderPageNumbers,
     isRenderQueueIdle,
@@ -307,7 +324,7 @@ export function usePdfDocumentRuntime({
       performanceOptions?.directionAwarePreRender === false
         ? []
         : preloadPageNumbers,
-    scale: layout.renderScale,
+    scale: effectiveRenderScale,
     rotation: layout.rotation,
     devicePixelRatio: layout.pageDevicePixelRatio,
     resetKey: document,
@@ -316,10 +333,11 @@ export function usePdfDocumentRuntime({
       performanceOptions?.directionAwarePreRender === false ? 0 : 1,
   });
   useKeyedMountEffect(
-    joinEffectKey([isShellMotionActive, isRenderQueueIdle]),
+    joinEffectKey([isShellMotionActive, isRenderQueueIdle, isZoomTransitioning]),
     () => {
       const nextShouldHold =
         isShellMotionActive ||
+        isZoomTransitioning ||
         (shouldHoldPageWindowForRaster && !isRenderQueueIdle);
       setShouldHoldPageWindowForRaster((previous) =>
         previous === nextShouldHold ? previous : nextShouldHold,
@@ -328,6 +346,9 @@ export function usePdfDocumentRuntime({
   );
   const handlePageRenderTiming = React.useCallback(
     (timing: PdfPageRenderTiming) => {
+      // Attribute raster work to a live zoom flight — with the flight-time
+      // holds above this stays at 0, and the flight recorder proves it.
+      notePdfZoomMotionPageRender(timing);
       handleScheduledPageRenderTiming(timing);
       onPageRenderTiming?.(timing);
     },
@@ -363,7 +384,7 @@ export function usePdfDocumentRuntime({
     layout: layout.pageLayout,
     pageDevicePixelRatio: layout.pageDevicePixelRatio,
     renderPageNumbers,
-    renderScale: layout.renderScale,
+    renderScale: effectiveRenderScale,
     rendererFrame: layout.rendererFrame,
     visiblePageNumbers,
   });
@@ -474,7 +495,7 @@ export function usePdfDocumentRuntime({
       renderCache: shouldUseRenderedPageCache ? renderedPageCache : undefined,
       renderPageNumbers,
       renderPageOverlay,
-      renderScale: layout.renderScale,
+      renderScale: effectiveRenderScale,
       resolveSurfaceMotionStyle: layout.resolveSurfaceMotionStyle,
       rotation: layout.rotation,
       scale: layout.displayScale,

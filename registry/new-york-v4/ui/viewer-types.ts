@@ -105,11 +105,22 @@ export type ViewerDocumentScrollTargetResolver<Anchor, Target> = (input: {
 // gesture's own task against the pre-zoom layout and painted DOM;
 // `resolveScrollTarget` and `play` run inside the geometry commit against the
 // post-zoom layout (commit-then-relax).
+export type ViewerDocumentZoomMotionBypassReason =
+  | "resolve-failed"
+  | "shell-transition"
+  | "stale-intent";
+
 export type ViewerDocumentZoomMotionController<Transaction = unknown> = {
   capture: (input: {
     scrollTop: number;
     viewportElement: HTMLDivElement;
   }) => Transaction | null;
+  /**
+   * Telemetry tap: a captured zoom intent reached a geometry commit but the
+   * zoom lane declined it. Without this the bypass is invisible — the commit
+   * falls back to the reading-anchor restore and no flight is recorded.
+   */
+  noteBypass?: (reason: ViewerDocumentZoomMotionBypassReason) => void;
   resolveScrollTarget: (input: {
     transaction: Transaction;
     viewportElement: HTMLDivElement;

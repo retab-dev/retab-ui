@@ -574,40 +574,45 @@ export function useViewerDocumentScroll<Anchor, Target, ZoomTransaction = unknow
       cancelZoomMotion();
 
       const transition = layout.transition;
-      if (
-        pendingZoomIntent &&
-        zoomMotion &&
-        transition?.source !== "viewer-shell" &&
-        readViewerDocumentNow() - pendingZoomIntent.capturedAt <=
+      if (pendingZoomIntent && zoomMotion) {
+        if (transition?.source === "viewer-shell") {
+          zoomMotion.noteBypass?.("shell-transition");
+        } else if (
+          readViewerDocumentNow() - pendingZoomIntent.capturedAt >
           VIEWER_DOCUMENT_ZOOM_INTENT_MAX_AGE_MS
-      ) {
-        const zoomTarget = zoomMotion.resolveScrollTarget({
-          transaction: pendingZoomIntent.transaction,
-          viewportElement,
-        });
-        if (zoomTarget) {
-          // Commit-then-relax: land the centered scroll inside this commit
-          // (never deferred), then relax the painted FLIP over it.
-          applyLogicalScrollTop(
-            viewportElement,
-            zoomTarget.top,
-            { behavior: "auto" },
-            { allowDefer: false },
-          );
-          if (zoomTarget.left != null) {
-            markInternalScrollWrite();
-            setViewportPhysicalScrollLeft(viewportElement, zoomTarget.left);
-          }
-          cacheReadingAnchor({
-            scrollTop: zoomTarget.top,
-            viewportBlockSize: viewportElement.clientHeight,
-          });
-          cacheVisualLayerRect(viewportElement);
-          activeZoomMotionCancelRef.current = zoomMotion.play({
+        ) {
+          zoomMotion.noteBypass?.("stale-intent");
+        } else {
+          const zoomTarget = zoomMotion.resolveScrollTarget({
             transaction: pendingZoomIntent.transaction,
             viewportElement,
           });
-          return;
+          if (!zoomTarget) {
+            zoomMotion.noteBypass?.("resolve-failed");
+          } else {
+            // Commit-then-relax: land the centered scroll inside this commit
+            // (never deferred), then relax the painted FLIP over it.
+            applyLogicalScrollTop(
+              viewportElement,
+              zoomTarget.top,
+              { behavior: "auto" },
+              { allowDefer: false },
+            );
+            if (zoomTarget.left != null) {
+              markInternalScrollWrite();
+              setViewportPhysicalScrollLeft(viewportElement, zoomTarget.left);
+            }
+            cacheReadingAnchor({
+              scrollTop: zoomTarget.top,
+              viewportBlockSize: viewportElement.clientHeight,
+            });
+            cacheVisualLayerRect(viewportElement);
+            activeZoomMotionCancelRef.current = zoomMotion.play({
+              transaction: pendingZoomIntent.transaction,
+              viewportElement,
+            });
+            return;
+          }
         }
       }
 

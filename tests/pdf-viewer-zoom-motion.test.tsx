@@ -1,8 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createPdfPageLayout } from "@/registry/new-york-v4/ui/pdf-viewer-layout";
 import {
   capturePdfZoomTransaction,
+  clearPdfZoomMotionFlightRecords,
+  createPdfZoomMotionController,
+  getPdfZoomMotionFlightRecords,
+  notePdfZoomMotionPageRender,
   playPdfZoomMotion,
   resolvePdfZoomScrollTarget,
 } from "@/registry/new-york-v4/ui/pdf-viewer-zoom-motion";
@@ -57,6 +61,7 @@ function makeViewport({
     clientWidth,
     clientHeight,
     scrollLeft,
+    scrollTop: 0,
     getBoundingClientRect: () =>
       makeRect({ left: 0, top: 0, width: clientWidth, height: clientHeight }),
     querySelector: (selector: string) => {
@@ -71,8 +76,13 @@ function makeViewport({
   };
 }
 
+beforeEach(() => {
+  clearPdfZoomMotionFlightRecords();
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -169,62 +179,90 @@ describe("pdf zoom motion anchor", () => {
   });
 });
 
-describe("pdf zoom motion player", () => {
-  it("relaxes a FLIP from the painted rect and cleans up inline styles", () => {
-    vi.useFakeTimers();
-    const frameCallbacks: FrameRequestCallback[] = [];
-    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-      frameCallbacks.push(callback);
-      return frameCallbacks.length;
-    });
-    vi.stubGlobal("cancelAnimationFrame", () => {});
+const PLAYER_PREVIOUS_RECT = () =>
+  makeRect({ left: 116, top: -1708, width: 400, height: 4128 });
+const PLAYER_CURRENT_RECT = () =>
+  makeRect({ left: 76, top: -2106, width: 480, height: 4953.6 });
 
-    const previousRect = makeRect({
-      left: 116,
-      top: -1708,
-      width: 400,
-      height: 4128,
-    });
-    const currentRect = makeRect({
-      left: 76,
-      top: -2106,
-      width: 480,
-      height: 4953.6,
-    });
+function makePlayerTransaction() {
+  return {
+    capturedAt: 990,
+    pageNumber: 3,
+    yPercent: 0.45,
+    inlineFraction: 0.75,
+    previousVisualRect: PLAYER_PREVIOUS_RECT(),
+  };
+}
+
+function stubFrameClock() {
+  const frameCallbacks: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frameCallbacks.push(callback);
+    return frameCallbacks.length;
+  });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  return {
+    tick: (frameTime: number) => {
+      for (const callback of frameCallbacks.splice(0)) callback(frameTime);
+    },
+  };
+}
+
+describe("pdf zoom motion player", () => {
+  it("relaxes on a frame-anchored clock and cleans up at settle", () => {
+    vi.useFakeTimers();
+    const clock = stubFrameClock();
+    const currentRect = PLAYER_CURRENT_RECT();
     const { clipElement, viewport } = makeViewport({
       rangeRect: currentRect,
       clipRect: currentRect,
     });
 
     const cancel = playPdfZoomMotion({
-      transaction: {
-        pageNumber: 3,
-        yPercent: 0.45,
-        inlineFraction: 0.75,
-        previousVisualRect: previousRect,
-      },
+      transaction: makePlayerTransaction(),
       viewportElement: viewport,
     });
 
     expect(cancel).not.toBeNull();
     const style = clipElement!.style;
+    // First frame is written synchronously inside the commit: full counter
+    // transform, anchor point fixed.
     expect(style.transform).toContain("scale(0.833333");
     expect(style.willChange).toBe("transform");
     expect(style.transformOrigin).not.toBe("");
 
-    // The kick-off frame swaps in the eased transition to identity.
-    for (const callback of frameCallbacks.splice(0)) callback(0);
-    expect(style.transition).toContain("transform");
-    expect(style.transform).toBe("translate3d(0px, 0px, 0px) scale(1, 1)");
+    // The clock anchors at the first tick's frame time — progress stays 0.
+    clock.tick(1000);
+    expect(style.transform).toContain("scale(0.833333");
 
-    vi.runAllTimers();
+    // Mid-flight: eased progress moves the scale strictly toward identity.
+    clock.tick(1100);
+    const midScale = Number(style.transform.match(/scale\(([\d.]+)/)?.[1]);
+    expect(midScale).toBeGreaterThan(0.834);
+    expect(midScale).toBeLessThan(1);
+
+    // At the duration boundary: settle clears every inline style.
+    clock.tick(1200);
     expect(style.transform).toBe("");
-    expect(style.transition).toBe("");
+    expect(style.transformOrigin).toBe("");
     expect(style.willChange).toBe("");
+
+    const record = getPdfZoomMotionFlightRecords().at(-1)!;
+    expect(record.status).toBe("played");
+    expect(record.interruption).toBe("none");
+    expect(record.settledClean).toBe(true);
+    expect(record.tickCount).toBe(3);
+    expect(record.startLatencyMs).toBe(10);
+    expect(record.maxTickGapMs).toBe(100);
+    expect(record.scrollDriftMaxPx).toBe(0);
+    expect(record.ticks.map((tick) => tick.progress)).toEqual(
+      record.ticks.map((tick) => tick.progress).slice().sort((a, b) => a - b),
+    );
+    vi.runAllTimers();
   });
 
-  it("snaps instead of animating when the axes stopped scaling together", () => {
-    vi.stubGlobal("requestAnimationFrame", () => 1);
+  it("skips and records the reason when the axes stopped scaling together", () => {
+    stubFrameClock();
     // A rebased physical scroll: height ratio (1.0) diverges from the width
     // ratio (0.833) — the whole-surface FLIP would warp, so no motion plays.
     const previousRect = makeRect({
@@ -245,48 +283,28 @@ describe("pdf zoom motion player", () => {
     });
 
     const cancel = playPdfZoomMotion({
-      transaction: {
-        pageNumber: 3,
-        yPercent: 0.45,
-        inlineFraction: 0.75,
-        previousVisualRect: previousRect,
-      },
+      transaction: { ...makePlayerTransaction(), previousVisualRect: previousRect },
       viewportElement: viewport,
     });
 
     expect(cancel).toBeNull();
     expect(clipElement!.style.transform ?? "").toBe("");
+    const record = getPdfZoomMotionFlightRecords().at(-1)!;
+    expect(record.status).toBe("skipped");
+    expect(record.skipReason).toBe("axis-scale-mismatch");
   });
 
-  it("cancel snaps straight to the committed endpoint", () => {
+  it("cancel snaps straight to the committed endpoint and marks the flight", () => {
     vi.useFakeTimers();
-    vi.stubGlobal("requestAnimationFrame", () => 1);
-    vi.stubGlobal("cancelAnimationFrame", () => {});
-
-    const previousRect = makeRect({
-      left: 116,
-      top: -1708,
-      width: 400,
-      height: 4128,
-    });
-    const currentRect = makeRect({
-      left: 76,
-      top: -2106,
-      width: 480,
-      height: 4953.6,
-    });
+    stubFrameClock();
+    const currentRect = PLAYER_CURRENT_RECT();
     const { clipElement, viewport } = makeViewport({
       rangeRect: currentRect,
       clipRect: currentRect,
     });
 
     const cancel = playPdfZoomMotion({
-      transaction: {
-        pageNumber: 3,
-        yPercent: 0.45,
-        inlineFraction: 0.75,
-        previousVisualRect: previousRect,
-      },
+      transaction: makePlayerTransaction(),
       viewportElement: viewport,
     });
 
@@ -294,5 +312,86 @@ describe("pdf zoom motion player", () => {
     cancel!();
     expect(clipElement!.style.transform).toBe("");
     expect(clipElement!.style.willChange).toBe("");
+    const record = getPdfZoomMotionFlightRecords().at(-1)!;
+    expect(record.interruption).toBe("cancelled");
+    vi.runAllTimers();
+  });
+
+  it("records scroll drift and attributes page raster work to the live flight", () => {
+    vi.useFakeTimers();
+    const clock = stubFrameClock();
+    const currentRect = PLAYER_CURRENT_RECT();
+    const { viewport } = makeViewport({
+      rangeRect: currentRect,
+      clipRect: currentRect,
+    });
+
+    playPdfZoomMotion({
+      transaction: makePlayerTransaction(),
+      viewportElement: viewport,
+    });
+    clock.tick(1000);
+
+    notePdfZoomMotionPageRender({
+      pageNumber: 3,
+      scale: 1.2,
+      rotation: 0,
+      devicePixelRatio: 2,
+      status: "rendered",
+      durationMs: 24,
+    });
+    (viewport as unknown as { scrollTop: number }).scrollTop = 7;
+    clock.tick(1100);
+
+    const record = getPdfZoomMotionFlightRecords().at(-1)!;
+    expect(record.pageRenderCount).toBe(1);
+    expect(record.pageRenderMainThreadMs).toBe(24);
+    expect(record.scrollDriftMaxPx).toBe(7);
+
+    // After settle the flight is no longer live — later raster work is not
+    // attributed to it.
+    clock.tick(1300);
+    notePdfZoomMotionPageRender({
+      pageNumber: 3,
+      scale: 1.2,
+      rotation: 0,
+      devicePixelRatio: 2,
+      status: "rendered",
+      durationMs: 40,
+    });
+    expect(getPdfZoomMotionFlightRecords().at(-1)!.pageRenderCount).toBe(1);
+    vi.runAllTimers();
+  });
+
+  it("records a zoom-lane bypass so a silent fallback stays visible", () => {
+    const controller = createPdfZoomMotionController(makeLayout(1));
+    controller.noteBypass?.("stale-intent");
+
+    const record = getPdfZoomMotionFlightRecords().at(-1)!;
+    expect(record.status).toBe("skipped");
+    expect(record.skipReason).toBe("bypass:stale-intent");
+  });
+
+  it("force-finishes a stalled clock so the transform never outlives its flight", () => {
+    vi.useFakeTimers();
+    stubFrameClock();
+    const currentRect = PLAYER_CURRENT_RECT();
+    const { clipElement, viewport } = makeViewport({
+      rangeRect: currentRect,
+      clipRect: currentRect,
+    });
+
+    playPdfZoomMotion({
+      transaction: makePlayerTransaction(),
+      viewportElement: viewport,
+    });
+    expect(clipElement!.style.transform).not.toBe("");
+
+    // No rAF ever fires (hidden tab); the stall net clears the transform.
+    vi.runAllTimers();
+    expect(clipElement!.style.transform).toBe("");
+    expect(getPdfZoomMotionFlightRecords().at(-1)!.interruption).toBe(
+      "stalled",
+    );
   });
 });
