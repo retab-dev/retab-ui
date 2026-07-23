@@ -10,6 +10,11 @@ import {
   getVisibleSlideSize,
   type PptxSize,
 } from "./pptx-viewer-core";
+import {
+  PPTX_ZOOM_INTENT_MAX_AGE_MS,
+  type PptxZoomTransaction,
+} from "./pptx-viewer-zoom-motion";
+import type { ViewerDocumentZoomMotionController } from "./viewer-types";
 
 export const PPTX_READING_MARKER_RATIO = 0.2;
 export const PPTX_RENDER_FIT_PERFECTLY_OVERSCAN_PX = 32;
@@ -82,6 +87,7 @@ export interface PptxVisibleSlideInput {
   layout: PptxSlideLayout;
   onVisibleSlideChange?: (slide: number) => void;
   onScrollProgressChange?: (progress: number) => void;
+  zoomMotion?: ViewerDocumentZoomMotionController<PptxZoomTransaction>;
 }
 
 type PptxReadingAnchor =
@@ -528,6 +534,7 @@ export function usePptxVisibleSlide({
   layout,
   onVisibleSlideChange,
   onScrollProgressChange,
+  zoomMotion,
 }: PptxVisibleSlideInput) {
   const [currentSlide, setCurrentSlide] = React.useState(1);
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -535,7 +542,22 @@ export function usePptxVisibleSlide({
   const lastVisibleSlideCallback = React.useRef(onVisibleSlideChange);
   const committedLayoutRef = React.useRef(layout);
   const scrollPageOffsetRef = React.useRef(0);
+  const pendingZoomIntentRef = React.useRef<{
+    capturedAt: number;
+    transaction: PptxZoomTransaction;
+  } | null>(null);
+  const activeZoomMotionCancelRef = React.useRef<(() => void) | null>(null);
   const layoutEffectKey = getPptxSlideLayoutKey(layout);
+
+  // Interrupting a zoom relax snaps to its committed endpoint: the layout and
+  // scroll landed in the zoom's own commit, so clearing the transform is
+  // always safe and never moves the settled geometry.
+  const cancelZoomMotion = React.useCallback(() => {
+    pendingZoomIntentRef.current = null;
+    const cancelActiveZoomMotion = activeZoomMotionCancelRef.current;
+    activeZoomMotionCancelRef.current = null;
+    cancelActiveZoomMotion?.();
+  }, []);
 
   if (lastVisibleSlideCallback.current !== onVisibleSlideChange) {
     lastVisibleSlideCallback.current = onVisibleSlideChange;
@@ -551,6 +573,29 @@ export function usePptxVisibleSlide({
       }),
     [layout.totalHeight],
   );
+
+  // Called in the zoom gesture's own task, against the pre-zoom layout and
+  // painted DOM; the layout commit the gesture causes consumes the intent.
+  const captureZoomIntent = React.useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport || !zoomMotion) {
+      pendingZoomIntentRef.current = null;
+      return;
+    }
+    const metrics = readPptxScrollMetrics({
+      scrollPageOffset: scrollPageOffsetRef.current,
+      totalHeight: layout.totalHeight,
+      viewportElement: viewport,
+    });
+    const transaction = zoomMotion.capture({
+      scrollTop: metrics.scrollTop,
+      viewportElement: viewport,
+    });
+    pendingZoomIntentRef.current =
+      transaction == null
+        ? null
+        : { capturedAt: readPptxZoomNow(), transaction };
+  }, [layout.totalHeight, zoomMotion]);
 
   const syncPhysicalScrollPosition = React.useCallback(
     (viewport: HTMLDivElement) => {
@@ -608,6 +653,39 @@ export function usePptxVisibleSlide({
     const viewport = scrollViewportRef.current;
     if (!viewport) return;
 
+    // A fresh layout commit owns the visual layer; an in-flight zoom relax
+    // against the previous layout can no longer settle correctly.
+    const pendingZoomIntent = pendingZoomIntentRef.current;
+    pendingZoomIntentRef.current = null;
+    cancelZoomMotion();
+
+    if (
+      pendingZoomIntent &&
+      zoomMotion &&
+      readPptxZoomNow() - pendingZoomIntent.capturedAt <=
+        PPTX_ZOOM_INTENT_MAX_AGE_MS
+    ) {
+      const zoomTarget = zoomMotion.resolveScrollTarget({
+        transaction: pendingZoomIntent.transaction,
+        viewportElement: viewport,
+      });
+      if (zoomTarget) {
+        // Commit-then-relax: land the centered scroll inside this commit
+        // (through the paged-scroll mapping), then relax the painted FLIP
+        // over it. Raw scrollLeft assignment on purpose — the browser clamps
+        // to the live scrollable range, including RTL's negative space.
+        scrollViewportToLogicalTop(viewport, zoomTarget.top);
+        if (zoomTarget.left != null && Number.isFinite(zoomTarget.left)) {
+          viewport.scrollLeft = zoomTarget.left;
+        }
+        activeZoomMotionCancelRef.current = zoomMotion.play({
+          transaction: pendingZoomIntent.transaction,
+          viewportElement: viewport,
+        });
+        return;
+      }
+    }
+
     const previousLogicalScrollTop = getPptxLogicalScrollTop({
       physicalScrollTop: viewport.scrollTop,
       scrollPageOffset: scrollPageOffsetRef.current,
@@ -660,7 +738,20 @@ export function usePptxVisibleSlide({
     syncPhysicalScrollPosition,
   ]);
 
-  return { currentSlide, getScrollMetrics, handleScroll, scrollViewportRef };
+  return {
+    captureZoomIntent,
+    currentSlide,
+    getScrollMetrics,
+    handleScroll,
+    scrollViewportRef,
+  };
+}
+
+function readPptxZoomNow() {
+  return typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
 }
 
 function getPptxSlideLayoutKey(layout: PptxSlideLayout) {

@@ -58,6 +58,7 @@ import {
   useDocxViewerScale,
 } from "./docx-viewer-scale";
 import { useDocxViewerScroll } from "./docx-viewer-scroll";
+import { createDocxZoomMotionController } from "./docx-viewer-zoom-motion";
 import {
   buildDocxRenderIndex,
   resolveDocxTargetHit,
@@ -131,7 +132,12 @@ export function DocxViewerContent({
     resetKey: resource.keys.resource,
     scale: controlledScale,
   });
+  const zoomMotion = React.useMemo(
+    () => createDocxZoomMotionController({ layout: pageLayout, scale }),
+    [pageLayout, scale],
+  );
   const {
+    captureZoomIntent,
     currentPage,
     handleScroll,
     measureScroll,
@@ -144,8 +150,27 @@ export function DocxViewerContent({
     onVisiblePageChange,
     ready,
     scale,
+    zoomMotion,
   });
   const isDocumentTransitioning = rendererFrame.phase !== "idle";
+  const beginZoomMotion = React.useCallback(() => {
+    // A zoom step mid shell-slide keeps the shell's own anchor solve in
+    // charge; the centered relax only owns quiet-state zooms.
+    if (isDocumentTransitioning) return;
+    captureZoomIntent();
+  }, [captureZoomIntent, isDocumentTransitioning]);
+  const zoomInCentered = React.useCallback(() => {
+    beginZoomMotion();
+    zoomIn();
+  }, [beginZoomMotion, zoomIn]);
+  const zoomOutCentered = React.useCallback(() => {
+    beginZoomMotion();
+    zoomOut();
+  }, [beginZoomMotion, zoomOut]);
+  const fitWidthCentered = React.useCallback(() => {
+    beginZoomMotion();
+    fitWidth();
+  }, [beginZoomMotion, fitWidth]);
   const scaleRef = React.useRef(scale);
   scaleRef.current = scale;
 
@@ -517,12 +542,12 @@ export function DocxViewerContent({
     currentPage,
     download,
     downloadAction: resource.originalDownload,
-    fitWidth,
+    fitWidth: fitWidthCentered,
     numPages,
     ready,
     scale,
-    zoomIn,
-    zoomOut,
+    zoomIn: zoomInCentered,
+    zoomOut: zoomOutCentered,
   });
 
   React.useImperativeHandle(
@@ -565,9 +590,9 @@ export function DocxViewerContent({
             }}
             zoom={{
               scale,
-              onZoomOut: zoomOut,
-              onZoomIn: zoomIn,
-              onFit: fitWidth,
+              onZoomOut: zoomOutCentered,
+              onZoomIn: zoomInCentered,
+              onFit: fitWidthCentered,
             }}
             downloads={
               download && resource.originalDownload
@@ -585,14 +610,27 @@ export function DocxViewerContent({
           viewportRef={scrollViewportRef}
           viewportProps={{ onScroll: handleViewportScroll }}
         >
-          {/* overflow-clip: the mid-flight counter-transform scales the
-              surface past its committed layout box; without the clip that
-              visual overflow inflates the scroller's scrollHeight, and a
-              scroll position clamped at max gets dragged down frame by
-              frame as the transform relaxes (a 300px in-flight swing at
-              the document end). The clipped strip is beyond the settled
-              document bottom, so nothing visible is lost. */}
-          <div ref={containerRef} className="overflow-clip">
+          {/* The clip exists for ONE state: a fit-width shell slide, where
+              the kernel's counter-transform paints the surface past its
+              committed box, and that visual overflow would otherwise inflate
+              the scroller's scrollHeight and drag a max-clamped scroll
+              position down frame by frame as the transform relaxes (a 300px
+              in-flight swing at the document end). Every other state must
+              NOT clip: a zoomed-in surface's inline overflow IS the
+              horizontal scroll range (an unconditional clip froze
+              scrollWidth at the viewport width and made zoomed documents
+              horizontally unscrollable), and a zoom relax's enlarged opening
+              frame must not be cut at the committed box. At fit-width the
+              surface fits the layout width, so the active clip can never
+              eat scrollable overflow. */}
+          <div
+            ref={containerRef}
+            className={
+              isDocumentTransitioning && isFitWidth
+                ? "overflow-clip"
+                : "overflow-visible"
+            }
+          >
             {!ready ? (
               <div className="p-4">
                 <DocxSkeleton />
@@ -611,7 +649,15 @@ export function DocxViewerContent({
               )}
               style={{ width: stageInlineSize ?? undefined }}
             >
-              <div ref={hostRef} style={{ zoom: scale }} />
+              {/* The zoom stage shrink-wraps the page box (width = pageWidth
+                  × scale, exactly linear in scale): it is the inline-anchor
+                  ruler AND the FLIP layer for toolbar zoom steps
+                  (docx-viewer-zoom-motion). The relax transform must not
+                  share an element with the CSS `zoom` below (their coordinate
+                  spaces disagree) nor with the kernel-owned surface above. */}
+              <div data-slot="docx-viewer-zoom-stage">
+                <div ref={hostRef} style={{ zoom: scale }} />
+              </div>
             </div>
           </div>
         </ScrollArea>

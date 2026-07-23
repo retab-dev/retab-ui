@@ -478,6 +478,7 @@ export function ImageViewerContent({
               frameListRef={frameListRef}
               getScrollMetrics={getScrollMetrics}
               freezeVisibleFrameWindow={freezeVisibleFrameWindow}
+              isFitWidth={isFitWidth}
               isZoomTransitioning={isZoomTransitioning}
               viewportRef={setScrollViewportRefWithRebase}
               onScroll={handleScrollWithRebase}

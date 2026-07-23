@@ -74,6 +74,8 @@ export interface ImageFrameScrollerProps {
   frameListRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
   freezeVisibleFrameWindow?: boolean;
+  /** The frames are at their fit-width scale (the shell motion's domain). */
+  isFitWidth?: boolean;
   /** A toolbar zoom step's FLIP relax is in flight (image-viewer-zoom-motion). */
   isZoomTransitioning?: boolean;
   viewportRef: React.Ref<HTMLDivElement>;
@@ -287,6 +289,7 @@ export function ImageFrameScroller({
   frameListRef,
   getScrollMetrics,
   freezeVisibleFrameWindow = false,
+  isFitWidth = true,
   isZoomTransitioning = false,
   viewportRef,
   onScroll,
@@ -502,9 +505,24 @@ export function ImageFrameScroller({
         style: { overflowAnchor: "none" },
       }}
     >
+      {/* The outer clip exists for ONE state: a fit-width shell slide, where
+          the kernel's counter-transform paints the stage past its committed
+          box, and that visual overflow would otherwise inflate the scroller's
+          scrollable area and drag a max-clamped scroll position mid-flight.
+          Every other state must NOT clip: a zoomed-in stage's inline overflow
+          IS the horizontal scroll range (an unconditional clip froze
+          scrollWidth at the viewport width and made zoomed images
+          horizontally unscrollable), and a zoom relax's enlarged opening
+          frame must not be cut at the committed box. At fit-width the stage
+          fits the layout width, so the active clip can never eat scrollable
+          overflow. */}
       <div
         ref={frameListRef}
-        className="relative min-h-full w-full overflow-clip"
+        className={`relative min-h-full w-full ${
+          freezeVisibleFrameWindow && isFitWidth
+            ? "overflow-clip"
+            : "overflow-visible"
+        }`}
         data-slot="image-viewer-fit-width-measure"
       >
         {/* The margin class must mirror the fit-width motion resolver's

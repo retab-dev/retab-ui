@@ -12,6 +12,11 @@ import {
   type DocxPageLayout,
   type DocxReadingAnchor,
 } from "./docx-viewer-layout";
+import {
+  DOCX_ZOOM_INTENT_MAX_AGE_MS,
+  type DocxZoomTransaction,
+} from "./docx-viewer-zoom-motion";
+import type { ViewerDocumentZoomMotionController } from "./viewer-types";
 import { joinEffectKey } from "@/lib/effect-key";
 
 export function useDocxViewerScroll({
@@ -21,6 +26,7 @@ export function useDocxViewerScroll({
   onVisiblePageChange,
   ready,
   scale,
+  zoomMotion,
 }: {
   layoutKey: unknown;
   pageLayout: DocxPageLayout | null;
@@ -28,6 +34,7 @@ export function useDocxViewerScroll({
   onVisiblePageChange?: (page: number) => void;
   ready: boolean;
   scale: number;
+  zoomMotion?: ViewerDocumentZoomMotionController<DocxZoomTransaction>;
 }) {
   const scrollViewportRef = React.useRef<HTMLDivElement | null>(null);
   const lastReported = React.useRef(0);
@@ -35,13 +42,47 @@ export function useDocxViewerScroll({
   const committedLayoutKeyRef = React.useRef(layoutKey);
   const [currentPage, setCurrentPage] = React.useState(1);
   const scrollFrame = React.useRef(0);
+  const pendingZoomIntentRef = React.useRef<{
+    capturedAt: number;
+    transaction: DocxZoomTransaction;
+  } | null>(null);
+  const activeZoomMotionCancelRef = React.useRef<(() => void) | null>(null);
+
+  // Interrupting a zoom relax snaps to its committed endpoint: the layout and
+  // scroll landed in the zoom's own commit, so clearing the transform is
+  // always safe and never moves the settled geometry.
+  const cancelZoomMotion = React.useCallback(() => {
+    pendingZoomIntentRef.current = null;
+    const cancelActiveZoomMotion = activeZoomMotionCancelRef.current;
+    activeZoomMotionCancelRef.current = null;
+    cancelActiveZoomMotion?.();
+  }, []);
+
+  // Called in the zoom gesture's own task, against the pre-zoom layout and
+  // painted DOM; the layout commit the gesture causes consumes the intent.
+  const captureZoomIntent = React.useCallback(() => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport || !zoomMotion) {
+      pendingZoomIntentRef.current = null;
+      return;
+    }
+    const transaction = zoomMotion.capture({
+      scrollTop: viewport.scrollTop,
+      viewportElement: viewport,
+    });
+    pendingZoomIntentRef.current =
+      transaction == null
+        ? null
+        : { capturedAt: readDocxScrollNow(), transaction };
+  }, [zoomMotion]);
 
   const resetScroll = React.useCallback(() => {
     setCurrentPage(1);
     lastReported.current = 0;
     latestAnchorRef.current = { kind: "top" };
+    cancelZoomMotion();
     if (scrollViewportRef.current) scrollViewportRef.current.scrollTop = 0;
-  }, []);
+  }, [cancelZoomMotion]);
 
   const measureScroll = React.useCallback(() => {
     scrollFrame.current = 0;
@@ -93,6 +134,7 @@ export function useDocxViewerScroll({
       pageLayout,
       ready,
       scale,
+      zoomMotion,
     ]),
     () => {
       const previousLayoutKey = committedLayoutKeyRef.current;
@@ -102,6 +144,40 @@ export function useDocxViewerScroll({
 
       const viewport = scrollViewportRef.current;
       if (!viewport) return;
+
+      // A fresh layout commit owns the zoom stage; an in-flight relax against
+      // the previous layout can no longer settle correctly.
+      const pendingZoomIntent = pendingZoomIntentRef.current;
+      pendingZoomIntentRef.current = null;
+      cancelZoomMotion();
+
+      if (
+        pendingZoomIntent &&
+        zoomMotion &&
+        readDocxScrollNow() - pendingZoomIntent.capturedAt <=
+          DOCX_ZOOM_INTENT_MAX_AGE_MS
+      ) {
+        const zoomTarget = zoomMotion.resolveScrollTarget({
+          transaction: pendingZoomIntent.transaction,
+          viewportElement: viewport,
+        });
+        if (zoomTarget) {
+          // Commit-then-relax: land the centered scroll inside this commit,
+          // then relax the painted FLIP over it. Raw scrollLeft assignment on
+          // purpose — the browser clamps to the live scrollable range,
+          // including RTL's negative coordinate space.
+          viewport.scrollTop = zoomTarget.top;
+          if (zoomTarget.left != null && Number.isFinite(zoomTarget.left)) {
+            viewport.scrollLeft = zoomTarget.left;
+          }
+          activeZoomMotionCancelRef.current = zoomMotion.play({
+            transaction: pendingZoomIntent.transaction,
+            viewportElement: viewport,
+          });
+          measureScroll();
+          return;
+        }
+      }
 
       const maxScrollTop = Math.max(
         0,
@@ -121,15 +197,24 @@ export function useDocxViewerScroll({
 
   useMountEffect(() => {
     return () => {
+      cancelZoomMotion();
       if (scrollFrame.current > 0) cancelAnimationFrame(scrollFrame.current);
     };
   });
 
   return {
+    captureZoomIntent,
     currentPage,
     handleScroll,
     measureScroll,
     resetScroll,
     scrollViewportRef,
   };
+}
+
+function readDocxScrollNow() {
+  return typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
 }

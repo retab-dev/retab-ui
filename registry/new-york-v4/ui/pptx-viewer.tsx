@@ -5,6 +5,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { joinEffectKey } from "@/lib/effect-key";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { useKeyedMountEffect } from "@/hooks/use-keyed-mount-effect";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import {
   createViewerResource,
@@ -50,6 +51,10 @@ import {
   usePptxVisibleSlide,
 } from "./pptx-viewer-visible-slide";
 import { usePptxZoom } from "./pptx-viewer-zoom";
+import {
+  createPptxZoomMotionController,
+  PPTX_ZOOM_MOTION_TOTAL_MS,
+} from "./pptx-viewer-zoom-motion";
 import { useIsClient } from "./use-is-client";
 import { ViewerControls } from "./viewer-controls";
 import { ViewerErrorBoundary } from "./viewer-error";
@@ -181,18 +186,55 @@ function PptxViewerContent({
       }),
     [source.baseSize, source.slideCount, zoomScale, rotation],
   );
-  const { currentSlide, getScrollMetrics, handleScroll, scrollViewportRef } =
-    usePptxVisibleSlide({
-      layout: slideLayout,
-      onScrollProgressChange,
-      onVisibleSlideChange,
-    });
+  const zoomMotion = React.useMemo(
+    () => createPptxZoomMotionController(slideLayout),
+    [slideLayout],
+  );
+  const {
+    captureZoomIntent,
+    currentSlide,
+    getScrollMetrics,
+    handleScroll,
+    scrollViewportRef,
+  } = usePptxVisibleSlide({
+    layout: slideLayout,
+    onScrollProgressChange,
+    onVisibleSlideChange,
+    zoomMotion,
+  });
+  const isDocumentTransitioning = rendererFrame.phase !== "idle";
+  // Toolbar zoom steps re-anchor the viewport center and relax a FLIP over
+  // the commit (pptx-viewer-zoom-motion). The sequence must flip in the zoom
+  // gesture's own render so the visual clip is already released when the
+  // enlarged opening frame paints; rapid steps re-arm the release timer.
+  const [zoomMotionSequence, setZoomMotionSequence] = React.useState(0);
+  const isZoomTransitioning = zoomMotionSequence > 0;
+  useKeyedMountEffect(joinEffectKey([zoomMotionSequence]), () => {
+    if (zoomMotionSequence === 0) return;
+    const timeout = setTimeout(
+      () => setZoomMotionSequence(0),
+      PPTX_ZOOM_MOTION_TOTAL_MS,
+    );
+    return () => clearTimeout(timeout);
+  });
+  const beginZoomMotion = React.useCallback(() => {
+    // A zoom step mid shell-slide keeps the shell's own anchor solve in
+    // charge; the centered relax only owns quiet-state zooms.
+    if (isDocumentTransitioning) return;
+    captureZoomIntent();
+    setZoomMotionSequence((sequence) => sequence + 1);
+  }, [captureZoomIntent, isDocumentTransitioning]);
   // Preserve the reading position when the slide surface re-fits to a new width
-  // (the sidebar toggle). The fit-driven zoom scale is the layout key.
+  // (the sidebar toggle). The fit-driven zoom scale is the layout key. A
+  // toolbar zoom step must NOT take this path: its layout commit already
+  // restored the viewport-CENTER anchor (pptx-viewer-zoom-motion), and the
+  // fraction restore would overwrite that scroll in the same commit. The
+  // sequence flips in the zoom gesture's own render, so the zoom's re-fit
+  // lands with the rebase disabled while the key still advances.
   const { captureReadingFraction } = useReadingFractionRebase({
     scrollerRef: scrollViewportRef,
     layoutKey: zoomScale,
-    enabled: usesShellGeometry,
+    enabled: usesShellGeometry && !isZoomTransitioning,
   });
   const scrollInteractionRestoreRef = React.useRef<number | null>(null);
   const scrollInteractionElementRef = React.useRef<HTMLElement | null>(null);
@@ -321,10 +363,10 @@ function PptxViewerContent({
     scrollActivity,
     suspendScrollInteractions,
   ]);
-  // Held through the whole motion: layout and scroll commit at slide start
-  // (commit-then-relax), but the union in the scroller still keeps the
-  // pre-motion slides mounted until the motion idles as re-render insurance.
-  const isDocumentTransitioning = rendererFrame.phase !== "idle";
+  // Held through the whole motion (see isDocumentTransitioning above): layout
+  // and scroll commit at slide start (commit-then-relax), but the union in
+  // the scroller still keeps the pre-motion slides mounted until the motion
+  // idles as re-render insurance.
   const measureBeforeLayoutMotionRef = React.useRef(
     (_liveFrame: FileViewerMotionFrame | null) => {},
   );
@@ -435,9 +477,18 @@ function PptxViewerContent({
           }}
           zoom={{
             scale: zoomScale,
-            onZoomOut: () => setViewerScale(zoomScale / 1.2),
-            onZoomIn: () => setViewerScale(zoomScale * 1.2),
-            onFit: () => setViewerScale(null),
+            onZoomOut: () => {
+              beginZoomMotion();
+              setViewerScale(zoomScale / 1.2);
+            },
+            onZoomIn: () => {
+              beginZoomMotion();
+              setViewerScale(zoomScale * 1.2);
+            },
+            onFit: () => {
+              beginZoomMotion();
+              setViewerScale(null);
+            },
             isDisabled: scaleControlsDisabled,
           }}
           rotate={{
@@ -463,6 +514,7 @@ function PptxViewerContent({
               documentSurfaceRef={setDocumentSurfaceElement}
               viewportRef={scrollViewportRef}
               getScrollMetrics={getScrollMetrics}
+              isFitWidth={isFitWidth}
               isTransitioning={isDocumentTransitioning}
               onScroll={handleViewportScroll}
             />

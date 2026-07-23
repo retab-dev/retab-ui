@@ -3201,7 +3201,10 @@ describe("DocxViewer edge cases", () => {
 
     expect(await screen.findByText("120%")).toBeTruthy();
     expect(await screen.findByText("Page 3 of 5")).toBeTruthy();
-    expect(viewport!.scrollTop).toBeCloseTo(2584.8, 5);
+    // Toolbar zoom anchors the viewport CENTER (Apple Preview semantics),
+    // unlike passive re-fits which preserve the 20% reading marker: the
+    // content point at 2140 + 250 restores to 16 + 2374 * 1.2 - 250.
+    expect(viewport!.scrollTop).toBeCloseTo(2614.8, 5);
   });
 
   it("ignores whitespace-only text highlight targets", async () => {

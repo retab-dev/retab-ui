@@ -53,6 +53,8 @@ export interface PptxSlideScrollerProps {
   documentSurfaceRef?: React.Ref<HTMLDivElement>;
   viewportRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => PptxScrollMetrics;
+  /** The slide column is at its fit-width scale (the shell motion's domain). */
+  isFitWidth?: boolean;
   isTransitioning?: boolean;
   onScroll: () => void;
 }
@@ -70,6 +72,7 @@ export function PptxSlideScroller({
   documentSurfaceRef,
   viewportRef,
   getScrollMetrics,
+  isFitWidth = true,
   isTransitioning = false,
   onScroll,
 }: PptxSlideScrollerProps) {
@@ -219,11 +222,23 @@ export function PptxSlideScroller({
         onScroll={handleScroll}
         style={{ overflowAnchor: "none" }}
       >
-        {/* overflow-clip: keeps the mid-flight counter-transform's visual
-            overflow out of the scroller's scrollable area — an inflated
-            scrollHeight drags a max-clamped scroll position down frame by
-            frame as the transform relaxes. */}
-        <div className="overflow-clip">
+        {/* The clip exists for ONE state: a fit-width shell slide, where the
+            kernel's counter-transform paints the surface past its committed
+            box, and that visual overflow would otherwise inflate the
+            scroller's scrollHeight and drag a max-clamped scroll position
+            down frame by frame as the transform relaxes. Every other state
+            must NOT clip: a zoomed-in surface's inline overflow IS the
+            horizontal scroll range (an unconditional clip froze scrollWidth
+            at the viewport width and made zoomed decks horizontally
+            unscrollable), and a zoom relax's enlarged opening frame must not
+            be cut at the committed box. At fit-width the surface fits the
+            layout width, so the active clip can never eat scrollable
+            overflow. */}
+        <div
+          className={
+            isTransitioning && isFitWidth ? "overflow-clip" : "overflow-visible"
+          }
+        >
           <div
             ref={documentSurfaceRef}
             className="relative mx-auto min-w-0"
