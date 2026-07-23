@@ -7012,7 +7012,12 @@
       "type": "registry:block",
       "title": "Split Consensus Lukas",
       "description": "The split benchmark diagram from Lukas Bjorkland's article, with GT, Split v1, Split v2, the PDF pane, and the same dark metrics table treatment.",
-      "registryDependencies": ["@retab/file-viewer", "@retab/pdf-viewer"],
+      "registryDependencies": [
+        "@retab/file-viewer",
+        "@retab/pdf-viewer",
+        "@retab/use-keyed-layout-effect",
+        "@retab/effect-key"
+      ],
       "files": [
         {
           "path": "registry/new-york-v4/blocks/split-consensus-lukas-viewer-block.tsx",

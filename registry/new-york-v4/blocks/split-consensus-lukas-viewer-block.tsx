@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
+import { joinEffectKey } from "@/lib/effect-key";
 import { cn } from "@/lib/utils";
 import {
   FileViewer,
@@ -425,11 +427,10 @@ function HoverTooltip({
 }
 
 function useElementSize<T extends HTMLElement>() {
-  const ref = React.useRef<T | null>(null);
+  const [element, setElement] = React.useState<T | null>(null);
   const [size, setSize] = React.useState({ width: 0, height: 0 });
 
-  React.useLayoutEffect(() => {
-    const element = ref.current;
+  useKeyedLayoutEffect(element ? joinEffectKey([element]) : null, () => {
     if (!element) return;
 
     const observer = new ResizeObserver((entries) => {
@@ -443,9 +444,9 @@ function useElementSize<T extends HTMLElement>() {
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  });
 
-  return [ref, size] as const;
+  return [setElement, size] as const;
 }
 
 function remotePdfUrl(document: string): string {

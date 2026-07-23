@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   setViewerScroll,
@@ -109,10 +109,7 @@ const FORMATS = [
 // tracked grid element: light-DOM queries never see it and Node.contains
 // does not cross the boundary (rule 6 — the probe blindness that kept
 // every text/csv/xlsx depth cell at scroll zero for the suite's life).
-async function readScroll(
-  page: import("@playwright/test").Page,
-  frameSelector: string,
-) {
+async function readScroll(page: Page, frameSelector: string) {
   return page.evaluate((frameSelector) => {
     const deepQueryAll = (
       scope: ParentNode,
