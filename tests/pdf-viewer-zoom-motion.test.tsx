@@ -39,12 +39,14 @@ function makeViewport({
   rangeRect,
   clipRect,
   scrollLeft = 0,
+  scrollTop = 0,
   clientWidth = 800,
   clientHeight = 600,
 }: {
   rangeRect?: DOMRect | null;
   clipRect?: DOMRect | null;
   scrollLeft?: number;
+  scrollTop?: number;
   clientWidth?: number;
   clientHeight?: number;
 }) {
@@ -61,7 +63,7 @@ function makeViewport({
     clientWidth,
     clientHeight,
     scrollLeft,
-    scrollTop: 0,
+    scrollTop,
     getBoundingClientRect: () =>
       makeRect({ left: 0, top: 0, width: clientWidth, height: clientHeight }),
     querySelector: (selector: string) => {
@@ -87,9 +89,9 @@ afterEach(() => {
 });
 
 describe("pdf zoom motion anchor", () => {
-  it("captures the viewport-center content point on both axes", () => {
+  it("captures the viewport-center content point against the painted layer", () => {
     const { viewport } = makeViewport({
-      rangeRect: makeRect({ left: 100, top: -1708, width: 400, height: 4128 }),
+      clipRect: makeRect({ left: 100, top: -1708, width: 400, height: 4128 }),
     });
 
     const transaction = capturePdfZoomTransaction({
@@ -98,18 +100,20 @@ describe("pdf zoom motion anchor", () => {
       viewportElement: viewport,
     });
 
-    // Center marker at 1708 + 300 lands inside page 3 (offset 1648, height
-    // 800) at 45% of the page.
+    // Model fallback: center marker at 1708 + 300 lands inside page 3
+    // (offset 1648, height 800) at 45% of the page.
     expect(transaction).not.toBeNull();
     expect(transaction!.pageNumber).toBe(3);
     expect(transaction!.yPercent).toBeCloseTo(0.45, 5);
-    // Viewport center x = 400; stage spans [100, 500] → 75% across.
-    expect(transaction!.inlineFraction).toBeCloseTo(0.75, 5);
+    // Painted anchor: viewport center (400, 300) against the layer rect.
+    expect(transaction!.paintedAnchor).not.toBeNull();
+    expect(transaction!.paintedAnchor!.x).toBeCloseTo(0.75, 5);
+    expect(transaction!.paintedAnchor!.y).toBeCloseTo(2008 / 4128, 6);
   });
 
-  it("restores the captured content point back under the viewport center", () => {
+  it("restores the captured content point back under the viewport center by rect delta", () => {
     const capturedAt = makeViewport({
-      rangeRect: makeRect({ left: 100, top: -1708, width: 400, height: 4128 }),
+      clipRect: makeRect({ left: 100, top: -1708, width: 400, height: 4128 }),
     });
     const transaction = capturePdfZoomTransaction({
       layout: makeLayout(1),
@@ -117,10 +121,75 @@ describe("pdf zoom motion anchor", () => {
       viewportElement: capturedAt.viewport,
     })!;
 
-    // After the 1.2x commit (before restore): stage is 480 wide at left 60.
+    // After the 1.2x commit (before restore): the committed layer spans the
+    // document exactly, scrolled to 2000.
+    const committedLayout = makeLayout(1.2);
     const committed = makeViewport({
-      rangeRect: makeRect({ left: 60, top: -2000, width: 480, height: 4950 }),
+      clipRect: makeRect({
+        left: 60,
+        top: -2000,
+        width: 480,
+        height: committedLayout.totalHeight,
+      }),
       scrollLeft: 0,
+      scrollTop: 2000,
+    });
+    const target = resolvePdfZoomScrollTarget({
+      layout: committedLayout,
+      transaction,
+      viewportElement: committed.viewport,
+    });
+
+    expect(target).not.toBeNull();
+    // Anchored point y sits at fraction 2008/4128 of the committed layer;
+    // scroll it under the viewport center: 2000 + (-2000 + fy·H) − 300.
+    expect(target!.top).toBeCloseTo(
+      2000 + (-2000 + (2008 / 4128) * committedLayout.totalHeight) - 300,
+      5,
+    );
+    // Anchored point x = 60 + 0.75 · 480 = 420; center is 400 → scroll +20.
+    expect(target!.left).toBeCloseTo(20, 5);
+  });
+
+  it("falls back to the page model when the painted layer is unavailable", () => {
+    const { viewport } = makeViewport({ rangeRect: null, clipRect: null });
+
+    const transaction = capturePdfZoomTransaction({
+      layout: makeLayout(1),
+      scrollTop: 1708,
+      viewportElement: viewport,
+    });
+
+    expect(transaction).not.toBeNull();
+    expect(transaction!.paintedAnchor).toBeNull();
+
+    const target = resolvePdfZoomScrollTarget({
+      layout: makeLayout(1.2),
+      transaction: transaction!,
+      viewportElement: viewport,
+    });
+    expect(target).not.toBeNull();
+    // Page 3 at 1.2x: offset 1974, height 960 → 1974 + 432 − 300 (jsdom
+    // viewport is 600 tall in this harness).
+    expect(target!.top).toBeCloseTo(2106, 5);
+    expect(target!.left).toBeUndefined();
+  });
+
+  it("falls back to the page model when the physical scroll is rebased", () => {
+    const captured = makeViewport({
+      clipRect: makeRect({ left: 100, top: -1708, width: 400, height: 4128 }),
+    });
+    const transaction = capturePdfZoomTransaction({
+      layout: makeLayout(1),
+      scrollTop: 1708,
+      viewportElement: captured.viewport,
+    })!;
+
+    // Committed layer much shorter than the document (paged physical
+    // scroll): the rect delta would target the wrong content.
+    const committed = makeViewport({
+      clipRect: makeRect({ left: 60, top: -500, width: 480, height: 3000 }),
+      scrollTop: 500,
     });
     const target = resolvePdfZoomScrollTarget({
       layout: makeLayout(1.2),
@@ -129,36 +198,12 @@ describe("pdf zoom motion anchor", () => {
     });
 
     expect(target).not.toBeNull();
-    // Page 3 at 1.2x: offset 1974, height 960 → 1974 + 432 - 300.
     expect(target!.top).toBeCloseTo(2106, 5);
-    // Anchored point x = 60 + 0.75 * 480 = 420; center is 400 → scroll +20.
-    expect(target!.left).toBeCloseTo(20, 5);
-  });
-
-  it("omits the inline axis when the stage cannot be measured", () => {
-    const { viewport } = makeViewport({ rangeRect: null });
-
-    const transaction = capturePdfZoomTransaction({
-      layout: makeLayout(1),
-      scrollTop: 1708,
-      viewportElement: viewport,
-    });
-
-    expect(transaction).not.toBeNull();
-    expect(transaction!.inlineFraction).toBeNull();
-
-    const target = resolvePdfZoomScrollTarget({
-      layout: makeLayout(1.2),
-      transaction: transaction!,
-      viewportElement: viewport,
-    });
-    expect(target).not.toBeNull();
-    expect(target!.left).toBeUndefined();
   });
 
   it("clamps the block restore to the scrollable range", () => {
     const { viewport } = makeViewport({
-      rangeRect: makeRect({ left: 100, top: 0, width: 400, height: 4128 }),
+      clipRect: makeRect({ left: 100, top: 0, width: 400, height: 4128 }),
     });
     const transaction = capturePdfZoomTransaction({
       layout: makeLayout(1),
@@ -189,7 +234,7 @@ function makePlayerTransaction() {
     capturedAt: 990,
     pageNumber: 3,
     yPercent: 0.45,
-    inlineFraction: 0.75,
+    paintedAnchor: null,
     previousVisualRect: PLAYER_PREVIOUS_RECT(),
   };
 }
@@ -360,6 +405,44 @@ describe("pdf zoom motion player", () => {
       durationMs: 40,
     });
     expect(getPdfZoomMotionFlightRecords().at(-1)!.pageRenderCount).toBe(1);
+    vi.runAllTimers();
+  });
+
+  it("folds a sub-pixel residual into the opening frame so the anchor never pans", () => {
+    vi.useFakeTimers();
+    stubFrameClock();
+    // cur → prev at scale 5/6 about the viewport center (400, 300) is an
+    // EXACT pure center zoom; shifting prev by half a pixel models the
+    // scroll write's device-pixel quantization.
+    const previousRect = makeRect({
+      left: 100.5,
+      top: -1000,
+      width: 400,
+      height: 4000,
+    });
+    const currentRect = makeRect({
+      left: 40,
+      top: -1260,
+      width: 480,
+      height: 4800,
+    });
+    const { clipElement, viewport } = makeViewport({
+      clipRect: currentRect,
+    });
+
+    const cancel = playPdfZoomMotion({
+      transaction: { ...makePlayerTransaction(), previousVisualRect: previousRect },
+      viewportElement: viewport,
+    });
+
+    expect(cancel).not.toBeNull();
+    const record = getPdfZoomMotionFlightRecords().at(-1)!;
+    expect(record.residualPx).toBeCloseTo(0.5, 3);
+    expect(record.residualSnapped).toBe(true);
+    expect(record.translate).toEqual({ x: 0, y: 0 });
+    // The opening frame is a pure scale about the anchor — zero translate.
+    expect(clipElement!.style.transform).toContain("translate3d(0px, 0px, 0px)");
+    cancel!();
     vi.runAllTimers();
   });
 

@@ -14,6 +14,7 @@ type ZoomFlightTick = {
 };
 
 type ZoomFlightRecord = {
+  anchorDriftMax: { x: number; y: number };
   durationMs: number;
   id: number;
   interruption: "cancelled" | "none" | "stalled";
@@ -22,11 +23,15 @@ type ZoomFlightRecord = {
   maxTickGapMs: number;
   pageRenderCount: number;
   pageRenderMainThreadMs: number;
+  pathDeviationMaxPx: number;
+  residualPx: number;
+  residualSnapped: boolean;
   scale: { x: number; y: number };
   scrollDriftMaxPx: number;
   settledClean: boolean;
   skipReason: string | null;
   startLatencyMs: number | null;
+  startSnapPx: number | null;
   status: "played" | "skipped";
   tickCount: number;
   ticks: ZoomFlightTick[];
@@ -44,6 +49,15 @@ const ZOOM_SCROLL_DRIFT_BUDGET_PX = 1;
 const ZOOM_MIN_TICK_COUNT = 6;
 const ZOOM_START_LATENCY_BUDGET_MS = 250;
 const ZOOM_SETTLE_WAIT_MS = 700;
+// The zoom is anchored on the viewport-center content point: away from the
+// document edges that point must not move AT ALL during the relax (measured
+// ≤0.05px; budget leaves headroom for rect rounding). The trajectory of
+// every other point is a straight line — curvature is foreign motion. The
+// commit's sub-pixel residual folds into the opening frame, whose snap is
+// budgeted like the shell motion's content-start-snap.
+const ZOOM_ANCHOR_DRIFT_BUDGET_PX = 0.75;
+const ZOOM_PATH_DEVIATION_BUDGET_PX = 1;
+const ZOOM_START_SNAP_BUDGET_PX = 1.5;
 
 async function openPdfBenchmark(page: Page) {
   await page.goto("/view/file-viewer-sidebar-benchmark");
@@ -97,7 +111,15 @@ function percentile(values: readonly number[], ratio: number) {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ratio))];
 }
 
-function expectSmoothFlight(record: ZoomFlightRecord, label: string) {
+function expectSmoothFlight(
+  record: ZoomFlightRecord,
+  label: string,
+  {
+    // Clamped-edge flights pan the anchor by design (the center target hits
+    // the scrollable range's end); only unclamped flights gate stationarity.
+    expectStationaryAnchor = true,
+  }: { expectStationaryAnchor?: boolean } = {},
+) {
   const failures: string[] = [];
 
   if (record.status !== "played") {
@@ -105,6 +127,27 @@ function expectSmoothFlight(record: ZoomFlightRecord, label: string) {
   }
   if (record.interruption !== "none") {
     failures.push(`interrupted: ${record.interruption}`);
+  }
+  if (expectStationaryAnchor) {
+    if (
+      record.anchorDriftMax.x > ZOOM_ANCHOR_DRIFT_BUDGET_PX ||
+      record.anchorDriftMax.y > ZOOM_ANCHOR_DRIFT_BUDGET_PX
+    ) {
+      failures.push(
+        `anchor wandered ${record.anchorDriftMax.x.toFixed(2)}px/${record.anchorDriftMax.y.toFixed(2)}px`,
+      );
+    }
+    if (
+      record.startSnapPx != null &&
+      record.startSnapPx > ZOOM_START_SNAP_BUDGET_PX
+    ) {
+      failures.push(`opening frame snapped ${record.startSnapPx.toFixed(2)}px`);
+    }
+  }
+  if (record.pathDeviationMaxPx > ZOOM_PATH_DEVIATION_BUDGET_PX) {
+    failures.push(
+      `trajectory curved ${record.pathDeviationMaxPx.toFixed(2)}px off the chord`,
+    );
   }
   if (!record.settledClean) failures.push("settle left inline styles behind");
   if (record.pageRenderCount > 0) {
@@ -198,9 +241,16 @@ test.describe("pdf zoom motion flight telemetry", () => {
     const interrupted = flights.at(-2)!;
     const settled = flights.at(-1)!;
     // The first flight is retargeted by the second click; interruption is
-    // its expected, recorded outcome — and it must still have cleaned up.
+    // its expected, recorded outcome — and it must still have cleaned up
+    // without its anchor wandering while it flew.
     expect(interrupted.interruption).toBe("cancelled");
     expect(interrupted.settledClean).toBe(true);
+    expect(interrupted.anchorDriftMax.x).toBeLessThanOrEqual(
+      ZOOM_ANCHOR_DRIFT_BUDGET_PX,
+    );
+    expect(interrupted.anchorDriftMax.y).toBeLessThanOrEqual(
+      ZOOM_ANCHOR_DRIFT_BUDGET_PX,
+    );
     expectSmoothFlight(settled, "rapid-retarget-final");
   });
 
@@ -215,6 +265,8 @@ test.describe("pdf zoom motion flight telemetry", () => {
 
     const flights = await readZoomFlights(page);
     expect(flights.length).toBeGreaterThanOrEqual(1);
-    expectSmoothFlight(flights.at(-1)!, "top-edge-zoom-in");
+    expectSmoothFlight(flights.at(-1)!, "top-edge-zoom-in", {
+      expectStationaryAnchor: false,
+    });
   });
 });
