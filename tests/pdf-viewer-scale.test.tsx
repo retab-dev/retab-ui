@@ -21,6 +21,7 @@ afterEach(() => {
 
 describe("pdf-viewer-scale", () => {
   it("clamps explicit scale values to the viewer bounds", () => {
+    expect(MIN_PDF_SCALE).toBe(0.1);
     expect(clampPdfScale(0)).toBe(MIN_PDF_SCALE);
     expect(clampPdfScale(10)).toBe(MAX_PDF_SCALE);
     expect(clampPdfScale(Number.NaN)).toBe(1);

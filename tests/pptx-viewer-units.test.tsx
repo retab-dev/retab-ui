@@ -109,7 +109,7 @@ describe("pptx-viewer-core geometry", () => {
     expect(clamp(-1, 0, 10)).toBe(0);
     expect(clamp(99, 0, 10)).toBe(10);
     expect(normalizePptxScale(2)).toBe(2);
-    expect(normalizePptxScale(0)).toBe(0.25);
+    expect(normalizePptxScale(0)).toBe(0.1);
     expect(normalizePptxScale(999)).toBe(5);
     // Non-finite inputs (NaN, ±Infinity) map to 1 before clamping, not to a bound.
     expect(normalizePptxScale(Number.NaN)).toBe(1);
@@ -133,8 +133,8 @@ describe("pptx-viewer-core geometry", () => {
     const fit = getPptxResetKey({ resourceKey: "url:/a.pptx" });
     const manual = getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 1 });
     expect(fit).not.toBe(manual);
-    expect(getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.1 })).toBe(
-      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.25 }),
+    expect(getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.01 })).toBe(
+      getPptxResetKey({ resourceKey: "url:/a.pptx", scale: 0.1 }),
     );
   });
 
@@ -883,7 +883,7 @@ describe("usePptxZoom", () => {
         onScaleChange={onScaleChange}
       />,
     );
-    expect(screen.getByTestId("zoom").textContent).toBe("0.25");
+    expect(screen.getByTestId("zoom").textContent).toBe("0.1");
     expect(screen.getByTestId("disabled").textContent).toBe("false");
   });
 });

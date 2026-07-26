@@ -3,7 +3,7 @@ import * as React from "react";
 import { useKeyedLayoutEffect } from "@/hooks/use-keyed-layout-effect";
 import { joinEffectKey } from "@/lib/effect-key";
 
-export const MIN_PDF_SCALE = 0.25;
+export const MIN_PDF_SCALE = 0.1;
 export const MAX_PDF_SCALE = 5;
 export const PDF_ZOOM_STEP = 1.2;
 export const PDF_PAGE_HORIZONTAL_PADDING = 32;

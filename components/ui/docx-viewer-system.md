@@ -78,7 +78,7 @@ flowchart TB
   subgraph "Zoom, resize, and scroll state"
     ResizeObserverNode["ResizeObserver on container\ncoalesced with requestAnimationFrame"]
     ScaleState["scale state\nfixed scale or fit width\nmanualScale nullable"]
-    ScaleClamp["normalizeScale()/clamp()\n0.25 to 5\nNaN -> 1"]
+    ScaleClamp["normalizeScale()/clamp()\n0.1 to 5\nNaN -> 1"]
     FitWidth["fitScale = (containerWidth - 32) / pageWidth"]
     CssZoom["CSS zoom on host\ncheap scale after layout"]
     ScrollArea["ScrollArea viewport"]
@@ -442,7 +442,7 @@ flowchart LR
 - Every page gets `content-visibility: auto` and `contain-intrinsic-size` for browser-managed off-screen page skipping with stable scroll height.
 - Zoom is CSS `zoom` on the rendered host. It does not re-run `docx-preview`.
 - Uncontrolled scale starts as fit-to-width. Manual zoom stores `manualScale`; fit width clears `manualScale` back to `null`.
-- Controlled `scale` is normalized to `[0.25, 5]`; `NaN` becomes `1`. Controls zoom actions are inert while scale is controlled.
+- Controlled `scale` is normalized to `[0.1, 5]`; `NaN` becomes `1`. Controls zoom actions are inert while scale is controlled.
 - Fit width subtracts the container padding (`32px`) from the measured container width before dividing by page width.
 - Resize work and scroll work are coalesced with `requestAnimationFrame`.
 - Scroll progress is clamped to `[0, 1]`; a non-scrollable viewport reports `0`.

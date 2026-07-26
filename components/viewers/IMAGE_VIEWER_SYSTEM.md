@@ -86,8 +86,8 @@ flowchart TD
 
   subgraph ContentLayout["ImageViewerContent layout and state"]
     FrameListWidth["useFrameListWidth\ncallback ref reads clientWidth\nResizeObserver updates frameListWidth"]
-    ScaleHook["useImageViewerScale\ncontrolled if scale prop is defined\nuncontrolled scale null means fit-width\nreset rotation and uncontrolled zoom on source change\nscale clamped 0.25 to 5"]
-    FitWidth["fit-width scale\nwidest rotated frame width\n(frameListWidth - 32px horizontal padding) / widestFrameWidth\nthen clamp 0.25 to 5"]
+    ScaleHook["useImageViewerScale\ncontrolled if scale prop is defined\nuncontrolled scale null means fit-width\nreset rotation and uncontrolled zoom on source change\nscale clamped 0.1 to 5"]
+    FitWidth["fit-width scale\nwidest rotated frame width\n(frameListWidth - 32px horizontal padding) / widestFrameWidth\nthen clamp 0.1 to 5"]
     Rotation["rotation\nrawRotation increments by 90\nnormalizeRotation -> 0, 90, 180, 270"]
     VisibleHook["useVisibleFrame\nstate currentFrameNumber\nreset to frame 1 on source change\non scroll reports progress 0..1\nfinds frame at viewport marker y=20%, x=center"]
     VisibleFallback["visible frame math\nuses layout offsets and viewport scrollTop\noverlay DOM cannot spoof current frame detection"]

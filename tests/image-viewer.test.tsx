@@ -2702,10 +2702,10 @@ describe("ImageViewer scale semantics", () => {
     });
 
     const overlay = await screen.findByTestId("invalid-scale-overlay");
-    expect(overlay.getAttribute("data-scale")).toBe("0.25");
-    expect(overlay.getAttribute("data-width")).toBe("25");
-    expect(overlay.getAttribute("data-height")).toBe("12.5");
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(overlay.getAttribute("data-scale")).toBe("0.1");
+    expect(overlay.getAttribute("data-width")).toBe("10");
+    expect(overlay.getAttribute("data-height")).toBe("5");
+    expect(screen.getByText("10%")).toBeTruthy();
   });
 
   it.each([
@@ -2734,10 +2734,10 @@ describe("ImageViewer scale semantics", () => {
     });
 
     const overlay = await screen.findByTestId("invalid-scale-overlay");
-    expect(overlay.getAttribute("data-scale")).toBe("0.25");
-    expect(overlay.getAttribute("data-width")).toBe("25");
-    expect(overlay.getAttribute("data-height")).toBe("12.5");
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(overlay.getAttribute("data-scale")).toBe("0.1");
+    expect(overlay.getAttribute("data-width")).toBe("10");
+    expect(overlay.getAttribute("data-height")).toBe("5");
+    expect(screen.getByText("10%")).toBeTruthy();
   });
 
   it("keeps scale uncontrolled when the prop is absent", async () => {
@@ -2980,7 +2980,7 @@ describe("ImageViewer interactions", () => {
         fireEvent.click(screen.getByLabelText("Zoom out"));
       });
     }
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(screen.getByLabelText("Fit width"));

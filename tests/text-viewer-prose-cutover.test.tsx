@@ -129,12 +129,16 @@ describe("public TextViewer prose cutover", () => {
     expect(thirdLine.getAttribute("data-text-highlighted")).toBeNull();
   });
 
-  it("keeps the existing zoom controls on the public prose viewer", async () => {
+  it("keeps the zoom controls on the public prose viewer down to 10%", async () => {
     render(<TextViewer source={textSource("zoomable prose")} />);
 
     expect(await screen.findByText("100%")).toBeTruthy();
     fireEvent.click(screen.getByLabelText("Zoom in"));
     expect(await screen.findByText("120%")).toBeTruthy();
+    for (let index = 0; index < 20; index += 1) {
+      fireEvent.click(screen.getByLabelText("Zoom out"));
+    }
+    expect(await screen.findByText("10%")).toBeTruthy();
     fireEvent.click(screen.getByLabelText("Reset zoom"));
     expect(await screen.findByText("100%")).toBeTruthy();
   });

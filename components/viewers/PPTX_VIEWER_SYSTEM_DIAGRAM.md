@@ -122,7 +122,7 @@ flowchart TB
     Core["pptx-viewer-core.ts<br/>DEFAULT 960x720<br/>fit scale, reset key, bitmap key<br/>scale/rotation geometry + clamp"]
     ViewportWidth["usePptxViewportWidth<br/>containerRef + ResizeObserver<br/>viewportWidth"]
     FitScale["getPptxFitScale(viewportWidth, baseWidth)<br/>(width - 32) / baseWidth<br/>clamp 0.1..5, fallback 1"]
-    ZoomHook["usePptxZoom<br/>controlled scale or uncontrolled fit/manual<br/>normalize 0.25..5<br/>setViewerScale(null) = fit width"]
+    ZoomHook["usePptxZoom<br/>controlled scale or uncontrolled fit/manual<br/>normalize 0.1..5<br/>setViewerScale(null) = fit width"]
     Rotation["rotation state<br/>controls increments +90 modulo 360"]
     VisibleHook["usePptxVisibleSlide<br/>scroll viewport ref<br/>progress = scrollTop / scrollable<br/>visible slide marker at 20% viewport height"]
     ScrollActivity["createPptxScrollActivity<br/>idle after 120ms<br/>only used to defer uncached renders when eager=false"]

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-const XLSX_MIN_SCALE = 0.25;
+const XLSX_MIN_SCALE = 0.1;
 const XLSX_MAX_SCALE = 5;
 const XLSX_ZOOM_STEP = 1.2;
 

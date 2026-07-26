@@ -1,6 +1,6 @@
 export const CODE_VIEWER_BASE_FONT_PX = 12;
 export const CODE_VIEWER_BASE_LINE_PX = 20;
-export const CODE_VIEWER_MIN_SCALE = 0.25;
+export const CODE_VIEWER_MIN_SCALE = 0.1;
 export const CODE_VIEWER_MAX_SCALE = 5;
 export const CODE_VIEWER_OVERSCAN_PX = 1000;
 export const CODE_VIEWER_BLOCK_PADDING = 8;

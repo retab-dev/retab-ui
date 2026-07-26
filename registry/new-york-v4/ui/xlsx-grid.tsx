@@ -383,5 +383,5 @@ function normalizeGridCount(value: number) {
 
 function normalizeGridScale(value: number) {
   if (!Number.isFinite(value) || value <= 0) return 1;
-  return Math.min(5, Math.max(0.25, value));
+  return Math.min(5, Math.max(0.1, value));
 }

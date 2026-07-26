@@ -133,5 +133,5 @@ export function clamp(value: number, min: number, max: number) {
 }
 
 export function normalizePptxScale(scale: number) {
-  return clamp(Number.isFinite(scale) ? scale : 1, 0.25, 5);
+  return clamp(Number.isFinite(scale) ? scale : 1, 0.1, 5);
 }

@@ -921,8 +921,8 @@ describe("CsvViewer", () => {
       fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
     }
 
-    expect(screen.getByText("25%")).toBeTruthy();
-    expect(viewer?.style.fontSize).toBe("3.25px");
+    expect(screen.getByText("10%")).toBeTruthy();
+    expect(viewer?.style.fontSize).toBe("1.3px");
 
     for (let index = 0; index < 40; index += 1) {
       fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));

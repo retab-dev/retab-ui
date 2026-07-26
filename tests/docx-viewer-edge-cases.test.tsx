@@ -332,17 +332,17 @@ describe("DocxViewer zoom + scale coercion", () => {
     expect(host?.style.zoom).toBe("1");
   });
 
-  it("clamps a zero controlled scale to the 25% minimum", async () => {
+  it("clamps a zero controlled scale to the 10% minimum", async () => {
     await renderDocx(
       <DocxViewer source={docxUrlSource("/zero-scale.docx")} scale={0} />,
     );
     await waitForRenderedDocx();
 
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
     const host = document.querySelector<HTMLElement>(
       '[data-slot="docx-viewer"] .docx-wrapper',
     )?.parentElement;
-    expect(host?.style.zoom).toBe("0.25");
+    expect(host?.style.zoom).toBe("0.1");
   });
 
   it("keeps the fit-width zoom inert when zoom-out is clicked under a controlled scale", async () => {

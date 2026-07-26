@@ -109,7 +109,7 @@
     },
     {
       "path": "registry/new-york-v4/ui/text-viewer-scale.ts",
-      "content": "export const TEXT_VIEWER_MIN_SCALE = 0.25;\nexport const TEXT_VIEWER_MAX_SCALE = 5;\nexport const TEXT_VIEWER_BLOCK_PADDING = 8;\n\nexport function clampTextViewerScale(value: number) {\n  return Math.min(\n    TEXT_VIEWER_MAX_SCALE,\n    Math.max(TEXT_VIEWER_MIN_SCALE, value),\n  );\n}\n",
+      "content": "export const TEXT_VIEWER_MIN_SCALE = 0.1;\nexport const TEXT_VIEWER_MAX_SCALE = 5;\nexport const TEXT_VIEWER_BLOCK_PADDING = 8;\n\nexport function clampTextViewerScale(value: number) {\n  return Math.min(\n    TEXT_VIEWER_MAX_SCALE,\n    Math.max(TEXT_VIEWER_MIN_SCALE, value),\n  );\n}\n",
       "type": "registry:ui",
       "target": "@ui/text-viewer-scale.ts"
     },

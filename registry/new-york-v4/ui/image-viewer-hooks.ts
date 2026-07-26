@@ -35,7 +35,7 @@ export const IMAGE_READING_MARKER_RATIO = 0.2;
 export const IMAGE_VIEWER_HORIZONTAL_PADDING = 32;
 
 /** Bounds for the viewer's zoom range, shared by fit-width and the controls. */
-export const MIN_VIEWER_SCALE = 0.25;
+export const MIN_VIEWER_SCALE = 0.1;
 export const MAX_VIEWER_SCALE = 5;
 
 export function useFrameListWidth({

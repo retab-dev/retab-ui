@@ -49,7 +49,7 @@ function ImageFrameSkeleton({
 }) {
   const normalizedScale =
     scale !== undefined && Number.isFinite(scale) && scale > 0
-      ? Math.min(5, Math.max(0.25, scale))
+      ? Math.min(5, Math.max(0.1, scale))
       : null;
   const style: React.CSSProperties | undefined = frameSize
     ? normalizedScale !== null
@@ -59,7 +59,7 @@ function ImageFrameSkeleton({
         }
       : {
           aspectRatio: `${frameSize.width} / ${frameSize.height}`,
-          minWidth: frameSize.width * 0.25,
+          minWidth: frameSize.width * 0.1,
         }
     : { aspectRatio: "4 / 3" };
 

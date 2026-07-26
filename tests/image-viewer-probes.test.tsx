@@ -694,9 +694,9 @@ function stubObservableLayout(frameListWidth: number) {
 }
 
 describe("ImageViewer fit-width clamping", () => {
-  it("clamps fit-width to the 25% floor for an ultra-narrow viewport", async () => {
+  it("clamps fit-width to the 10% floor for an ultra-narrow viewport", async () => {
     // A 100px-wide image in a 30px viewport yields a negative raw fit scale
-    // once horizontal padding is subtracted; it must clamp up to the 25% floor
+    // once horizontal padding is subtracted; it must clamp up to the 10% floor
     // rather than produce a zero/negative scale.
     stubImageLoading(bitmap(100, 100));
     stubObservableLayout(30);
@@ -707,7 +707,7 @@ describe("ImageViewer fit-width clamping", () => {
       );
     });
 
-    expect(await screen.findByText("25%")).toBeTruthy();
+    expect(await screen.findByText("10%")).toBeTruthy();
   });
 
   it("clamps fit-width to the 500% ceiling for a tiny image in a wide viewport", async () => {

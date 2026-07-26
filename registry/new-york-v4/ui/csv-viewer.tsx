@@ -344,5 +344,5 @@ function useCsvControlsRegistration({
 }
 
 function clampCsvViewerZoom(zoom: number) {
-  return Math.max(0.25, Math.min(5, zoom));
+  return Math.max(0.1, Math.min(5, zoom));
 }

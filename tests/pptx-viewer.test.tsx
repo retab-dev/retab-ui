@@ -2490,15 +2490,15 @@ describe("PptxViewer", () => {
       view.rerender(
         <PptxViewer
           source={pptxUrlSource("/controlled-clamp.pptx")}
-          scale={0.25}
+          scale={0.1}
           onScaleChange={onScaleChange}
         />,
       );
     });
 
-    await screen.findByText("25%");
+    await screen.findByText("10%");
     fireEvent.click(screen.getByLabelText("Zoom out"));
-    expect(onScaleChange).toHaveBeenLastCalledWith(0.25);
+    expect(onScaleChange).toHaveBeenLastCalledWith(0.1);
   });
 
   it("clamps uncontrolled zoom changes to the supported range", async () => {
@@ -2518,10 +2518,10 @@ describe("PptxViewer", () => {
       expect(screen.getByText("100%")).toBeTruthy();
     });
 
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 20; i += 1) {
       fireEvent.click(screen.getByLabelText("Zoom out"));
     }
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
   });
 
   it("passes slide overlay geometry with slide-native naming", async () => {

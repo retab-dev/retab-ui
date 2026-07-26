@@ -3186,7 +3186,7 @@ describe("CodeViewer", () => {
     for (let index = 0; index < 40; index++) {
       fireEvent.click(screen.getByLabelText("Zoom out"));
     }
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("Reset zoom"));
     expect(screen.getByText("100%")).toBeTruthy();

@@ -107,9 +107,9 @@ describe("XlsxViewer zoom clamping", () => {
     await screen.findByText("100%");
   });
 
-  it("never zooms out past the 25% floor", () => {
+  it("never zooms out past the 10% floor", () => {
     clickMany("Zoom out", 20);
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
   });
 
   it("never zooms in past the 500% ceiling", () => {

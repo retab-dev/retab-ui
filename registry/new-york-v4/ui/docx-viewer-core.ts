@@ -6,7 +6,7 @@ import {
   type ViewerFormatErrorMapperOptions,
 } from "@/lib/viewer-errors";
 
-export const DOCX_MIN_SCALE = 0.25;
+export const DOCX_MIN_SCALE = 0.1;
 export const DOCX_MAX_SCALE = 5;
 export const DOCX_ZOOM_STEP = 1.2;
 

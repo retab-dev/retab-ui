@@ -31,7 +31,7 @@ function clamp(value: number, min: number, max: number) {
 export function useZoom() {
   const [scale, setScale] = React.useState(1);
   const zoom = React.useCallback(
-    (factor: number) => setScale((s) => clamp(s * factor, 0.25, 5)),
+    (factor: number) => setScale((s) => clamp(s * factor, 0.1, 5)),
     [],
   );
   const reset = React.useCallback(() => setScale(1), []);

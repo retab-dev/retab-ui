@@ -736,7 +736,7 @@ describe("FileViewerHtmlContent", () => {
     expect(screen.getByText("100%")).toBeTruthy();
   });
 
-  it("clamps HTML zoom between 25% and 500%", async () => {
+  it("clamps HTML zoom between 10% and 500%", async () => {
     const pending = deferred<Response>();
     vi.stubGlobal(
       "fetch",
@@ -757,8 +757,8 @@ describe("FileViewerHtmlContent", () => {
     for (let i = 0; i < 20; i += 1) {
       fireEvent.click(screen.getByLabelText("Zoom out"));
     }
-    expect(iframe.style.zoom).toBe("0.25");
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(iframe.style.zoom).toBe("0.1");
+    expect(screen.getByText("10%")).toBeTruthy();
 
     for (let i = 0; i < 30; i += 1) {
       fireEvent.click(screen.getByLabelText("Zoom in"));

@@ -1005,11 +1005,11 @@ describe("DocxViewer", () => {
     );
 
     await waitForRenderedDocx();
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
     let host = document.querySelector<HTMLElement>(
       '[data-slot="docx-viewer"] .docx-wrapper',
     )?.parentElement;
-    expect(host?.style.zoom).toBe("0.25");
+    expect(host?.style.zoom).toBe("0.1");
 
     await act(async () => {
       view.rerender(
@@ -1285,10 +1285,10 @@ describe("DocxViewer", () => {
     fireEvent.click(screen.getByLabelText("Zoom in"));
     expect(await screen.findByText("120%")).toBeTruthy();
 
-    for (let i = 0; i < 12; i += 1) {
+    for (let i = 0; i < 20; i += 1) {
       fireEvent.click(screen.getByLabelText("Zoom out"));
     }
-    expect(await screen.findByText("25%")).toBeTruthy();
+    expect(await screen.findByText("10%")).toBeTruthy();
 
     const container = document.querySelector(
       '[data-slot="docx-viewer"] [class*="items-center"]',
@@ -1307,11 +1307,11 @@ describe("DocxViewer", () => {
     );
     await waitForRenderedDocx();
 
-    expect(screen.getByText("25%")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
     let host = document.querySelector<HTMLElement>(
       '[data-slot="docx-viewer"] .docx-wrapper',
     )?.parentElement;
-    expect(host?.style.zoom).toBe("0.25");
+    expect(host?.style.zoom).toBe("0.1");
 
     narrowView.unmount();
     cleanup();
