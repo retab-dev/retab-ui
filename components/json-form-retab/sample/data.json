@@ -1,0 +1,40 @@
+{
+  "DocumentTitle": "MORTGAGE",
+  "reasoning___DocumentTitle": "Caption is centered and bolded at the top of page 1: \"MORTGAGE\". No modifier (\"Amended\", \"Consolidated\") appears anywhere in the heading block, so the title is taken verbatim.",
+  "BeneficiaryName": "Sunstate Federal Savings Bank",
+  "reasoning___BeneficiaryName": "The granting clause on page 1 reads \"...unto Sunstate Federal Savings Bank, its successors and assigns\". The signature block on page 7 names \"Sunstate Federal Savings\" without \"Bank\"; I kept the longer form from the operative clause, which controls.",
+  "CondominiumName": null,
+  "reasoning___CondominiumName": "Exhibit A describes the collateral as \"Unit 12-B\" and references a Declaration of Condominium recorded at Book 21883, Page 441, but never names the regime. The letterhead mentions \"Bayfront Tower\" — that is the seller's marketing name, not a recorded condominium name, so I left the field null rather than guess.",
+  "DatedDate": "2017-06-23",
+  "reasoning___DatedDate": "Preamble: \"THIS MORTGAGE is made this 23rd day of June, 2017\". The notary jurat on page 7 is dated June 26, 2017 — that is the acknowledgment date and was not used.",
+  "PrincipalAmount": 486000,
+  "reasoning___PrincipalAmount": "The note recital states \"FOUR HUNDRED EIGHTY-SIX THOUSAND AND 00/100 DOLLARS ($486,000.00)\". Words and figures agree.",
+  "InterestRatePercent": 4.375,
+  "reasoning___InterestRatePercent": "Section 2 fixes the rate at \"four and three hundred seventy-five thousandths percent (4.375%) per annum\".",
+  "IsFirstLien": true,
+  "reasoning___IsFirstLien": "Section 9 warrants the property is free of prior encumbrances other than the taxes described in Schedule B, so this instrument takes first position.",
+  "RecordingJurisdiction": "Miami-Dade County, FL",
+  "reasoning___RecordingJurisdiction": "The recording stamp on page 1 reads \"OFFICIAL RECORDS OF MIAMI-DADE COUNTY, FLORIDA\".",
+  "Borrower": {
+    "Name": "Elena R. Marchetti",
+    "reasoning___Name": "Named as \"Mortgagor\" in the preamble and matched to the signature on page 7.",
+    "TaxId": "***-**-4471",
+    "reasoning___TaxId": "Only the last four digits are legible on the redacted copy; the preceding digits are blacked out.",
+    "MailingAddress": "1201 Brickell Bay Drive, Unit 12-B\nMiami, FL 33131",
+    "reasoning___MailingAddress": "Notice address from Section 14, which supersedes the property address for correspondence."
+  },
+  "reasoning___Borrower": "Single mortgagor; no co-borrower or guarantor appears on the instrument.",
+  "DocumentReferences": [
+    {
+      "InstrumentNumber": "2017-R-338921",
+      "reasoning___InstrumentNumber": "Clerk's instrument number from the recording stamp of the referenced declaration.",
+      "RecordingDate": "2003-11-14",
+      "reasoning___RecordingDate": "Stamped \"RECORDED 11/14/2003\" in the reference block of Exhibit A.",
+      "Book": "21883",
+      "reasoning___Book": "Book number cited in Exhibit A's legal description.",
+      "Page": "441",
+      "reasoning___Page": "Page number cited in Exhibit A's legal description."
+    }
+  ],
+  "reasoning___DocumentReferences": "Exhibit A incorporates exactly one prior instrument — the Declaration of Condominium. The plat reference in the same paragraph is a survey citation, not a recorded instrument, so it was excluded."
+}

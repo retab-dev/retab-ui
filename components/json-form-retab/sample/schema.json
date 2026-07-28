@@ -1,0 +1,68 @@
+{
+  "title": "Mortgage Deed",
+  "type": "object",
+  "required": ["DocumentTitle", "DatedDate", "PrincipalAmount"],
+  "properties": {
+    "DocumentTitle": {
+      "type": "string",
+      "description": "The instrument's caption, as printed on the first page."
+    },
+    "BeneficiaryName": {
+      "type": ["string", "null"],
+      "description": "The party in whose favor the mortgage is granted."
+    },
+    "CondominiumName": {
+      "type": ["string", "null"],
+      "description": "Name of the condominium regime, when the collateral is a unit."
+    },
+    "DatedDate": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "The date the instrument bears on its face, not the recording date."
+    },
+    "PrincipalAmount": {
+      "type": ["number", "null"],
+      "description": "Face amount of the secured note, in USD."
+    },
+    "InterestRatePercent": {
+      "type": ["number", "null"],
+      "description": "Stated annual interest rate."
+    },
+    "IsFirstLien": {
+      "type": "boolean",
+      "description": "Whether the mortgage takes first lien position."
+    },
+    "RecordingJurisdiction": {
+      "type": ["string", "null"],
+      "enum": [
+        "Miami-Dade County, FL",
+        "Broward County, FL",
+        "Palm Beach County, FL",
+        "Monroe County, FL"
+      ],
+      "description": "County whose official records the deed was filed in."
+    },
+    "Borrower": {
+      "title": "Borrower",
+      "type": "object",
+      "properties": {
+        "Name": { "type": ["string", "null"] },
+        "TaxId": { "type": ["string", "null"], "title": "Tax ID" },
+        "MailingAddress": { "type": ["string", "null"], "format": "textarea" }
+      }
+    },
+    "DocumentReferences": {
+      "type": "array",
+      "description": "Prior recorded instruments this deed incorporates.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "InstrumentNumber": { "type": ["string", "null"] },
+          "RecordingDate": { "type": ["string", "null"], "format": "date" },
+          "Book": { "type": ["string", "null"] },
+          "Page": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

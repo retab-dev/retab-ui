@@ -1,0 +1,16 @@
+{
+  "DocumentTitle": 0.99,
+  "BeneficiaryName": 0.82,
+  "DatedDate": 0.97,
+  "PrincipalAmount": 0.995,
+  "InterestRatePercent": 0.91,
+  "IsFirstLien": 0.88,
+  "RecordingJurisdiction": 0.96,
+  "Borrower.Name": 0.94,
+  "Borrower.TaxId": 0.54,
+  "Borrower.MailingAddress": 0.9,
+  "DocumentReferences.*.InstrumentNumber": 0.86,
+  "DocumentReferences.*.RecordingDate": 0.93,
+  "DocumentReferences.*.Book": 0.97,
+  "DocumentReferences.*.Page": 0.97
+}
