@@ -245,17 +245,17 @@ function PptxViewerContent({
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
-          align: rendererFrame.align,
+          // The slide surface centres with auto margins whatever the renderer
+          // frame's align is (a zoomed-out deck splits its leftover space
+          // evenly), so the margin model must say "center" too — modelling
+          // "start" over an mx-auto surface leaves the auto-margin
+          // re-centering uncompensated mid-slide.
+          align: "center",
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: slideLayout.slideWidth,
         }),
-      [
-        isFitWidth,
-        rendererFrame.align,
-        rendererFrame.direction,
-        slideLayout.slideWidth,
-      ],
+      [isFitWidth, rendererFrame.direction, slideLayout.slideWidth],
     );
   const preMotionAnchorRef = React.useRef<{
     screenRelTop: number;

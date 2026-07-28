@@ -194,7 +194,10 @@ export function ImageViewerContent({
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
-          align: rendererFrame.align,
+          // The frame centres the stage with auto margins whatever the
+          // renderer frame's align is (a zoomed-out document splits its
+          // leftover space evenly), so the margin model must say "center" too.
+          align: "center",
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: frameLayout.maxFrameWidth + frameLayout.padding * 2,
@@ -206,7 +209,6 @@ export function ImageViewerContent({
         frameLayout.maxFrameWidth,
         frameLayout.padding,
         isFitWidth,
-        rendererFrame.align,
         rendererFrame.direction,
       ],
     );
@@ -473,7 +475,6 @@ export function ImageViewerContent({
               scale={scale}
               rotation={rotation}
               rasterScale={rasterScale}
-              align={rendererFrame.align}
               documentSurfaceRef={setImageDocumentSurfaceRef}
               frameListRef={frameListRef}
               getScrollMetrics={getScrollMetrics}

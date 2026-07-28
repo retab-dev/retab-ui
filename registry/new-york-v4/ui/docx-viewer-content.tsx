@@ -23,10 +23,7 @@ import {
 } from "./file-viewer-fit-width-motion";
 import type { FileViewerDocumentSurfaceMotionResolver } from "./file-viewer-motion-kernel";
 import type { FileViewerMotionFrame } from "./file-viewer-motion-plan";
-import {
-  resolveFileViewerRendererLayoutInlineSize,
-  type FileViewerDocumentAlign,
-} from "./file-viewer-renderer-contract";
+import { resolveFileViewerRendererLayoutInlineSize } from "./file-viewer-renderer-contract";
 import {
   useOptionalFileViewerRendererEnvironment,
   useOptionalFileViewerRendererFrame,
@@ -234,18 +231,16 @@ export function DocxViewerContent({
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
-          align: rendererFrame.align,
+          // The stage centres with auto margins whatever the renderer frame's
+          // align is (a zoomed-out document splits its leftover space evenly),
+          // so the margin model must say "center" too.
+          align: "center",
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: stageInlineSize ?? 0,
           stageInlinePadding: DOCX_STAGE_INLINE_PADDING_PX,
         }),
-      [
-        isFitWidth,
-        rendererFrame.align,
-        rendererFrame.direction,
-        stageInlineSize,
-      ],
+      [isFitWidth, rendererFrame.direction, stageInlineSize],
     );
   const documentSurfaceRef = React.useRef<HTMLDivElement | null>(null);
   const [documentSurfaceElement, setDocumentSurfaceElementState] =
@@ -625,11 +620,15 @@ export function DocxViewerContent({
               eat scrollable overflow. */}
           <div
             ref={containerRef}
-            className={
+            className={cn(
+              // Flex column so the stage's block-axis auto margin has free
+              // space to split once a zoomed-out document is shorter than the
+              // pane; a block container would give it none.
+              "flex min-h-full flex-col",
               isDocumentTransitioning && isFitWidth
                 ? "overflow-clip"
-                : "overflow-visible"
-            }
+                : "overflow-visible",
+            )}
           >
             {!ready ? (
               <div className="p-4">
@@ -638,14 +637,21 @@ export function DocxViewerContent({
             ) : null}
             {/* The registered document surface is the shrink-wrapped stage box
                 (page + its own padding) so the kernel's fit-width transform
-                scales it about its own laid-out origin; auto margins mirror
-                the resolver's align-margin model. */}
+                scales it about its own laid-out origin. It is a camera view:
+                auto margins split the leftover space evenly on both axes when
+                the zoomed-out page is smaller than the pane, and collapse to 0
+                once it overflows — mirroring the resolver's "center" margin
+                model. */}
             <div
               ref={setDocumentSurfaceElement}
               className={cn(
-                "p-4 transition-opacity duration-200",
+                "mx-auto shrink-0 p-4 transition-opacity duration-200",
+                // Block-axis centring only outside fit-width: at fit-width a
+                // pane resize re-fits the page, and half of that height delta
+                // is motion the shell transform does not model. Zoomed, that
+                // transform is identity and the height is pane-independent.
+                !isFitWidth && "my-auto",
                 ready ? "opacity-100" : "opacity-0",
-                getDocxDocumentMarginClass(rendererFrame.align),
               )}
               style={{ width: stageInlineSize ?? undefined }}
             >
@@ -727,16 +733,6 @@ function resolveDocxMeasuredInlineSize(value: number) {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function getDocxDocumentMarginClass(align: FileViewerDocumentAlign) {
-  switch (align) {
-    case "center":
-      return "mx-auto";
-    case "end":
-      return "ml-auto";
-    case "start":
-      return null;
-  }
-}
 
 function useDocxControlsRegistration({
   currentPage,

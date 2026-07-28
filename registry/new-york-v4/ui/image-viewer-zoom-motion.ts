@@ -21,11 +21,19 @@ const IMAGE_ZOOM_MOTION_CLEANUP_MS = IMAGE_ZOOM_MOTION_DURATION_MS + 50;
 const IMAGE_ZOOM_MOTION_MIN_TRANSLATE_PX = 0.5;
 const IMAGE_ZOOM_MOTION_MIN_SCALE_DELTA = 0.001;
 // A rebased (paged) physical scroll detaches the stage box from the content
-// scale, so the whole-surface FLIP would warp. The two axes then stop scaling
-// by the same ratio, which is exactly the detectable symptom. (The fixed
-// 16px edge padding also nudges the two ratios apart; for real-world frame
-// sizes that skew stays well inside this tolerance.)
-const IMAGE_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.02;
+// scale, so the whole-surface FLIP would warp. Its signature is precise: the
+// rebased axis is PINNED (the container keeps its size while the content
+// rescales), so one axis barely moves while the other moves a lot. Testing for
+// that beats a plain ratio tolerance — an honest frame stack carries small
+// constant terms (rounded gaps, fixed outer padding) that put the block axis a
+// couple of percent off the inline one. On a big jump a tight ratio tolerance
+// then refuses the relax and the whole scale change lands in one frame —
+// measured as an un-animated 620px snap on a multi-frame TIFF's fit-width. The
+// wide ratio net below still catches anything wilder, and the FLIP writes
+// per-axis scales, so a slightly non-affine layout renders exactly.
+const IMAGE_ZOOM_MOTION_AXIS_FROZEN_DELTA = 0.02;
+const IMAGE_ZOOM_MOTION_AXIS_MOVED_DELTA = 0.05;
+const IMAGE_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.25;
 
 // The exact wait-out of the relax before the visual clip re-tightens; clip
 // release is React-rendered state, so it outlives the inline transition.
@@ -46,6 +54,14 @@ export type ImageZoomTransaction = {
   yPercent: number;
   /** Viewport-center position as a fraction of the stage's inline size. */
   inlineFraction: number | null;
+  /**
+   * Same, on the BLOCK axis. Rect-derived like the inline one, so the solve
+   * cannot be thrown off by anything the layout model does not know about —
+   * chiefly the auto margins that centre a zoomed-out stage inside the pane.
+   * The model path below stays the fallback for a rebased (paged) scroll,
+   * where the stage stops spanning the document.
+   */
+  blockFraction: number | null;
   /** Painted visual-layer rect at click time — the FLIP's "first" frame. */
   previousVisualRect: DOMRectReadOnly | null;
 };
@@ -85,6 +101,7 @@ export function captureImageZoomTransaction({
     frameNumber,
     yPercent: (centerOffset - frameLayout.offsetTop) / frameLayout.height,
     inlineFraction: captureImageZoomInlineFraction(viewportElement),
+    blockFraction: captureImageZoomBlockFraction(viewportElement),
     previousVisualRect: readElementRect(
       findImageZoomVisualLayer(viewportElement),
     ),
@@ -106,9 +123,10 @@ export function resolveImageZoomScrollTarget({
   const viewportBlockSize = Math.max(0, viewportElement.clientHeight);
   const maxScrollTop = Math.max(0, layout.totalHeight - viewportBlockSize);
   const top = clamp(
-    frameLayout.offsetTop +
-      frameLayout.height * transaction.yPercent -
-      viewportBlockSize * IMAGE_ZOOM_CENTER_MARKER_RATIO,
+    resolveImageZoomScrollTop({ layout, transaction, viewportElement }) ??
+      frameLayout.offsetTop +
+        frameLayout.height * transaction.yPercent -
+        viewportBlockSize * IMAGE_ZOOM_CENTER_MARKER_RATIO,
     0,
     maxScrollTop,
   );
@@ -129,6 +147,46 @@ function captureImageZoomInlineFraction(viewportElement: HTMLDivElement) {
   if (!rangeRect || rangeRect.width <= 0) return null;
   return (
     (getViewportCenterX(viewportElement) - rangeRect.left) / rangeRect.width
+  );
+}
+
+function captureImageZoomBlockFraction(viewportElement: HTMLDivElement) {
+  const rangeRect = readElementRect(
+    viewportElement.querySelector<HTMLElement>(
+      IMAGE_ZOOM_SCROLL_RANGE_SELECTOR,
+    ),
+  );
+  if (!rangeRect || rangeRect.height <= 0) return null;
+  return (
+    (getViewportCenterY(viewportElement) - rangeRect.top) / rangeRect.height
+  );
+}
+
+// Scroll down by however far the anchored content point currently sits below
+// the viewport centre — the block mirror of the inline solve. Only valid while
+// the stage box IS the document; a rebased scroll detaches the two, and the
+// caller falls back to the frame model.
+function resolveImageZoomScrollTop({
+  layout,
+  transaction,
+  viewportElement,
+}: {
+  layout: ImageFrameLayoutModel;
+  transaction: ImageZoomTransaction;
+  viewportElement: HTMLDivElement;
+}) {
+  if (transaction.blockFraction == null) return null;
+  const rangeRect = readElementRect(
+    viewportElement.querySelector<HTMLElement>(
+      IMAGE_ZOOM_SCROLL_RANGE_SELECTOR,
+    ),
+  );
+  if (!rangeRect || rangeRect.height <= 0) return null;
+  if (Math.abs(rangeRect.height - layout.totalHeight) > 2) return null;
+  return (
+    viewportElement.scrollTop +
+    (rangeRect.top + rangeRect.height * transaction.blockFraction) -
+    getViewportCenterY(viewportElement)
   );
 }
 
@@ -181,10 +239,7 @@ export function playImageZoomMotion({
 
   const scaleX = previousRect.width / currentRect.width;
   const scaleY = previousRect.height / currentRect.height;
-  if (
-    Math.abs(scaleX - scaleY) >
-    IMAGE_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
-  ) {
+  if (hasDetachedImageZoomAxes(scaleX, scaleY)) {
     return null;
   }
 
@@ -251,6 +306,31 @@ function getViewportCenterX(viewportElement: HTMLDivElement) {
   return (
     viewportElement.getBoundingClientRect().left +
     Math.max(0, viewportElement.clientWidth) / 2
+  );
+}
+
+function getViewportCenterY(viewportElement: HTMLDivElement) {
+  return (
+    viewportElement.getBoundingClientRect().top +
+    Math.max(0, viewportElement.clientHeight) / 2
+  );
+}
+
+// True when one axis is pinned while the other rescales — the paged-scroll
+// signature — or when the two ratios are so far apart that the stage box
+// cannot be tracking the content at all.
+function hasDetachedImageZoomAxes(scaleX: number, scaleY: number) {
+  const inlineDelta = Math.abs(scaleX - 1);
+  const blockDelta = Math.abs(scaleY - 1);
+  const frozenAxis =
+    (blockDelta < IMAGE_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      inlineDelta > IMAGE_ZOOM_MOTION_AXIS_MOVED_DELTA) ||
+    (inlineDelta < IMAGE_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      blockDelta > IMAGE_ZOOM_MOTION_AXIS_MOVED_DELTA);
+  return (
+    frozenAxis ||
+    Math.abs(scaleX - scaleY) >
+      IMAGE_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
   );
 }
 

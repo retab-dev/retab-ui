@@ -146,7 +146,12 @@ export function usePdfDocumentLayout({
     React.useMemo<FileViewerDocumentSurfaceMotionResolver>(
       () =>
         createFileViewerFitWidthSurfaceMotionResolver({
-          align: rendererFrame.align,
+          // The pages layer centres the surface with auto margins whatever the
+          // frame's align is (a camera view splits leftover space evenly), so
+          // the margin model must say "center" too — an align-derived model
+          // over a centred surface is exactly the mismatch that pops the
+          // narrowing leg.
+          align: "center",
           direction: rendererFrame.direction,
           isFitWidth,
           stageInlineSize: pageLayout.maxPageWidth,
@@ -156,7 +161,6 @@ export function usePdfDocumentLayout({
       [
         isFitWidth,
         pageLayout.maxPageWidth,
-        rendererFrame.align,
         rendererFrame.direction,
         stageInlineSlope,
       ],

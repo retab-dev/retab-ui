@@ -31,12 +31,14 @@ function makeRect(rect: Partial<DOMRect>): DOMRect {
 function makeViewport({
   stageRect,
   scrollLeft = 0,
+  scrollTop = 0,
   scrollHeight = 5000,
   clientWidth = 800,
   clientHeight = 600,
 }: {
   stageRect?: DOMRect | null;
   scrollLeft?: number;
+  scrollTop?: number;
   scrollHeight?: number;
   clientWidth?: number;
   clientHeight?: number;
@@ -53,7 +55,7 @@ function makeViewport({
     clientHeight,
     scrollHeight,
     scrollLeft,
-    scrollTop: 0,
+    scrollTop,
     getBoundingClientRect: () =>
       makeRect({ left: 0, top: 0, width: clientWidth, height: clientHeight }),
     querySelector: (selector: string) =>
@@ -81,6 +83,7 @@ describe("docx zoom motion anchor", () => {
   it("captures the viewport-center content point on both axes", () => {
     const { viewport } = makeViewport({
       stageRect: makeRect({ left: 100, top: -1692, width: 400, height: 4064 }),
+      scrollTop: 1708,
     });
 
     const transaction = captureDocxZoomTransaction({
@@ -97,11 +100,14 @@ describe("docx zoom motion anchor", () => {
     expect(transaction!.yPercent).toBeCloseTo(0.45, 5);
     // Viewport center x = 400; stage spans [100, 500] → 75% across.
     expect(transaction!.inlineFraction).toBeCloseTo(0.75, 5);
+    // Viewport center y = 300; stage spans [-1692, 2372] → 49.0% down.
+    expect(transaction!.blockFraction).toBeCloseTo(1992 / 4064, 5);
   });
 
   it("restores the captured content point back under the viewport center", () => {
     const capturedAt = makeViewport({
       stageRect: makeRect({ left: 100, top: -1692, width: 400, height: 4064 }),
+      scrollTop: 1708,
     });
     const transaction = captureDocxZoomTransaction({
       layout: makeLayout(),
@@ -110,10 +116,54 @@ describe("docx zoom motion anchor", () => {
       viewportElement: capturedAt.viewport,
     })!;
 
-    // After the 1.2x commit (before restore): stage is 480 wide at left 60.
+    // After the 1.2x commit (before restore): stage is 480 wide at left 60,
+    // still painted from the pre-restore scroll.
+    const scaledHeight = makeLayout().totalHeight * 1.2;
     const committed = makeViewport({
-      stageRect: makeRect({ left: 60, top: -2000, width: 480, height: 4876.8 }),
+      stageRect: makeRect({
+        left: 60,
+        top: -1692,
+        width: 480,
+        height: scaledHeight,
+      }),
       scrollHeight: 4909,
+      scrollTop: 1708,
+    });
+    const target = resolveDocxZoomScrollTarget({
+      layout: makeLayout(),
+      scale: 1.2,
+      transaction,
+      viewportElement: committed.viewport,
+    });
+
+    expect(target).not.toBeNull();
+    // BOTH axes solve off the painted stage rect: scroll by however far the
+    // anchored content point sits from the viewport centre. Rect-derived, so
+    // an auto-margin the layout model knows nothing about cannot skew it.
+    expect(target!.top).toBeCloseTo(
+      1708 + (-1692 + scaledHeight * (1992 / 4064)) - 300,
+      4,
+    );
+    // Anchored point x = 60 + 0.75 * 480 = 420; center is 400 → scroll +20.
+    expect(target!.left).toBeCloseTo(20, 5);
+  });
+
+  it("falls back to the page model when the stage stops matching the document", () => {
+    const capturedAt = makeViewport({
+      stageRect: makeRect({ left: 100, top: -1692, width: 400, height: 4064 }),
+      scrollTop: 1708,
+    });
+    const transaction = captureDocxZoomTransaction({
+      layout: makeLayout(),
+      scale: 1,
+      scrollTop: 1708,
+      viewportElement: capturedAt.viewport,
+    })!;
+
+    const committed = makeViewport({
+      stageRect: makeRect({ left: 60, top: -2000, width: 480, height: 12_000 }),
+      scrollHeight: 4909,
+      scrollTop: 1708,
     });
     const target = resolveDocxZoomScrollTarget({
       layout: makeLayout(),
@@ -125,8 +175,6 @@ describe("docx zoom motion anchor", () => {
     expect(target).not.toBeNull();
     // 16 + (1632 + 0.45 * 800) * 1.2 - 300.
     expect(target!.top).toBeCloseTo(2106.4, 4);
-    // Anchored point x = 60 + 0.75 * 480 = 420; center is 400 → scroll +20.
-    expect(target!.left).toBeCloseTo(20, 5);
   });
 
   it("clamps the block restore to the scrollable range", () => {
@@ -185,6 +233,7 @@ describe("docx zoom motion player", () => {
         pageNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
@@ -233,6 +282,7 @@ describe("docx zoom motion player", () => {
         pageNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
@@ -271,6 +321,7 @@ describe("docx zoom motion player", () => {
         pageNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,

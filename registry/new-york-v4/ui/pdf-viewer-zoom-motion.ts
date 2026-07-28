@@ -19,9 +19,20 @@ const PDF_ZOOM_MOTION_DURATION_MS = 200;
 const PDF_ZOOM_MOTION_MIN_TRANSLATE_PX = 0.5;
 const PDF_ZOOM_MOTION_MIN_SCALE_DELTA = 0.001;
 // A rebased (paged) physical scroll detaches the stage box from the content
-// scale, so the whole-surface FLIP would warp. The two axes then stop scaling
-// by the same ratio, which is exactly the detectable symptom.
-const PDF_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.02;
+// scale, so the whole-surface FLIP would warp. Its signature is precise: the
+// rebased axis is PINNED (the container keeps its size while the content
+// rescales), so one axis barely moves while the other moves a lot. Testing for
+// that beats a plain ratio tolerance — an honest page stack carries small
+// constant terms (rounded gaps, fixed outer padding) that put the block axis a
+// couple of percent off the inline one. On a big jump a tight ratio tolerance
+// then refuses the relax and the whole scale change lands in one frame —
+// measured on the image viewer as an un-animated 620px snap on a multi-frame
+// TIFF's fit-width, and this stack has the same shape of layout. The
+// wide ratio net below still catches anything wilder, and the FLIP writes
+// per-axis scales, so a slightly non-affine layout renders exactly.
+const PDF_ZOOM_MOTION_AXIS_FROZEN_DELTA = 0.02;
+const PDF_ZOOM_MOTION_AXIS_MOVED_DELTA = 0.05;
+const PDF_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.25;
 // The scroll write quantizes to device pixels, so the commit can land the
 // anchor a sub-pixel off the pure center scale. Smearing that residual over
 // the relax pans the anchor for 200ms — the eye tracks it as a wander.
@@ -383,10 +394,7 @@ export function playPdfZoomMotion({
 
   const scaleX = previousRect.width / currentRect.width;
   const scaleY = previousRect.height / currentRect.height;
-  if (
-    Math.abs(scaleX - scaleY) >
-    PDF_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
-  ) {
+  if (hasDetachedPdfZoomAxes(scaleX, scaleY)) {
     return recordZoomFlightSkip("axis-scale-mismatch");
   }
 
@@ -470,8 +478,7 @@ export function playPdfZoomMotion({
     visualLayer.style.willChange = "";
     record.interruption = interruption;
     record.settledClean =
-      visualLayer.style.transform === "" &&
-      visualLayer.style.willChange === "";
+      visualLayer.style.transform === "" && visualLayer.style.willChange === "";
     record.pathDeviationMaxPx = computeZoomFlightPathDeviation(record.ticks);
     if (liveZoomFlightRecord === record) liveZoomFlightRecord = null;
   };
@@ -632,6 +639,24 @@ function getViewportCenterY(viewportElement: HTMLDivElement) {
   return (
     viewportElement.getBoundingClientRect().top +
     Math.max(0, viewportElement.clientHeight) / 2
+  );
+}
+
+// True when one axis is pinned while the other rescales — the paged-scroll
+// signature — or when the two ratios are so far apart that the stage box
+// cannot be tracking the content at all.
+function hasDetachedPdfZoomAxes(scaleX: number, scaleY: number) {
+  const inlineDelta = Math.abs(scaleX - 1);
+  const blockDelta = Math.abs(scaleY - 1);
+  const frozenAxis =
+    (blockDelta < PDF_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      inlineDelta > PDF_ZOOM_MOTION_AXIS_MOVED_DELTA) ||
+    (inlineDelta < PDF_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      blockDelta > PDF_ZOOM_MOTION_AXIS_MOVED_DELTA);
+  return (
+    frozenAxis ||
+    Math.abs(scaleX - scaleY) >
+      PDF_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
   );
 }
 

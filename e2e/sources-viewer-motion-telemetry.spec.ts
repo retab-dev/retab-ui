@@ -31,7 +31,12 @@ for (const format of [
     const contentOvershoot = result?.metrics.find(
       (metric) => metric.id === "content-overshoot",
     );
-    expect(contentOvershoot).toMatchObject({ passed: true, value: "0px" });
+    // Budget, not pixel-exact zero: the document surface centres itself with
+    // auto margins, and the browser resolves half the free space in layout
+    // units (1/64px) while the motion model resolves it in floats. That
+    // quantization leaves a ~0.01px residual — two orders of magnitude below
+    // the corridor and invisible; a real wobble is >= 1px.
+    expect(contentOvershoot).toMatchObject({ passed: true });
     expect(result?.status, JSON.stringify(result?.metrics, null, 2)).toBe(
       "passed",
     );

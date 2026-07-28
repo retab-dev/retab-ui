@@ -38,12 +38,14 @@ function makeViewport({
   stageRect,
   canvasRect,
   scrollLeft = 0,
+  scrollTop = 0,
   clientWidth = 800,
   clientHeight = 600,
 }: {
   stageRect?: DOMRect | null;
   canvasRect?: DOMRect | null;
   scrollLeft?: number;
+  scrollTop?: number;
   clientWidth?: number;
   clientHeight?: number;
 }) {
@@ -61,7 +63,7 @@ function makeViewport({
     clientWidth,
     clientHeight,
     scrollLeft,
-    scrollTop: 0,
+    scrollTop,
     getBoundingClientRect: () =>
       makeRect({ left: 0, top: 0, width: clientWidth, height: clientHeight }),
     querySelector: (selector: string) => {
@@ -94,6 +96,7 @@ describe("pptx zoom motion anchor", () => {
   it("captures the viewport-center content point on both axes", () => {
     const { viewport } = makeViewport({
       stageRect: makeRect({ left: 100, top: -1708, width: 400, height: 4096 }),
+      scrollTop: 1708,
     });
 
     const transaction = capturePptxZoomTransaction({
@@ -109,11 +112,14 @@ describe("pptx zoom motion anchor", () => {
     expect(transaction!.yPercent).toBeCloseTo(0.45, 5);
     // Viewport center x = 400; stage spans [100, 500] → 75% across.
     expect(transaction!.inlineFraction).toBeCloseTo(0.75, 5);
+    // Viewport center y = 300; stage spans [-1708, 2388] → 49.0% down.
+    expect(transaction!.blockFraction).toBeCloseTo(2008 / 4096, 5);
   });
 
   it("restores the captured content point back under the viewport center", () => {
     const capturedAt = makeViewport({
       stageRect: makeRect({ left: 100, top: -1708, width: 400, height: 4096 }),
+      scrollTop: 1708,
     });
     const transaction = capturePptxZoomTransaction({
       layout: makeLayout(1),
@@ -121,9 +127,51 @@ describe("pptx zoom motion anchor", () => {
       viewportElement: capturedAt.viewport,
     })!;
 
-    // After the 1.2x commit (before restore): stage is 480 wide at left 60.
+    // After the 1.2x commit (before restore): stage is 480 wide at left 60,
+    // still painted from the pre-restore scroll (top = -scrollTop).
+    const committedLayout = makeLayout(1.2);
     const committed = makeViewport({
-      stageRect: makeRect({ left: 60, top: -2000, width: 480, height: 4908.8 }),
+      stageRect: makeRect({
+        left: 60,
+        top: -1708,
+        width: 480,
+        height: committedLayout.totalHeight,
+      }),
+      scrollTop: 1708,
+    });
+    const target = resolvePptxZoomScrollTarget({
+      layout: committedLayout,
+      transaction,
+      viewportElement: committed.viewport,
+    });
+
+    expect(target).not.toBeNull();
+    // BOTH axes solve off the painted stage rect: scroll by however far the
+    // anchored content point sits from the viewport centre. Rect-derived, so
+    // an auto-margin the layout model knows nothing about cannot skew it.
+    expect(target!.top).toBeCloseTo(
+      1708 + (-1708 + committedLayout.totalHeight * (2008 / 4096)) - 300,
+      4,
+    );
+    // Anchored point x = 60 + 0.75 * 480 = 420; center is 400 → scroll +20.
+    expect(target!.left).toBeCloseTo(20, 5);
+  });
+
+  it("falls back to the slide model when the stage stops spanning the deck", () => {
+    const capturedAt = makeViewport({
+      stageRect: makeRect({ left: 100, top: -1708, width: 400, height: 4096 }),
+      scrollTop: 1708,
+    });
+    const transaction = capturePptxZoomTransaction({
+      layout: makeLayout(1),
+      scrollTop: 1708,
+      viewportElement: capturedAt.viewport,
+    })!;
+
+    // A rebased (paged) scroll detaches the stage box from the deck.
+    const committed = makeViewport({
+      stageRect: makeRect({ left: 60, top: -2000, width: 480, height: 12_000 }),
+      scrollTop: 1708,
     });
     const target = resolvePptxZoomScrollTarget({
       layout: makeLayout(1.2),
@@ -135,8 +183,6 @@ describe("pptx zoom motion anchor", () => {
     // Slide 3 at 1.2x: top 16 + 2 * 979.2 = 1974.4, height 960 →
     // 1974.4 + 432 - 300.
     expect(target!.top).toBeCloseTo(2106.4, 4);
-    // Anchored point x = 60 + 0.75 * 480 = 420; center is 400 → scroll +20.
-    expect(target!.left).toBeCloseTo(20, 5);
   });
 
   it("clamps the block restore to the scrollable range", () => {
@@ -194,6 +240,7 @@ describe("pptx zoom motion player", () => {
         slideNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
@@ -243,6 +290,7 @@ describe("pptx zoom motion player", () => {
         slideNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
@@ -284,6 +332,7 @@ describe("pptx zoom motion player", () => {
         slideNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,

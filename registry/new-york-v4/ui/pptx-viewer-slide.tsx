@@ -234,14 +234,22 @@ export function PptxSlideScroller({
             be cut at the committed box. At fit-width the surface fits the
             layout width, so the active clip can never eat scrollable
             overflow. */}
+        {/* Flex column so the surface's block-axis auto margin has free space
+            to split once a zoomed-out deck is shorter than the pane. */}
         <div
-          className={
+          className={`flex min-h-full flex-col ${
             isTransitioning && isFitWidth ? "overflow-clip" : "overflow-visible"
-          }
+          }`}
         >
           <div
             ref={documentSurfaceRef}
-            className="relative mx-auto min-w-0"
+            className={`relative mx-auto min-w-0 shrink-0 ${
+              // Block-axis centring only outside fit-width: at fit-width a
+              // pane resize re-fits the slides, and half of that height delta
+              // is motion the shell transform does not model. Zoomed, that
+              // transform is identity and the height is pane-independent.
+              isFitWidth ? "" : "my-auto"
+            }`}
             data-slot="pptx-viewer-document-surface"
             style={{
               contain: "layout style",

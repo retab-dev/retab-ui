@@ -482,6 +482,7 @@ export function usePdfDocumentRuntime({
       document,
       documentAlign: layout.rendererFrame.align,
       documentKey,
+      isFitWidth: layout.isFitWidth,
       isLayoutTransitioning: layout.rendererFrame.isTransitioning,
       isZoomTransitioning,
       layout: layout.pageLayout,

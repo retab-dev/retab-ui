@@ -26,12 +26,21 @@ const PPTX_ZOOM_MOTION_EASING = "cubic-bezier(0.33, 1, 0.68, 1)";
 const PPTX_ZOOM_MOTION_CLEANUP_MS = PPTX_ZOOM_MOTION_DURATION_MS + 50;
 const PPTX_ZOOM_MOTION_MIN_TRANSLATE_PX = 0.5;
 const PPTX_ZOOM_MOTION_MIN_SCALE_DELTA = 0.001;
-// A rebased (paged) physical scroll detaches the canvas box from the content
-// scale, so the whole-surface FLIP would warp. The two axes then stop scaling
-// by the same ratio, which is exactly the detectable symptom. (The fixed
-// slide padding also nudges the two ratios apart; for real decks that skew
-// stays well inside this tolerance.)
-const PPTX_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.02;
+// A rebased (paged) physical scroll detaches the stage box from the content
+// scale, so the whole-surface FLIP would warp. Its signature is precise: the
+// rebased axis is PINNED (the container keeps its size while the content
+// rescales), so one axis barely moves while the other moves a lot. Testing for
+// that beats a plain ratio tolerance — an honest slide stack carries small
+// constant terms (rounded gaps, fixed outer padding) that put the block axis a
+// couple of percent off the inline one. On a big jump a tight ratio tolerance
+// then refuses the relax and the whole scale change lands in one frame —
+// measured on the image viewer as an un-animated 620px snap on a multi-frame
+// TIFF's fit-width, and this stack has the same shape of layout. The
+// wide ratio net below still catches anything wilder, and the FLIP writes
+// per-axis scales, so a slightly non-affine layout renders exactly.
+const PPTX_ZOOM_MOTION_AXIS_FROZEN_DELTA = 0.02;
+const PPTX_ZOOM_MOTION_AXIS_MOVED_DELTA = 0.05;
+const PPTX_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.25;
 
 // The exact wait-out of the relax before the visual clip re-tightens; clip
 // release is React-rendered state, so it outlives the inline transition.
@@ -63,6 +72,14 @@ export type PptxZoomTransaction = {
   yPercent: number;
   /** Viewport-center position as a fraction of the stage's inline size. */
   inlineFraction: number | null;
+  /**
+   * Same, on the BLOCK axis. Rect-derived like the inline one, so the solve
+   * cannot be thrown off by anything the layout model does not know about —
+   * chiefly the auto margins that centre a zoomed-out deck inside the pane.
+   * The slide model stays the fallback for a rebased (paged) scroll, where
+   * the stage stops spanning the deck.
+   */
+  blockFraction: number | null;
   /** Painted visual-layer rect at click time — the FLIP's "first" frame. */
   previousVisualRect: DOMRectReadOnly | null;
 };
@@ -102,6 +119,7 @@ export function capturePptxZoomTransaction({
     slideNumber,
     yPercent: (centerOffset - slideTop) / layout.slideHeight,
     inlineFraction: capturePptxZoomInlineFraction(viewportElement),
+    blockFraction: capturePptxZoomBlockFraction(viewportElement),
     previousVisualRect: readElementRect(
       findPptxZoomVisualLayer(viewportElement),
     ),
@@ -130,9 +148,10 @@ export function resolvePptxZoomScrollTarget({
   const slideTop = getPptxZoomSlideTop(layout, transaction.slideNumber - 1);
   // LOGICAL target — the caller maps back into the paged physical space.
   const top = clamp(
-    slideTop +
-      layout.slideHeight * transaction.yPercent -
-      viewportBlockSize * PPTX_ZOOM_CENTER_MARKER_RATIO,
+    resolvePptxZoomScrollTop({ layout, transaction, viewportElement }) ??
+      slideTop +
+        layout.slideHeight * transaction.yPercent -
+        viewportBlockSize * PPTX_ZOOM_CENTER_MARKER_RATIO,
     0,
     maxScrollTop,
   );
@@ -149,6 +168,38 @@ function capturePptxZoomInlineFraction(viewportElement: HTMLDivElement) {
   if (!stageRect || stageRect.width <= 0) return null;
   return (
     (getViewportCenterX(viewportElement) - stageRect.left) / stageRect.width
+  );
+}
+
+function capturePptxZoomBlockFraction(viewportElement: HTMLDivElement) {
+  const stageRect = readElementRect(findPptxZoomStage(viewportElement));
+  if (!stageRect || stageRect.height <= 0) return null;
+  return (
+    (getViewportCenterY(viewportElement) - stageRect.top) / stageRect.height
+  );
+}
+
+// Scroll down by however far the anchored content point currently sits below
+// the viewport centre — the block mirror of the inline solve. Only valid while
+// the stage box IS the deck; a rebased scroll detaches the two and the caller
+// falls back to the slide model.
+function resolvePptxZoomScrollTop({
+  layout,
+  transaction,
+  viewportElement,
+}: {
+  layout: PptxZoomSlideLayout;
+  transaction: PptxZoomTransaction;
+  viewportElement: HTMLDivElement;
+}) {
+  if (transaction.blockFraction == null) return null;
+  const stageRect = readElementRect(findPptxZoomStage(viewportElement));
+  if (!stageRect || stageRect.height <= 0) return null;
+  if (Math.abs(stageRect.height - layout.totalHeight) > 2) return null;
+  return (
+    viewportElement.scrollTop +
+    (stageRect.top + stageRect.height * transaction.blockFraction) -
+    getViewportCenterY(viewportElement)
   );
 }
 
@@ -197,10 +248,7 @@ export function playPptxZoomMotion({
 
   const scaleX = previousRect.width / currentRect.width;
   const scaleY = previousRect.height / currentRect.height;
-  if (
-    Math.abs(scaleX - scaleY) >
-    PPTX_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
-  ) {
+  if (hasDetachedPptxZoomAxes(scaleX, scaleY)) {
     return null;
   }
 
@@ -282,10 +330,7 @@ function attachPptxZoomInterruptListeners(
   };
 }
 
-function getPptxZoomSlideAtOffset(
-  layout: PptxZoomSlideLayout,
-  offset: number,
-) {
+function getPptxZoomSlideAtOffset(layout: PptxZoomSlideLayout, offset: number) {
   if (layout.slideCount <= 1 || layout.slideStride <= 0) return 1;
   const slideIndex = Math.floor(
     (offset - layout.slideTopPadding) / layout.slideStride,
@@ -313,6 +358,31 @@ function getViewportCenterX(viewportElement: HTMLDivElement) {
   return (
     viewportElement.getBoundingClientRect().left +
     Math.max(0, viewportElement.clientWidth) / 2
+  );
+}
+
+function getViewportCenterY(viewportElement: HTMLDivElement) {
+  return (
+    viewportElement.getBoundingClientRect().top +
+    Math.max(0, viewportElement.clientHeight) / 2
+  );
+}
+
+// True when one axis is pinned while the other rescales — the paged-scroll
+// signature — or when the two ratios are so far apart that the stage box
+// cannot be tracking the content at all.
+function hasDetachedPptxZoomAxes(scaleX: number, scaleY: number) {
+  const inlineDelta = Math.abs(scaleX - 1);
+  const blockDelta = Math.abs(scaleY - 1);
+  const frozenAxis =
+    (blockDelta < PPTX_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      inlineDelta > PPTX_ZOOM_MOTION_AXIS_MOVED_DELTA) ||
+    (inlineDelta < PPTX_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      blockDelta > PPTX_ZOOM_MOTION_AXIS_MOVED_DELTA);
+  return (
+    frozenAxis ||
+    Math.abs(scaleX - scaleY) >
+      PPTX_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
   );
 }
 

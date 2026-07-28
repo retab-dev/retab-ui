@@ -24,8 +24,6 @@ import {
 } from "@/components/ui/image-viewer-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import type { FileViewerDocumentAlign } from "./file-viewer-renderer-contract";
-
 import {
   getImageFrameLayout,
   getImagePhysicalScrollHeight,
@@ -69,7 +67,6 @@ export interface ImageFrameScrollerProps {
   scale: number;
   rasterScale?: number;
   rotation: QuarterTurn;
-  align?: FileViewerDocumentAlign;
   documentSurfaceRef?: React.Ref<HTMLDivElement>;
   frameListRef: React.Ref<HTMLDivElement>;
   getScrollMetrics?: () => ImageFrameVirtualizationScrollMetrics;
@@ -284,7 +281,6 @@ export function ImageFrameScroller({
   scale,
   rasterScale = scale,
   rotation,
-  align = "center",
   documentSurfaceRef,
   frameListRef,
   getScrollMetrics,
@@ -518,21 +514,28 @@ export function ImageFrameScroller({
           overflow. */}
       <div
         ref={frameListRef}
-        className={`relative min-h-full w-full ${
+        className={`relative flex min-h-full w-full flex-col ${
           freezeVisibleFrameWindow && isFitWidth
             ? "overflow-clip"
             : "overflow-visible"
         }`}
         data-slot="image-viewer-fit-width-measure"
       >
-        {/* The margin class must mirror the fit-width motion resolver's
-            align-margin model: the counter-transform's translateX assumes the
-            stage's DOM margins follow the renderer frame's align, so a
-            hardcoded mx-auto under align="start" leaves the auto-margin
-            re-centering uncompensated mid-slide. */}
+        {/* The stage is a CAMERA view: a zoom step shrinks it about the
+            viewport centre, so leftover space splits evenly. Auto margins do
+            that and collapse to 0 once the stage overflows, keeping the scroll
+            origin (and every pixel) reachable — and the fit-width motion
+            resolver is handed the matching "center" margin model, since a
+            mismatch there leaves the auto-margin re-centering uncompensated
+            mid-slide. The BLOCK axis centres only outside fit-width: at
+            fit-width a pane resize re-fits the frames, and half of that height
+            delta is motion the shell transform does not model (measured as a
+            4.4px hop). Zoomed, that transform is identity and the height is
+            pane-independent, so the centring is inert during a slide. The flex
+            column exists only to give those margins free space to split. */}
         <div
           data-slot="image-viewer-scroll-range"
-          className={`relative ${getImageDocumentAlignClass(align)}`}
+          className={`relative mx-auto shrink-0 ${isFitWidth ? "" : "my-auto"}`}
           style={{
             contain: "layout size style",
             height: physicalScrollHeight,
@@ -619,17 +622,6 @@ export function ImageFrameScroller({
       </div>
     </ScrollArea>
   );
-}
-
-function getImageDocumentAlignClass(align: FileViewerDocumentAlign) {
-  switch (align) {
-    case "center":
-      return "mx-auto";
-    case "end":
-      return "ml-auto";
-    case "start":
-      return "mr-auto";
-  }
 }
 
 type ImageFrameProjectionCache = {

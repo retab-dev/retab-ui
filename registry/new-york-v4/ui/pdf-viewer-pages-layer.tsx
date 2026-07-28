@@ -36,6 +36,8 @@ export type PdfDocumentPagesLayerProps = {
   document: PdfDocument;
   documentAlign: FileViewerDocumentAlign | null;
   documentKey: string;
+  /** The pages are at their fit-width scale (the shell motion's domain). */
+  isFitWidth: boolean;
   isLayoutTransitioning: boolean;
   /** A toolbar zoom step's FLIP relax is in flight (pdf-viewer-zoom-motion). */
   isZoomTransitioning: boolean;
@@ -67,6 +69,7 @@ export function PdfDocumentPagesLayer({
   document,
   documentAlign,
   documentKey,
+  isFitWidth,
   isLayoutTransitioning,
   isZoomTransitioning,
   layout,
@@ -196,7 +199,22 @@ export function PdfDocumentPagesLayer({
   const documentContent = (
     <div
       data-slot="pdf-viewer-scroll-range"
-      className={cn("relative", getPdfDocumentFrameAlignClass(documentAlign))}
+      // The document surface is a CAMERA view, not a laid-out column: a zoom
+      // step shrinks it about the viewport centre, so whenever it is smaller
+      // than the pane the leftover space splits evenly. Auto margins (never
+      // justify/align-content) do exactly that and collapse to 0 once the
+      // surface overflows, so an overflowing document still starts at the
+      // scroll origin and every pixel of it stays reachable. The inset's
+      // `align` keeps governing the FRAME, not this surface.
+      //
+      // The BLOCK axis centres only outside fit-width. At fit-width a pane
+      // resize re-fits the document, which would move a block-centred surface
+      // by half the height delta — motion the shell's fit-width transform does
+      // not model, so it would land as a hop mid-slide. Zoomed, that transform
+      // is identity and the document's height is pane-independent, so the
+      // centring is inert during a slide; the fit↔zoom switch itself rides the
+      // zoom FLIP, which measures painted rects and absorbs the margin change.
+      className={cn("relative mx-auto shrink-0", !isFitWidth && "my-auto")}
       style={scrollRangeStyle}
     >
       <div
@@ -275,8 +293,10 @@ export function PdfDocumentPagesLayer({
     <div
       ref={containerRef}
       data-slot="pdf-viewer-fit-width-measure"
+      // Flex column purely so the surface's block-axis auto margins have free
+      // space to split: a block container gives its child no block centring.
       className={cn(
-        "relative min-w-0",
+        "relative flex min-w-0 flex-col",
         isInsideDocumentFrame && "h-full w-full",
       )}
       style={{ paddingInline: PDF_PAGE_HORIZONTAL_PADDING / 2 }}
@@ -284,16 +304,4 @@ export function PdfDocumentPagesLayer({
       {documentContent}
     </div>
   );
-}
-
-function getPdfDocumentFrameAlignClass(align: FileViewerDocumentAlign | null) {
-  switch (align) {
-    case "center":
-    case null:
-      return "mx-auto";
-    case "end":
-      return "ml-auto";
-    case "start":
-      return "mr-auto";
-  }
 }

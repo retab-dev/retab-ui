@@ -20,11 +20,21 @@ const DOCX_ZOOM_MOTION_EASING = "cubic-bezier(0.33, 1, 0.68, 1)";
 const DOCX_ZOOM_MOTION_CLEANUP_MS = DOCX_ZOOM_MOTION_DURATION_MS + 50;
 const DOCX_ZOOM_MOTION_MIN_TRANSLATE_PX = 0.5;
 const DOCX_ZOOM_MOTION_MIN_SCALE_DELTA = 0.001;
-// The zoom stage (the CSS-zoomed page host) scales uniformly with the scale
-// step; a diverging axis ratio means the surface is no longer a pure camera
-// zoom of its previous self (mid-reflow, virtualization churn) and the
-// whole-surface FLIP would warp. Snap instead.
-const DOCX_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.02;
+// A rebased (paged) physical scroll detaches the stage box from the content
+// scale, so the whole-surface FLIP would warp. Its signature is precise: the
+// rebased axis is PINNED (the container keeps its size while the content
+// rescales), so one axis barely moves while the other moves a lot. Testing for
+// that beats a plain ratio tolerance — an honest page stack carries small
+// constant terms (rounded gaps, fixed outer padding) that put the block axis a
+// couple of percent off the inline one. On a big jump a tight ratio tolerance
+// then refuses the relax and the whole scale change lands in one frame —
+// measured on the image viewer as an un-animated 620px snap on a multi-frame
+// TIFF's fit-width, and this stack has the same shape of layout. The
+// wide ratio net below still catches anything wilder, and the FLIP writes
+// per-axis scales, so a slightly non-affine layout renders exactly.
+const DOCX_ZOOM_MOTION_AXIS_FROZEN_DELTA = 0.02;
+const DOCX_ZOOM_MOTION_AXIS_MOVED_DELTA = 0.05;
+const DOCX_ZOOM_MOTION_AXIS_MISMATCH_RATIO = 0.25;
 
 // The exact wait-out of the relax before the visual clip re-tightens; clip
 // release is React-rendered state, so it outlives the inline transition.
@@ -54,6 +64,14 @@ export type DocxZoomTransaction = {
   yPercent: number;
   /** Viewport-center position as a fraction of the stage's inline size. */
   inlineFraction: number | null;
+  /**
+   * Same, on the BLOCK axis. Rect-derived like the inline one, so the solve
+   * cannot be thrown off by anything the layout model does not know about —
+   * chiefly the auto margins that centre a zoomed-out page inside the pane.
+   * The page model stays the fallback whenever the stage's painted height
+   * stops matching the scaled document.
+   */
+  blockFraction: number | null;
   /** Painted stage rect at click time — the FLIP's "first" frame. */
   previousVisualRect: DOMRectReadOnly | null;
 };
@@ -106,6 +124,7 @@ export function captureDocxZoomTransaction({
     pageNumber: page.pageNumber,
     yPercent: (y - page.top) / page.height,
     inlineFraction: captureDocxZoomInlineFraction(viewportElement),
+    blockFraction: captureDocxZoomBlockFraction(viewportElement),
     previousVisualRect: readElementRect(findDocxZoomStage(viewportElement)),
   };
 }
@@ -130,10 +149,11 @@ export function resolveDocxZoomScrollTarget({
     viewportElement.scrollHeight - viewportBlockSize,
   );
   const top = clamp(
-    DOCX_VIEWER_PADDING_PX +
-      (page.top + page.height * transaction.yPercent) *
-        safeDocxZoomScale(scale) -
-      viewportBlockSize * DOCX_ZOOM_CENTER_MARKER_RATIO,
+    resolveDocxZoomScrollTop({ layout, scale, transaction, viewportElement }) ??
+      DOCX_VIEWER_PADDING_PX +
+        (page.top + page.height * transaction.yPercent) *
+          safeDocxZoomScale(scale) -
+        viewportBlockSize * DOCX_ZOOM_CENTER_MARKER_RATIO,
     0,
     maxScrollTop,
   );
@@ -150,6 +170,41 @@ function captureDocxZoomInlineFraction(viewportElement: HTMLDivElement) {
   if (!stageRect || stageRect.width <= 0) return null;
   return (
     (getViewportCenterX(viewportElement) - stageRect.left) / stageRect.width
+  );
+}
+
+function captureDocxZoomBlockFraction(viewportElement: HTMLDivElement) {
+  const stageRect = readElementRect(findDocxZoomStage(viewportElement));
+  if (!stageRect || stageRect.height <= 0) return null;
+  return (
+    (getViewportCenterY(viewportElement) - stageRect.top) / stageRect.height
+  );
+}
+
+// Scroll down by however far the anchored content point currently sits below
+// the viewport centre — the block mirror of the inline solve. Guarded on the
+// stage still painting the whole scaled document, so a virtualized or
+// otherwise detached stage falls back to the page model.
+function resolveDocxZoomScrollTop({
+  layout,
+  scale,
+  transaction,
+  viewportElement,
+}: {
+  layout: DocxPageLayout | null;
+  scale: number;
+  transaction: DocxZoomTransaction;
+  viewportElement: HTMLDivElement;
+}) {
+  if (transaction.blockFraction == null || !layout) return null;
+  const stageRect = readElementRect(findDocxZoomStage(viewportElement));
+  if (!stageRect || stageRect.height <= 0) return null;
+  const documentHeight = layout.totalHeight * safeDocxZoomScale(scale);
+  if (Math.abs(stageRect.height - documentHeight) > 2) return null;
+  return (
+    viewportElement.scrollTop +
+    (stageRect.top + stageRect.height * transaction.blockFraction) -
+    getViewportCenterY(viewportElement)
   );
 }
 
@@ -198,10 +253,7 @@ export function playDocxZoomMotion({
 
   const scaleX = previousRect.width / currentRect.width;
   const scaleY = previousRect.height / currentRect.height;
-  if (
-    Math.abs(scaleX - scaleY) >
-    DOCX_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
-  ) {
+  if (hasDetachedDocxZoomAxes(scaleX, scaleY)) {
     return null;
   }
 
@@ -314,6 +366,31 @@ function getViewportCenterX(viewportElement: HTMLDivElement) {
   return (
     viewportElement.getBoundingClientRect().left +
     Math.max(0, viewportElement.clientWidth) / 2
+  );
+}
+
+function getViewportCenterY(viewportElement: HTMLDivElement) {
+  return (
+    viewportElement.getBoundingClientRect().top +
+    Math.max(0, viewportElement.clientHeight) / 2
+  );
+}
+
+// True when one axis is pinned while the other rescales — the paged-scroll
+// signature — or when the two ratios are so far apart that the stage box
+// cannot be tracking the content at all.
+function hasDetachedDocxZoomAxes(scaleX: number, scaleY: number) {
+  const inlineDelta = Math.abs(scaleX - 1);
+  const blockDelta = Math.abs(scaleY - 1);
+  const frozenAxis =
+    (blockDelta < DOCX_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      inlineDelta > DOCX_ZOOM_MOTION_AXIS_MOVED_DELTA) ||
+    (inlineDelta < DOCX_ZOOM_MOTION_AXIS_FROZEN_DELTA &&
+      blockDelta > DOCX_ZOOM_MOTION_AXIS_MOVED_DELTA);
+  return (
+    frozenAxis ||
+    Math.abs(scaleX - scaleY) >
+      DOCX_ZOOM_MOTION_AXIS_MISMATCH_RATIO * Math.max(scaleX, scaleY)
   );
 }
 

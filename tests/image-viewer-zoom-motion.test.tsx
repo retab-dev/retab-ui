@@ -35,12 +35,14 @@ function makeViewport({
   rangeRect,
   clipRect,
   scrollLeft = 0,
+  scrollTop = 0,
   clientWidth = 800,
   clientHeight = 600,
 }: {
   rangeRect?: DOMRect | null;
   clipRect?: DOMRect | null;
   scrollLeft?: number;
+  scrollTop?: number;
   clientWidth?: number;
   clientHeight?: number;
 }) {
@@ -57,6 +59,7 @@ function makeViewport({
     clientWidth,
     clientHeight,
     scrollLeft,
+    scrollTop,
     getBoundingClientRect: () =>
       makeRect({ left: 0, top: 0, width: clientWidth, height: clientHeight }),
     querySelector: (selector: string) => {
@@ -80,6 +83,7 @@ describe("image zoom motion anchor", () => {
   it("captures the viewport-center content point on both axes", () => {
     const { viewport } = makeViewport({
       rangeRect: makeRect({ left: 100, top: -1708, width: 432, height: 4096 }),
+      scrollTop: 1708,
     });
 
     const transaction = captureImageZoomTransaction({
@@ -95,11 +99,14 @@ describe("image zoom motion anchor", () => {
     expect(transaction!.yPercent).toBeCloseTo(0.45, 5);
     // Viewport center x = 400; stage spans [100, 532] → 69.4% across.
     expect(transaction!.inlineFraction).toBeCloseTo(300 / 432, 5);
+    // Viewport center y = 300; stage spans [-1708, 2388] → 49.0% down.
+    expect(transaction!.blockFraction).toBeCloseTo(2008 / 4096, 5);
   });
 
   it("restores the captured content point back under the viewport center", () => {
     const capturedAt = makeViewport({
       rangeRect: makeRect({ left: 100, top: -1708, width: 432, height: 4096 }),
+      scrollTop: 1708,
     });
     const transaction = captureImageZoomTransaction({
       layout: makeLayout(1),
@@ -107,10 +114,52 @@ describe("image zoom motion anchor", () => {
       viewportElement: capturedAt.viewport,
     })!;
 
-    // After the 1.2x commit (before restore): stage is 512 wide at left 60.
+    // After the 1.2x commit (before restore): stage is 512 wide at left 60,
+    // still painted from the pre-restore scroll (top = -scrollTop).
+    const committedLayout = makeLayout(1.2);
     const committed = makeViewport({
-      rangeRect: makeRect({ left: 60, top: -2000, width: 512, height: 4908.8 }),
+      rangeRect: makeRect({
+        left: 60,
+        top: -1708,
+        width: 512,
+        height: committedLayout.totalHeight,
+      }),
       scrollLeft: 0,
+      scrollTop: 1708,
+    });
+    const target = resolveImageZoomScrollTarget({
+      layout: committedLayout,
+      transaction,
+      viewportElement: committed.viewport,
+    });
+
+    expect(target).not.toBeNull();
+    // BOTH axes solve off the painted stage rect: scroll by however far the
+    // anchored content point sits from the viewport centre. Rect-derived, so
+    // an auto-margin the layout model knows nothing about cannot skew it.
+    expect(target!.top).toBeCloseTo(
+      1708 + (-1708 + committedLayout.totalHeight * (2008 / 4096)) - 300,
+      5,
+    );
+    expect(target!.left).toBeCloseTo(60 + (300 / 432) * 512 - 400, 5);
+  });
+
+  it("falls back to the frame model when the stage stops spanning the document", () => {
+    const capturedAt = makeViewport({
+      rangeRect: makeRect({ left: 100, top: -1708, width: 432, height: 4096 }),
+      scrollTop: 1708,
+    });
+    const transaction = captureImageZoomTransaction({
+      layout: makeLayout(1),
+      scrollTop: 1708,
+      viewportElement: capturedAt.viewport,
+    })!;
+
+    // A rebased (paged) scroll detaches the stage box from the document.
+    const committed = makeViewport({
+      rangeRect: makeRect({ left: 60, top: -2000, width: 512, height: 12_000 }),
+      scrollLeft: 0,
+      scrollTop: 1708,
     });
     const target = resolveImageZoomScrollTarget({
       layout: makeLayout(1.2),
@@ -121,9 +170,6 @@ describe("image zoom motion anchor", () => {
     expect(target).not.toBeNull();
     // Frame 3 at 1.2x: offset 1974.4, height 960 → 1974.4 + 432 - 300.
     expect(target!.top).toBeCloseTo(2106.4, 5);
-    // Anchored point x = 60 + (300 / 432) * 512 = 415.6; center is 400 →
-    // scroll +15.6.
-    expect(target!.left).toBeCloseTo(60 + (300 / 432) * 512 - 400, 5);
   });
 
   it("omits the inline axis when the stage cannot be measured", () => {
@@ -202,6 +248,7 @@ describe("image zoom motion player", () => {
         frameNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
@@ -224,10 +271,50 @@ describe("image zoom motion player", () => {
     expect(style.willChange).toBe("");
   });
 
-  it("snaps instead of animating when the axes stopped scaling together", () => {
+  it("still relaxes when a frame stack's constant terms skew the block axis", () => {
     vi.stubGlobal("requestAnimationFrame", () => 1);
-    // A rebased physical scroll: height ratio (1.0) diverges from the width
-    // ratio (0.833) — the whole-surface FLIP would warp, so no motion plays.
+    // A multi-frame stack is not perfectly affine: rounded gaps and fixed
+    // padding leave the block ratio (0.580) a couple of percent off the inline
+    // one (0.593). Both axes still track the content, so the relax must play —
+    // refusing here snapped the whole scale change into one frame.
+    const previousRect = makeRect({
+      left: 216,
+      top: -1708,
+      width: 572.5,
+      height: 5675.3,
+    });
+    const currentRect = makeRect({
+      left: 116,
+      top: -2106,
+      width: 966,
+      height: 9783.7,
+    });
+    const { clipElement, viewport } = makeViewport({
+      rangeRect: currentRect,
+      clipRect: currentRect,
+    });
+
+    const cancel = playImageZoomMotion({
+      transaction: {
+        frameNumber: 3,
+        yPercent: 0.45,
+        inlineFraction: 0.75,
+        blockFraction: 0.5,
+        previousVisualRect: previousRect,
+      },
+      viewportElement: viewport,
+    });
+
+    expect(cancel).not.toBeNull();
+    expect(clipElement!.style.transform ?? "").not.toBe("");
+    cancel?.();
+  });
+
+  it("snaps instead of animating when one axis is pinned (paged scroll)", () => {
+    vi.stubGlobal("requestAnimationFrame", () => 1);
+    // A rebased physical scroll: the block axis is PINNED (ratio 1.0) while
+    // the inline axis rescales (0.833) — the stage box has stopped tracking
+    // the content, so the whole-surface FLIP would warp and no motion plays.
     const previousRect = makeRect({
       left: 116,
       top: -1708,
@@ -250,6 +337,7 @@ describe("image zoom motion player", () => {
         frameNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
@@ -286,6 +374,7 @@ describe("image zoom motion player", () => {
         frameNumber: 3,
         yPercent: 0.45,
         inlineFraction: 0.75,
+        blockFraction: 0.5,
         previousVisualRect: previousRect,
       },
       viewportElement: viewport,
