@@ -4436,23 +4436,25 @@ describe("viewer architecture", () => {
           "<JsonForm",
         ],
       },
+      // The OCR blocks panel lives in the file-viewer shell's OWN sidebar
+      // (not the outer ViewerSidebar chrome): only the shell's sidebar toggle
+      // drives the motion kernel's commit-then-relax slide, so outer-chrome
+      // sidebars leave the document reflow-chasing the pane resize.
       {
         file: "registry/new-york-v4/ui/layout-blocks.tsx",
         symbols: [
           "<SegmentedDocumentProvider",
           "<OcrLayoutBlocksContent",
           "<ViewerRoot",
-          "<ViewerBody",
-          "<ViewerSurface",
           "<FileViewerProvider",
           "<FileViewer",
           "<PdfViewerProvider",
+          "<FileViewerSidebarTrigger",
           "<FileViewerContent",
           "<FileViewerInset",
           "<FileViewerViewport",
           "<PdfViewerPages",
-          "<ViewerSidebar",
-          "<LayoutBlocksPanel",
+          "<FileViewerSidebar",
         ],
       },
       {

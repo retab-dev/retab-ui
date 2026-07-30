@@ -39,6 +39,10 @@ const PAGES = [
   "split-consensus",
   "classify-consensus",
   "extract",
+  // OCR hosts the PDF behind the file-viewer shell's own right-side sidebar;
+  // regressed once to outer-chrome hosting, where the un-choreographed pane
+  // resize made the document drift sideways, recenter, then rescale.
+  "ocr",
 ] as const;
 
 for (const block of PAGES) {

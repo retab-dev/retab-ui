@@ -8,6 +8,8 @@ import {
   FileViewerContent,
   FileViewerProvider,
   FileViewerInset,
+  FileViewerSidebar,
+  FileViewerSidebarTrigger,
   FileViewerViewport,
 } from "@/components/ui/file-viewer";
 import {
@@ -22,12 +24,9 @@ import {
 } from "@/components/ui/segmented-document-provider";
 import { useSegmentedItemLink } from "@/components/ui/segmented-item-link";
 import {
-  ViewerBody,
   ViewerHeader,
   ViewerRoot,
-  ViewerSidebar,
   ViewerSidebarTrigger,
-  ViewerSurface,
 } from "@/components/ui/viewer";
 
 import {
@@ -240,101 +239,124 @@ function OcrLayoutBlocksContent({
 
   const level = inspectedLevels[0] ?? "block";
 
+  // The header row is rendered in two hosts (inside the file-viewer shell
+  // once the PDF is ready, directly under the root while preparing), so the
+  // toggle trigger is injected per host: the shell's own trigger drives the
+  // motion kernel; the preparing state shows an inert placeholder trigger.
+  const renderHeader = (trigger: React.ReactNode) => (
+    <ViewerHeader>
+      <div className="flex items-center justify-between gap-3 p-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {trigger}
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="truncate text-sm font-medium">OCR</div>
+            <div className="text-muted-foreground shrink-0 text-xs">
+              {levelCountLabel(level, model.visibleItems.length)}
+            </div>
+          </div>
+        </div>
+        <label className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="size-3.5"
+            checked={lowConfidenceOnly}
+            onChange={(event) =>
+              setLowConfidenceOnly(event.currentTarget.checked)
+            }
+          />
+          Low confidence
+        </label>
+      </div>
+    </ViewerHeader>
+  );
+  const panel = (
+    <LayoutBlocksPanel
+      activeItemId={activeItemId}
+      className="min-h-0 flex-1"
+      emptyLabel={
+        lowConfidenceOnly
+          ? `No low-confidence OCR ${levelPlural(level)} found.`
+          : `No OCR ${levelPlural(level)} found.`
+      }
+      items={model.evidenceItems}
+      selectedItemId={selectedItemId}
+      onActiveItemIdChange={previewItem}
+      onNavigateItem={(item, options) => {
+        navigateItem(item.id, {
+          behavior: options?.behavior,
+          clearPreview: options?.behavior === "auto" ? false : undefined,
+        });
+      }}
+      onSelectedItemIdChange={(itemId) => {
+        selectItem(itemId);
+      }}
+    />
+  );
+
+  // The blocks panel lives in the file-viewer shell's OWN sidebar: the shell's
+  // motion kernel is the single owner of sidebar toggles, and only its trigger
+  // choreographs the document slide (commit-then-relax). Hosting the panel in
+  // outer chrome instead leaves the pane resizing under the viewer, and the
+  // fit-width re-layout chasing it — the document drifts sideways, recenters,
+  // then resizes.
   return (
     <ViewerRoot
       data-layout-blocks=""
       className={cn("bg-background", heightClassName, className)}
-      defaultOpen
       sidebarSide="right"
     >
-      <ViewerHeader>
-        <div className="flex items-center justify-between gap-3 p-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <ViewerSidebarTrigger className="-ml-1" />
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="truncate text-sm font-medium">OCR</div>
-              <div className="text-muted-foreground shrink-0 text-xs">
-                {levelCountLabel(level, model.visibleItems.length)}
-              </div>
-            </div>
-          </div>
-          <label className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="size-3.5"
-              checked={lowConfidenceOnly}
-              onChange={(event) =>
-                setLowConfidenceOnly(event.currentTarget.checked)
-              }
-            />
-            Low confidence
-          </label>
-        </div>
-      </ViewerHeader>
-      <ViewerBody>
-        <ViewerSurface>
-          {pdfSource.source ? (
-            <FileViewerProvider source={pdfSource.source}>
-              <FileViewer className="h-full">
-                <PdfViewerProvider>
-                  <FileViewerContent>
-                    <FileViewerInset>
-                      <FileViewerViewport>
-                        <PdfViewerPages
-                          ref={setPdfViewerHandle}
-                          bare
-                          className="h-full"
-                          fallbackPageSize={fallbackPageSize}
-                          onScrollProgressChange={
-                            segmentedViewport.documentHandlers
-                              .onScrollProgressChange
-                          }
-                          onVisiblePageChange={
-                            segmentedViewport.documentHandlers
-                              .onCurrentPageChange
-                          }
-                          renderPageOverlay={renderPageOverlay}
-                        />
-                      </FileViewerViewport>
-                    </FileViewerInset>
-                  </FileViewerContent>
-                </PdfViewerProvider>
-              </FileViewer>
-            </FileViewerProvider>
-          ) : (
-            <div className="bg-muted/20 text-muted-foreground grid h-full place-items-center p-6 text-sm">
+      {pdfSource.source ? (
+        <FileViewerProvider source={pdfSource.source} defaultSidebarOpen>
+          <FileViewer className="bg-background">
+            <PdfViewerProvider>
+              {renderHeader(<FileViewerSidebarTrigger className="-ml-1" />)}
+              <FileViewerContent>
+                <FileViewerInset>
+                  <FileViewerViewport>
+                    <PdfViewerPages
+                      ref={setPdfViewerHandle}
+                      bare
+                      className="h-full"
+                      fallbackPageSize={fallbackPageSize}
+                      onScrollProgressChange={
+                        segmentedViewport.documentHandlers
+                          .onScrollProgressChange
+                      }
+                      onVisiblePageChange={
+                        segmentedViewport.documentHandlers.onCurrentPageChange
+                      }
+                      renderPageOverlay={renderPageOverlay}
+                    />
+                  </FileViewerViewport>
+                </FileViewerInset>
+                <FileViewerSidebar
+                  aria-label="OCR blocks"
+                  side="right"
+                  width="320px"
+                  className="bg-background flex min-h-0 flex-col border-l"
+                >
+                  {panel}
+                </FileViewerSidebar>
+              </FileViewerContent>
+            </PdfViewerProvider>
+          </FileViewer>
+        </FileViewerProvider>
+      ) : (
+        <>
+          {renderHeader(<ViewerSidebarTrigger className="-ml-1" disabled />)}
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+            <div className="bg-muted/20 text-muted-foreground grid min-w-0 flex-1 place-items-center p-6 text-sm">
               {pdfSource.error ?? "Preparing OCR pages..."}
             </div>
-          )}
-        </ViewerSurface>
-        <ViewerSidebar
-          aria-label="OCR blocks"
-          width="320px"
-          className="bg-background flex min-h-0 shrink-0 flex-col border-l"
-        >
-          <LayoutBlocksPanel
-            activeItemId={activeItemId}
-            className="min-h-0 flex-1"
-            emptyLabel={
-              lowConfidenceOnly
-                ? `No low-confidence OCR ${levelPlural(level)} found.`
-                : `No OCR ${levelPlural(level)} found.`
-            }
-            items={model.evidenceItems}
-            selectedItemId={selectedItemId}
-            onActiveItemIdChange={previewItem}
-            onNavigateItem={(item, options) => {
-              navigateItem(item.id, {
-                behavior: options?.behavior,
-                clearPreview: options?.behavior === "auto" ? false : undefined,
-              });
-            }}
-            onSelectedItemIdChange={(itemId) => {
-              selectItem(itemId);
-            }}
-          />
-        </ViewerSidebar>
-      </ViewerBody>
+            <aside
+              aria-label="OCR blocks"
+              className="bg-background flex w-[320px] min-w-0 shrink-0 flex-col border-l"
+            >
+              {panel}
+            </aside>
+          </div>
+        </>
+      )}
     </ViewerRoot>
   );
 }
