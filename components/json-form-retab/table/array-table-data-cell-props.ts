@@ -22,7 +22,7 @@ type ArrayTableDataCellSharedProps = {
   onCommit: CommitArrayTableCellValue;
   onEditingEnd: () => void;
   role?: "button";
-  tabIndex: 0;
+  tabIndex?: 0;
   "aria-label": string;
   "data-table-cell-editable"?: "true";
   "data-table-cell-editor"?: "true";
@@ -35,18 +35,21 @@ export function createArrayTableDataCellProps({
   isEditing,
   model,
   onEditingEnd,
+  readOnly,
 }: {
   column: Column;
   commitValue: CommitArrayTableCellValue;
   isEditing: boolean;
   model: ArrayTableCellModel;
   onEditingEnd: () => void;
+  readOnly: boolean;
 }): DataCellProps {
   const sharedProps = arrayTableDataCellSharedProps({
     commitValue,
     isEditing,
     model,
     onEditingEnd,
+    readOnly,
   });
 
   if (column.kind === "enum") {
@@ -129,25 +132,31 @@ function arrayTableDataCellSharedProps({
   isEditing,
   model,
   onEditingEnd,
+  readOnly,
 }: {
   commitValue: CommitArrayTableCellValue;
   isEditing: boolean;
   model: ArrayTableCellModel;
   onEditingEnd: () => void;
+  readOnly: boolean;
 }): ArrayTableDataCellSharedProps {
+  // A read-only cell keeps its source-link affordances and drops every editing
+  // one: no activation target, no focus stop, and no editor to open.
+  const editing = isEditing && !readOnly;
+
   return {
-    active: isEditing,
-    editable: isEditing,
-    autoFocus: isEditing,
+    active: editing,
+    editable: editing,
+    autoFocus: editing,
     name: model.path,
     onCommit: commitValue,
     onEditingEnd,
-    role: isEditing ? undefined : "button",
-    tabIndex: 0,
+    role: editing || readOnly ? undefined : "button",
+    tabIndex: readOnly ? undefined : 0,
     "aria-label": `${model.label} ${model.displayText}`,
-    "data-table-cell-editable": isEditing ? undefined : "true",
-    "data-table-cell-editor": isEditing ? "true" : undefined,
-    "data-table-cell-path": isEditing ? undefined : model.path,
+    "data-table-cell-editable": editing || readOnly ? undefined : "true",
+    "data-table-cell-editor": editing ? "true" : undefined,
+    "data-table-cell-path": editing || readOnly ? undefined : model.path,
   };
 }
 

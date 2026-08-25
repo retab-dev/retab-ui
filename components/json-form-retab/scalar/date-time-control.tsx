@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import {
   compactJsonFormDataCellClass,
   type ControlFieldApi,
@@ -40,6 +41,7 @@ export function DateTimeScalarControl({
   compact: boolean;
   nullable: boolean;
 } & ScalarControlDomProps) {
+  const readOnly = useJsonFormReadOnly();
   const value = field.value == null ? "" : String(field.value);
   if (!compact) {
     return (
@@ -56,7 +58,7 @@ export function DateTimeScalarControl({
     <DataCell
       {...controlProps}
       kind={kind}
-      active
+      active={!readOnly}
       value={field.value == null ? null : value}
       dateTimeZone={kind === "date-time" ? "preserve" : undefined}
       draftValue={kind === "date-time" ? datetimeLocalInputValue(value) : value}
@@ -144,6 +146,7 @@ function DateTimePickerControl({
   field: ControlFieldApi;
   nullable: boolean;
 } & ScalarControlDomProps) {
+  const readOnly = useJsonFormReadOnly();
   const [open, setOpen] = React.useState(false);
   const value = field.value == null ? "" : String(field.value);
   const pickerValue = pickerEditValue(kind, value);
@@ -193,6 +196,7 @@ function DateTimePickerControl({
         <button
           {...controlProps}
           type="button"
+          disabled={readOnly}
           data-empty={isEmpty || undefined}
           className="border-input bg-background text-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive/36 focus-visible:aria-invalid:border-destructive/64 focus-visible:aria-invalid:ring-destructive/16 dark:bg-input/32 inline-flex h-8.5 w-full min-w-0 items-center justify-between gap-2 rounded-lg border px-[calc(--spacing(3)-1px)] text-left text-base font-normal shadow-xs/5 transition-shadow outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-64 sm:h-7.5 sm:text-sm"
           onBlur={field.onBlur}

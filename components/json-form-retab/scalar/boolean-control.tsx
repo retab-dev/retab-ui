@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/json-form-retab/form-primitives";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import { NULL_SELECT_VALUE } from "@/components/json-form-retab/scalar/enum-control";
 import {
   type ControlFieldApi,
@@ -21,8 +22,11 @@ export function BooleanControl({
   field: ControlFieldApi;
   label: string;
 }) {
+  const readOnly = useJsonFormReadOnly();
+
   return (
     <Checkbox
+      disabled={readOnly}
       checked={Boolean(field.value)}
       aria-label={label}
       onCheckedChange={(value) => field.onChange(value === true)}
@@ -39,6 +43,7 @@ export function NullableBooleanControl({
   field: ControlFieldApi;
   label: string;
 } & ScalarControlDomProps) {
+  const readOnly = useJsonFormReadOnly();
   const selectValue =
     field.value === true
       ? "true"
@@ -54,6 +59,7 @@ export function NullableBooleanControl({
 
   return (
     <Select
+      disabled={readOnly}
       value={selectValue}
       onValueChange={(value) => {
         if (value === "true") {

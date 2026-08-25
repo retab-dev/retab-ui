@@ -25,6 +25,7 @@ import {
   encodeJsonFormValue,
   schemaNeedsJsonFormPathEncoding,
 } from "@/components/json-form/path-codec";
+import { JsonFormReadOnlyProvider } from "@/components/json-form/read-only";
 import {
   BooleanControl,
   NullableBooleanControl,
@@ -240,6 +241,12 @@ export interface JsonFormProps {
    * demos and benchmarks that need a deep virtualized body mounted immediately.
    */
   defaultOpenPaths?: readonly string[];
+  /**
+   * Render every control inert. Values stay visible (and selectable) but
+   * cannot be changed, and array add/remove affordances are dropped. Use it on
+   * viewer surfaces that never submit the form.
+   */
+  readOnly?: boolean;
   /** Rendered after the fields, e.g. a submit button. */
   children?: React.ReactNode;
 }
@@ -252,6 +259,7 @@ export function JsonForm({
   textInput,
   sourceLink,
   defaultOpenPaths,
+  readOnly = false,
   children,
 }: JsonFormProps) {
   const expandedSchema = React.useMemo(() => expandRefs(schema), [schema]);
@@ -312,18 +320,23 @@ export function JsonForm({
 
   return (
     <JsonFormSourceLinkProvider sourceLink={sourceLink}>
-      <JsonFormOpenPathsContext.Provider value={defaultOpenPathSet}>
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
-            <JsonFormRootFields
-              schema={expandedSchema}
-              textInput={textInput}
-              renderField={renderJsonFormField}
-            />
-            {children}
-          </form>
-        </Form>
-      </JsonFormOpenPathsContext.Provider>
+      <JsonFormReadOnlyProvider readOnly={readOnly}>
+        <JsonFormOpenPathsContext.Provider value={defaultOpenPathSet}>
+          <Form {...form}>
+            <form
+              onSubmit={handleSubmit}
+              className={cn("space-y-4", className)}
+            >
+              <JsonFormRootFields
+                schema={expandedSchema}
+                textInput={textInput}
+                renderField={renderJsonFormField}
+              />
+              {children}
+            </form>
+          </Form>
+        </JsonFormOpenPathsContext.Provider>
+      </JsonFormReadOnlyProvider>
     </JsonFormSourceLinkProvider>
   );
 }

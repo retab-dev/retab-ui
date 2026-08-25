@@ -3,6 +3,7 @@
 import { DataCell } from "@/components/ui/data-cell";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/json-form-retab/form-primitives";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import {
   compactJsonFormDataCellClass,
   type ControlFieldApi,
@@ -25,12 +26,14 @@ export function TextControl({
   compact: boolean;
   nullable: boolean;
 } & ScalarControlDomProps) {
+  const readOnly = useJsonFormReadOnly();
   const value = field.value == null ? "" : String(field.value);
 
   if (!compact && shouldRenderTextarea(schema, textInput)) {
     return (
       <Textarea
         {...controlProps}
+        readOnly={readOnly}
         value={value}
         onChange={(event) =>
           field.onChange(
@@ -47,6 +50,7 @@ export function TextControl({
     return (
       <Input
         {...controlProps}
+        readOnly={readOnly}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value;
@@ -62,7 +66,7 @@ export function TextControl({
     <DataCell
       {...controlProps}
       kind="text"
-      active
+      active={!readOnly}
       value={field.value == null ? null : value}
       draftValue={value}
       className={compactJsonFormDataCellClass}

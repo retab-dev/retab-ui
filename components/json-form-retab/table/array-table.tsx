@@ -9,6 +9,7 @@ import {
   type Column,
 } from "@/components/json-form-retab/schema-model";
 import { useSourceLinkedTableCells } from "@/components/json-form-retab/source-link";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import {
   createArrayTableActiveCellStore,
   type ArrayTableActiveCellStore,
@@ -38,8 +39,11 @@ export function ArrayTable({
   canRemove: boolean;
   columns: Column[];
 }) {
-  const template = `${columns.map(() => "minmax(9rem, 1fr)").join(" ")} 2.25rem`;
-  const minWidth = columns.length * 150 + 36;
+  const readOnly = useJsonFormReadOnly();
+  const template = `${columns.map(() => "minmax(9rem, 1fr)").join(" ")}${
+    readOnly ? "" : " 2.25rem"
+  }`;
+  const minWidth = columns.length * 150 + (readOnly ? 0 : 36);
   const activeCellStoreRef = React.useRef<ArrayTableActiveCellStore | null>(
     null,
   );
@@ -168,7 +172,7 @@ export function ArrayTable({
               ) : null}
             </div>
           ))}
-          <span className="sr-only">Actions</span>
+          {readOnly ? null : <span className="sr-only">Actions</span>}
         </div>
         {virtualize ? (
           <FixedArrayTableBody

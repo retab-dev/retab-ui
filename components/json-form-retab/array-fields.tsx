@@ -15,6 +15,7 @@ import {
   LONG_ARRAY_THRESHOLD,
 } from "@/components/json-form-retab/json-form-constants";
 import { useJsonFormStartsOpen } from "@/components/json-form-retab/open-paths";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import {
   emptyArrayItemFormValue,
   joinJsonFormPath,
@@ -51,6 +52,7 @@ export function JsonFormArray({
   depth: number;
   renderField: RenderJsonFormField;
 }) {
+  const readOnly = useJsonFormReadOnly();
   const { control, getValues, setValue, unregister } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
   const arrayValue = useWatch({ control, name });
@@ -95,8 +97,10 @@ export function JsonFormArray({
       renderedFields.length <= LONG_ARRAY_THRESHOLD,
   );
   const [open, setOpen] = React.useState(startsOpen);
-  const canAddItem = canAppendArrayItem(schema, renderedFields.length);
-  const canRemoveItem = canRemoveArrayItem(schema, renderedFields.length);
+  const canAddItem =
+    !readOnly && canAppendArrayItem(schema, renderedFields.length);
+  const canRemoveItem =
+    !readOnly && canRemoveArrayItem(schema, renderedFields.length);
 
   const add = React.useCallback(() => {
     const current = getValues(name);
@@ -159,16 +163,18 @@ export function JsonFormArray({
           />
         }
         actions={
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={add}
-            disabled={!canAddItem}
-          >
-            <Plus className="size-4" />
-            Add
-          </Button>
+          readOnly ? null : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={add}
+              disabled={!canAddItem}
+            >
+              <Plus className="size-4" />
+              Add
+            </Button>
+          )
         }
       />
       {open ? (
@@ -300,6 +306,8 @@ const ArrayCard = React.memo(function ArrayCard({
   depth: number;
   renderField: RenderJsonFormField;
 }) {
+  const readOnly = useJsonFormReadOnly();
+
   return (
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
@@ -312,17 +320,19 @@ const ArrayCard = React.memo(function ArrayCard({
           depth: depth + 1,
         })}
       </div>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="text-muted-foreground hover:border-border hover:text-destructive mt-1 border-transparent hover:bg-transparent"
-        onClick={() => remove(index)}
-        aria-label="Remove item"
-        disabled={!canRemove}
-      >
-        <X className="size-4" />
-      </Button>
+      {readOnly ? null : (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="text-muted-foreground hover:border-border hover:text-destructive mt-1 border-transparent hover:bg-transparent"
+          onClick={() => remove(index)}
+          aria-label="Remove item"
+          disabled={!canRemove}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
     </div>
   );
 });

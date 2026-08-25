@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import {
   compactJsonFormSelectDataCellClass,
   type ControlFieldApi,
@@ -70,6 +71,7 @@ export function EnumControl({
   compact: boolean;
   nullable: boolean;
 } & ScalarControlDomProps) {
+  const readOnly = useJsonFormReadOnly();
   const enumValues = schema.enum ?? [];
   const hasNullEnumValue = enumValues.some((value) => value === null);
   const currentIndex = enumValues.findIndex((value) =>
@@ -90,6 +92,7 @@ export function EnumControl({
 
   return (
     <Select
+      disabled={readOnly}
       value={selectValue}
       onValueChange={(value) => {
         if (typeof value !== "string") return;

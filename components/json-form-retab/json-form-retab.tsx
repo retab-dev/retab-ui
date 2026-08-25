@@ -30,6 +30,7 @@ import {
   encodeJsonFormValue,
   schemaNeedsJsonFormPathEncoding,
 } from "@/components/json-form-retab/path-codec";
+import { JsonFormReadOnlyProvider } from "@/components/json-form-retab/read-only";
 import {
   BooleanControl,
   NullableBooleanControl,
@@ -304,6 +305,12 @@ export interface JsonFormRetabProps {
   showConsensus?: boolean;
   /** Show the reasoning badge trailing each label. */
   showReasoning?: boolean;
+  /**
+   * Render every control inert. Values stay visible (and selectable) but
+   * cannot be changed, and array add/remove affordances are dropped. Use it on
+   * viewer surfaces that never submit the form.
+   */
+  readOnly?: boolean;
   /** Rendered after the fields, e.g. a submit button. */
   children?: React.ReactNode;
 }
@@ -321,6 +328,7 @@ export function JsonFormRetab({
   showConfidence = false,
   showConsensus = false,
   showReasoning = false,
+  readOnly = false,
   children,
 }: JsonFormRetabProps) {
   const expandedSchema = React.useMemo(() => expandRefs(schema), [schema]);
@@ -381,29 +389,31 @@ export function JsonFormRetab({
 
   return (
     <JsonFormSourceLinkProvider sourceLink={sourceLink}>
-      <JsonFormOpenPathsContext.Provider value={defaultOpenPathSet}>
-        <Form {...form}>
-          <JsonFormMetadataProvider
-            consensusDetails={consensusDetails}
-            likelihoods={likelihoods}
-            showConfidence={showConfidence}
-            showConsensus={showConsensus}
-            showReasoning={showReasoning}
-          >
-            <form
-              onSubmit={handleSubmit}
-              className={cn("space-y-4", className)}
+      <JsonFormReadOnlyProvider readOnly={readOnly}>
+        <JsonFormOpenPathsContext.Provider value={defaultOpenPathSet}>
+          <Form {...form}>
+            <JsonFormMetadataProvider
+              consensusDetails={consensusDetails}
+              likelihoods={likelihoods}
+              showConfidence={showConfidence}
+              showConsensus={showConsensus}
+              showReasoning={showReasoning}
             >
-              <JsonFormRootFields
-                schema={expandedSchema}
-                textInput={textInput}
-                renderField={renderJsonFormField}
-              />
-              {children}
-            </form>
-          </JsonFormMetadataProvider>
-        </Form>
-      </JsonFormOpenPathsContext.Provider>
+              <form
+                onSubmit={handleSubmit}
+                className={cn("space-y-4", className)}
+              >
+                <JsonFormRootFields
+                  schema={expandedSchema}
+                  textInput={textInput}
+                  renderField={renderJsonFormField}
+                />
+                {children}
+              </form>
+            </JsonFormMetadataProvider>
+          </Form>
+        </JsonFormOpenPathsContext.Provider>
+      </JsonFormReadOnlyProvider>
     </JsonFormSourceLinkProvider>
   );
 }

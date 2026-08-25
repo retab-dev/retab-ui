@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { DataCell } from "@/components/ui/data-cell";
+import { useJsonFormReadOnly } from "@/components/json-form-retab/read-only";
 import type { Column } from "@/components/json-form-retab/schema-model";
 import {
   useArrayTableCellActive,
@@ -29,6 +30,7 @@ function ArrayTableCellContent({
   setValue: SetArrayTableCellValue;
   closeEditor: () => void;
 }) {
+  const readOnly = useJsonFormReadOnly();
   const isEditing = useArrayTableCellActive(activeCellStore, model.path);
   const commitValue = React.useCallback<CommitArrayTableCellValue>(
     (nextValue, meta) => {
@@ -52,6 +54,7 @@ function ArrayTableCellContent({
         isEditing,
         model,
         onEditingEnd: closeEditor,
+        readOnly,
       })}
     />
   );

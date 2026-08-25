@@ -11,6 +11,7 @@ import {
   joinJsonFormPath,
   joinJsonSourcePath,
 } from "@/components/json-form/path-codec";
+import { useJsonFormReadOnly } from "@/components/json-form/read-only";
 import type { Column } from "@/components/json-form/schema-model";
 import type { ArrayTableActiveCellStore } from "@/components/json-form/table/array-table-active-cell-store";
 import { ArrayTableCell } from "@/components/json-form/table/array-table-cell";
@@ -42,6 +43,7 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
   rowTopPx?: number;
   activeCellStore: ArrayTableActiveCellStore;
 }) {
+  const readOnly = useJsonFormReadOnly();
   const { control, getValues, setValue } = useFormContext();
   const rowPath = joinJsonFormPath(name, index);
   const rowSourcePath = joinJsonSourcePath(sourcePath, index);
@@ -98,15 +100,17 @@ export const ArrayTableRow = React.memo(function ArrayTableRow({
           />
         );
       })}
-      <button
-        type="button"
-        className="text-muted-foreground hover:border-border hover:text-destructive focus-visible:ring-ring flex size-8 items-center justify-center rounded-md border border-transparent text-base leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-        onClick={() => remove(index)}
-        aria-label="Remove row"
-        disabled={!canRemove}
-      >
-        <X className="size-4" />
-      </button>
+      {readOnly ? null : (
+        <button
+          type="button"
+          className="text-muted-foreground hover:border-border hover:text-destructive focus-visible:ring-ring flex size-8 items-center justify-center rounded-md border border-transparent text-base leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          onClick={() => remove(index)}
+          aria-label="Remove row"
+          disabled={!canRemove}
+        >
+          <X className="size-4" />
+        </button>
+      )}
     </div>
   );
 });

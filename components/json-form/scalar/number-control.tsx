@@ -7,6 +7,7 @@ import {
   type DataCellValueMeta,
 } from "@/components/ui/data-cell";
 import { Input } from "@/components/ui/input";
+import { useJsonFormReadOnly } from "@/components/json-form/read-only";
 import {
   compactJsonFormDataCellClass,
   type ControlFieldApi,
@@ -25,11 +26,14 @@ export function NumberControl({
   compact: boolean;
   nullable: boolean;
 } & ScalarControlDomProps) {
+  const readOnly = useJsonFormReadOnly();
+
   if (!compact) {
     return (
       <Input
         {...controlProps}
         nativeInput
+        readOnly={readOnly}
         type="number"
         inputMode={kind === "integer" ? "numeric" : "decimal"}
         step={kind === "integer" ? 1 : "any"}
@@ -52,7 +56,7 @@ export function NumberControl({
     <DataCell
       {...controlProps}
       kind={kind}
-      active
+      active={!readOnly}
       value={dataCellNumberValue(field.value)}
       draftValue={field.value == null ? "" : String(field.value)}
       className={compactJsonFormDataCellClass}
