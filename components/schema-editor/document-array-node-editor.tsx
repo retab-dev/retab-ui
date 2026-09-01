@@ -56,7 +56,6 @@ export function DocumentArrayNodeEditor({
           nodeView: itemView,
           path: `${path}.items`,
           canDelete: false,
-          hidePencilButton: true,
           setDefsAccordionOpen,
         })}
       </div>

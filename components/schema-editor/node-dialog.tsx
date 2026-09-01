@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { ExtendedJSONSchema7 } from "@/components/schema-editor/lib/json-schema-types";
+import { resolvePropertyCapabilities } from "@/components/schema-editor/property-form/model/property-capabilities";
 import { PropertyForm } from "@/components/schema-editor/property-form/property-form";
 import type {
   PropertyDraft,
@@ -67,6 +68,18 @@ export function NodeDialog({
 
         <PropertyForm
           propertyDraft={{ name, schemaNode: node }}
+          capabilities={
+            onNameChange
+              ? undefined
+              : {
+                  ...resolvePropertyCapabilities({
+                    mode,
+                    canDelete: Boolean(onDelete),
+                  }),
+                  // fixed-name nodes (an array's "items") cannot be renamed
+                  canEditName: false,
+                }
+          }
           schemaContext={{
             ...formContext,
             siblingNames,

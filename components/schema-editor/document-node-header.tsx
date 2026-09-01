@@ -114,7 +114,7 @@ export function DocumentNodeHeader({
           isOpen={controller.metadataDialogOpen}
           onClose={() => controller.setMetadataDialogOpen(false)}
           onChange={onChange}
-          onNameChange={onNameChange || (() => {})}
+          onNameChange={onNameChange}
           onDelete={
             editable && canDelete
               ? () => {
