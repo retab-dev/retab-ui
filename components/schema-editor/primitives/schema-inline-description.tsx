@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +26,9 @@ export function SchemaInlineDescription({
   onOpenDetails,
   onCommit,
 }: SchemaInlineDescriptionProps) {
+  const [tooltipOpen, setTooltipOpen] = React.useState(false);
+  const [inputFocused, setInputFocused] = React.useState(false);
+
   const description = (
     <SchemaInlineText
       ariaLabel={ariaLabel}
@@ -37,11 +42,18 @@ export function SchemaInlineDescription({
     />
   );
 
-  if (editable || !value) return description;
+  if (!value) return description;
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{description}</TooltipTrigger>
+    <Tooltip open={tooltipOpen && !inputFocused} onOpenChange={setTooltipOpen}>
+      {/* SchemaInlineText drops unknown props, so the trigger needs a real DOM element */}
+      <TooltipTrigger
+        asChild
+        onFocusCapture={() => setInputFocused(true)}
+        onBlurCapture={() => setInputFocused(false)}
+      >
+        <span className="flex min-w-0 flex-1 items-center">{description}</span>
+      </TooltipTrigger>
       <TooltipContent className="max-w-xs">
         <div className="text-muted-foreground mb-1 text-xs">Description:</div>
         <div className="text-xs">{value}</div>

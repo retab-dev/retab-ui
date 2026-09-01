@@ -593,4 +593,37 @@ describe("SchemaInlineDescription", () => {
     ) as HTMLInputElement;
     expect(input.tagName).toBe("INPUT");
   });
+
+  it("wraps a non-empty description in a tooltip trigger element in both modes", () => {
+    for (const editable of [true, false]) {
+      const { container, unmount } = render(
+        <SchemaInlineDescription
+          ariaLabel="Description"
+          editable={editable}
+          value="The invoice identifier"
+          onCommit={vi.fn()}
+        />,
+      );
+
+      // The trigger must be a DOM element (not a prop-dropping component),
+      // otherwise Radix's hover handlers never land and the tooltip is dead.
+      expect(
+        container.querySelector('[data-slot="tooltip-trigger"]'),
+      ).not.toBeNull();
+      unmount();
+    }
+  });
+
+  it("renders no tooltip trigger for an empty description", () => {
+    const { container } = render(
+      <SchemaInlineDescription
+        ariaLabel="Description"
+        editable
+        value=""
+        onCommit={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('[data-slot="tooltip-trigger"]')).toBeNull();
+  });
 });

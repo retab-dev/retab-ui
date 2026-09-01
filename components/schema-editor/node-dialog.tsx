@@ -52,7 +52,8 @@ export function NodeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] gap-2 overflow-y-auto p-0 sm:max-w-xl">
+      {/* [&>*]:min-w-0 lets grid items shrink with classic scrollbars instead of clipping */}
+      <DialogContent className="max-h-[90vh] gap-2 overflow-y-auto p-0 sm:max-w-xl [&>*]:min-w-0">
         <DialogHeader className="px-4 pt-4">
           <DialogTitle>
             {mode === "readOnly" ? "View Property" : "Edit Property"}
